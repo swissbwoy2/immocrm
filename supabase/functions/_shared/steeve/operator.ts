@@ -251,6 +251,17 @@ function verifiedRecipient(emails: string[] | null | undefined): string | null {
   return new Set(list.map(domainOf)).size === 1 ? list[0] : null;
 }
 
+/**
+ * Annonce hors Flatfox sans adresse e-mail vérifiée : la routine Chrome lit le contact publié sur l'annonce
+ * (e-mail, téléphone, agence) ou passe par le formulaire de contact du portail ; sans résultat, l'admin appelle (a_appeler).
+ */
+async function contactTask(db: any, kind: 'demande_qr' | 'demande_visite', offreId: string, clientId: string, source: string, objet: string, corps: string): Promise<void> {
+  const { data } = await db.rpc('steeve_tache_creer', { p_kind: 'recherche_contact', p_canal: 'portail', p_offre_id: offreId, p_client_id: clientId, p_source: source, p_responsable: 'routine-chrome', p_note: null, p_by: null });
+  if (data?.id && !data.existante) {
+    await db.from('steeve_actions').update({ objet, corps, controles: { pour: kind }, note: `Contact de l'annonceur à relever sur l'annonce (${kind === 'demande_qr' ? 'demande du QR / formulaire' : 'demande de visite'} bloquée faute d'adresse).` }).eq('id', data.id);
+  }
+}
+
 /** Tâche confiée à la routine Flatfox locale (chat du portail), sans doublon. */
 async function flatfoxTask(db: any, kind: 'demande_qr' | 'demande_visite', offreId: string, clientId: string, source: string, objet: string, corps: string): Promise<void> {
   const { data } = await db.rpc('steeve_tache_creer', { p_kind: kind, p_canal: 'flatfox', p_offre_id: offreId, p_client_id: clientId, p_source: source, p_responsable: 'routine-chrome', p_note: null, p_by: null });
@@ -294,6 +305,7 @@ async function handleQr(deps: Required<OperatorDeps>, mode: Mode, c: any, taskId
   if (!to) {
     // Canal bloqué seul, cause tracée ; le chat Flatfox continue de son côté.
     await journal(db, { ...base, statut: 'bloque', destinataire: null, motif: (c.emails ?? []).length ? 'Plusieurs régies possibles : aucun destinataire e-mail vérifié.' : 'Aucune adresse e-mail vérifiée de la régie ou de l\'annonceur.' }, key, targetId);
+    if (!flatfox && !(c.emails ?? []).length) await contactTask(db, 'demande_qr', c.offre_id, c.client_id, source, subject, text);
     return;
   }
   if (!(await mail.ready(BOX_VISITES))) {
@@ -314,6 +326,13 @@ async function handleVisite(deps: Required<OperatorDeps>, mode: Mode, taskId: st
   const now = deps.now();
   const { data: t } = await db.from('steeve_actions').select('id, offre_id, client_id, source, idempotency_key, note').eq('id', taskId).single();
   const { data: o } = await db.from('offres').select('id, adresse, lien_annonce, statut').eq('id', t.offre_id).single();
+  // Visite déjà enregistrée pour ce bien (fixée entre-temps, par e-mail, chat ou admin) : aucune demande en plus.
+  const { data: dejaVisite } = await db.from('visites').select('id').eq('offre_id', t.offre_id).eq('client_id', t.client_id)
+    .not('statut', 'in', '(annulee,refusee)').limit(1);
+  if (dejaVisite?.length && !String(t.note ?? '').startsWith('Visite déléguée')) {
+    await db.from('steeve_actions').update({ statut: 'fait', note: 'Visite déjà enregistrée pour ce bien : aucune demande envoyée.', verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() }).eq('id', taskId);
+    return;
+  }
   const { data: ref } = await db.from('contacts_annonceurs').select('reference').eq('offre_id', t.offre_id).not('reference', 'is', null).limit(1);
   const { data: emails } = await db.rpc('steeve_emails_regie', { p_offre_id: t.offre_id });
   const { subject, text } = visiteEmail({ adresse: o.adresse, reference: ref?.[0]?.reference ?? null, disponibilites: t.source === 'client' ? t.note : null });
@@ -327,8 +346,9 @@ async function handleVisite(deps: Required<OperatorDeps>, mode: Mode, taskId: st
   if (!to) {
     const flatfox = /flatfox\.ch/i.test(String(o.lien_annonce ?? ''));
     if (flatfox) await flatfoxTask(db, 'demande_visite', o.id, t.client_id, t.source ?? 'client', subject, text);
+    else await contactTask(db, 'demande_visite', o.id, t.client_id, t.source ?? 'client', subject, text);
     await journal(db, { ...base, kind: 'demande_visite', statut: 'bloque', verrou_par: null, verrou_jeton: null, verrou_jusqu: null,
-      motif: flatfox ? 'Aucune adresse vérifiée : demande confiée au chat Flatfox (routine locale).' : 'Aucune adresse vérifiée de l\'annonceur : à contacter depuis le portail.' }, key, taskId);
+      motif: flatfox ? 'Aucune adresse vérifiée : demande confiée au chat Flatfox (routine locale).' : 'Aucune adresse vérifiée de l\'annonceur : contact recherché sur l\'annonce (routine Chrome), sinon à appeler.' }, key, taskId);
     return;
   }
   if (!(await mail.ready(BOX_VISITES))) {
@@ -1089,7 +1109,11 @@ async function runTask(deps: Required<OperatorDeps>, mode: Mode, t: any, lessons
   } else if (t.kind === 'relance_annonceur') {
     const { data: c } = await db.rpc('steeve_relance_candidates', { p_limit: 1, p_offre_id: t.offre_id });
     if (c?.[0]) await handleRelance(deps, mode, c[0], t.id, rep);
-    else await db.from('steeve_actions').update({ statut: 'bloque', motif: 'Pas de relance possible : aucun contact par e-mail sans réponse depuis plus de 24 h, ou relance déjà faite.', verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() }).eq('id', t.id);
+    else {
+      // Jamais contacté : la relance devient une première demande de visite (e-mail, chat Flatfox ou recherche du contact).
+      const { data: conv } = await db.rpc('steeve_relance_sans_contact', { p_task_id: t.id });
+      if (!conv?.ok) await db.from('steeve_actions').update({ statut: 'bloque', motif: 'Pas de relance possible : aucun contact par e-mail sans réponse depuis plus de 24 h, ou relance déjà faite.', verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() }).eq('id', t.id);
+    }
   } else if (t.kind === 'envoi_dossier') {
     await handleDrafts(deps, mode, { lessons }, rep, { id: t.id, offre_id: t.offre_id });
   } else if (t.kind === 'demande_visite') {

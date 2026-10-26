@@ -13,6 +13,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { inClientHours, normalize, streetKey, type Mode, type OperatorReport } from './operator.ts';
+import { zurichToUtc } from './dates.ts';
 
 const MODEL = ACTION_MODEL;
 const PER_RUN = 6; // Opus 5.5 (effort élevé) : quelques e-mails par passage, le reste au passage suivant (5 min)
@@ -81,20 +82,10 @@ export async function classifyMail(callModel: CallModel, m: any): Promise<{ resu
   return { result: use?.input ?? null, cost: costOf(MODEL, resp.usage) };
 }
 
-/** « 2026-10-30T18:00 » heure suisse → instant (hiver +01:00, été +02:00). */
-export function zurichToUtc(local: string): Date | null {
-  const m = local.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
-  if (!m) return null;
-  const guess = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]));
-  for (const offset of [1, 2]) {
-    const d = new Date(guess.getTime() - offset * 3600_000);
-    const z = new Intl.DateTimeFormat('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
-    if (z.replace(/\D/g, '') === `${m[4]}${m[5]}`) return d;
-  }
-  return null;
-}
+export { zurichToUtc };
 
 const domainOf = (e: string) => e.toLowerCase().split('@')[1] ?? '';
+const WEBMAIL = /^(gmail\.com|googlemail\.com|bluewin\.ch|hotmail\.(com|ch|fr)|outlook\.(com|fr)|live\.com|yahoo\.(com|fr)|icloud\.com|me\.com|gmx\.(ch|net|de)|sunrise\.ch|hispeed\.ch|protonmail\.com|proton\.me)$/i;
 const portalSender = (e: string) => /@(flatfox\.ch|immobilier\.ch|homegate\.ch|immoscout24\.ch)$/i.test(e) || /(^|\.)flatfox\.ch$/i.test(domainOf(e));
 
 /**
@@ -167,6 +158,7 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
   const now = deps.now();
   // Lecture entre 8h et 20h seulement : un e-mail reçu la nuit est traité le matin, avec son message au client.
   if (!callModel || !inClientHours(now)) return;
+  if (mode !== 'a_blanc') await processAttachedMails(deps, rep);
   const { data: mails } = await db.rpc('steeve_mail_candidates', { p_limit: PER_RUN });
   if (!mails?.length) return;
   const { data: offres } = await db.rpc('steeve_mail_context');
@@ -205,7 +197,6 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
       continue;
     }
 
-    const notes: string[] = [];
     const first = targets[0];
     const link = `/admin/offres-auto?offre=${first.offre_id}`;
     if (blank) {
@@ -214,126 +205,197 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
     }
     if (!(await journal(db, { ...base, offre_id: first.offre_id, client_id: targets.length === 1 ? first.client_id : null, statut: 'a_faire', note: resume }, key))) continue;
 
+    // Réponse authentifiée d'une régie (pas un relais de portail ni une messagerie personnelle) : son adresse rejoint
+    // le carnet des annonceurs, pour les prochaines demandes à la même agence.
+    if (m.auth_verified === true && !portalSender(m.from_email) && !WEBMAIL.test(domainOf(String(m.from_email ?? '')))
+        && !/^(no-?reply|ne-?pas-?repondre|donotreply|notification|mailer-daemon)/i.test(String(m.from_email ?? ''))
+        && ['visite_fixee', 'lien_demande_location', 'qr_en_piece_jointe', 'inscription_visite', 'pieces_demandees'].includes(cls.categorie)) {
+      for (const offreId of [...new Set(targets.map((t: any) => t.offre_id))].slice(0, 3)) {
+        await db.rpc('steeve_contact_annonceur_enregistrer', { p_offre_id: offreId, p_email: m.from_email, p_telephone: null, p_nom: m.from_name ?? null, p_source: 'reponse' });
+      }
+    }
+    await applyMail(db, m, cls, targets, key, base, resume, link, now, rep);
+  }
+}
+
+/**
+ * E-mails « à vérifier » rattachés par l'admin à une offre (admin_steeve_rattacher_mail) : relus, puis appliqués à ce
+ * dossier comme un e-mail sûr (l'admin a validé le rattachement).
+ */
+async function processAttachedMails(deps: { db: any; callModel: CallModel | null; now: () => Date; deadline?: number }, rep: OperatorReport & { mails?: number }) {
+  const { db, callModel } = deps;
+  if (!callModel) return;
+  const now = deps.now();
+  const { data: rows } = await db.from('steeve_actions').select('id, idempotency_key, offre_id, objet, controles')
+    .eq('kind', 'lecture_mail').eq('statut', 'a_faire').eq('controles->>rattache', 'admin').order('updated_at').limit(3);
+  for (const row of rows ?? []) {
+    if (deps.deadline && Date.now() > deps.deadline) break;
+    const mailId = String(row.idempotency_key ?? '').replace(/^(blanc:)?mail:/, '');
+    const [{ data: m }, { data: target }] = await Promise.all([
+      db.rpc('steeve_mail_get', { p_id: mailId }),
+      db.rpc('steeve_mail_cible', { p_offre_id: row.offre_id }),
+    ]);
+    if (!m || !target) {
+      await db.from('steeve_actions').update({ statut: 'echec', motif: 'E-mail ou offre introuvable pour le rattachement.', updated_at: now.toISOString() }).eq('id', row.id);
+      continue;
+    }
+    const controles = row.controles ?? {};
+    let cls: any;
     try {
-      for (const o of targets) {
-        const prenom = o.client_prenom ?? '';
-        switch (cls.categorie) {
-          case 'visite_fixee': {
-            const start = zurichToUtc(String(cls.date_visite));
-            const end = cls.date_fin ? zurichToUtc(String(cls.date_fin)) : null;
-            const { data: r } = await db.rpc('steeve_apply_visite', { p_offre_id: o.offre_id, p_client_id: o.client_id, p_date: start?.toISOString() ?? null, p_fin: end?.toISOString() ?? null, p_source: portalSender(m.from_email) ? domainOf(m.from_email) : 'email' });
-            if (!r?.ok) {
-              notes.push(`${o.adresse} : ${r?.motif ?? 'non fixée'}`);
-              await alert(db, `steeve-visite-${m.id}-${o.offre_id}`, r?.conflit ? 'Conflit de visite' : 'Visite à vérifier', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${r?.conflit ? 'une autre visite est prévue à moins de 90 minutes' : r?.motif}. ${resume}`, link, 'urgent');
-              break;
-            }
-            notes.push(`${o.adresse} : visite fixée au ${r.quand}${r.deja ? ' (déjà enregistrée)' : ''}`);
-            if (r.message_requis && !r.deja) {
-              await tellClient(db, o.client_id, `visite:${r.visite_id}:${start?.toISOString()}`, `Bonjour ${prenom}, bonne nouvelle : la visite de ${o.adresse} est fixée au ${r.quand}, confirmée par l'annonceur. Je l'ai mise dans votre agenda Logisorama. Merci de venir avec votre dossier complet (pièce d'identité, 3 dernières fiches de salaire, extrait des poursuites). En cas d'empêchement, prévenez-nous au plus vite au +41 21 634 28 39. L'équipe Immo-rama.ch`, now);
-            }
+      const r = await classifyMail(callModel, m);
+      cls = r.result;
+      rep.cout_usd += r.cost;
+    } catch (err) {
+      // Lecture impossible : trois essais au plus, puis l'admin reprend la main (jamais de relecture payée en boucle).
+      const essais = Number(controles.essais ?? 0) + 1;
+      await db.from('steeve_actions').update({ controles: { ...controles, essais }, updated_at: now.toISOString(),
+        ...(essais >= 3 ? { statut: 'a_valider', motif: `Rattaché par l'admin mais illisible pour Steeve : à traiter à la main.` } : {}) }).eq('id', row.id);
+      rep.erreurs.push(`rattachement ${mailId} : ${(err as Error).message}`);
+      continue;
+    }
+    if (!cls || cls.categorie === 'sans_rapport') {
+      await db.from('steeve_actions').update({ statut: 'fait', note: 'Rattaché par l’admin ; sans action à faire.', updated_at: now.toISOString() }).eq('id', row.id);
+      continue;
+    }
+    // L'admin a validé le rattachement de l'e-mail tel qu'il l'a vu : une relecture différente n'est pas appliquée,
+    // et une acceptation ou un bail n'est jamais annoncé au client depuis ce chemin (e-mail non authentifié).
+    const vue = String(controles.categorie ?? '');
+    if ((vue && vue !== cls.categorie) || (['candidature_acceptee', 'bail_envoye'].includes(cls.categorie) && m.auth_verified !== true)) {
+      const motif = vue && vue !== cls.categorie
+        ? `Rattaché par l'admin, mais la relecture diffère (${vue} → ${cls.categorie}) : à traiter à la main.`
+        : `Rattaché par l'admin : ${cls.categorie === 'bail_envoye' ? 'bail' : 'acceptation'} annoncé(e) par un e-mail non authentifié, à confirmer par l'équipe.`;
+      await db.from('steeve_actions').update({ statut: 'a_valider', motif: motif.slice(0, 500), controles: { ...controles, rattache: 'admin_bloque' }, updated_at: now.toISOString() }).eq('id', row.id);
+      await alert(db, `steeve-rattache-${row.id}`, 'E-mail rattaché à confirmer', `${motif} « ${String(m.subject ?? '').slice(0, 120)} »`, '/admin/steeve', 'urgent');
+      continue;
+    }
+    rep.mails = (rep.mails ?? 0) + 1;
+    await applyMail(db, m, cls, [target], row.idempotency_key, { objet: String(m.subject ?? row.objet ?? '').slice(0, 250) },
+      String(cls.resume ?? '').slice(0, 200), `/admin/offres-auto?offre=${target.offre_id}`, now, rep);
+  }
+}
+
+/** Applique un e-mail lu (catégorie) aux dossiers visés, puis clôt sa ligne du registre (clé). */
+async function applyMail(db: any, m: any, cls: any, targets: any[], key: string, base: { objet: string }, resume: string, link: string, now: Date, rep: OperatorReport) {
+  const notes: string[] = [];
+  try {
+    for (const o of targets) {
+      const prenom = o.client_prenom ?? '';
+      switch (cls.categorie) {
+        case 'visite_fixee': {
+          const start = zurichToUtc(String(cls.date_visite));
+          const end = cls.date_fin ? zurichToUtc(String(cls.date_fin)) : null;
+          const { data: r } = await db.rpc('steeve_apply_visite', { p_offre_id: o.offre_id, p_client_id: o.client_id, p_date: start?.toISOString() ?? null, p_fin: end?.toISOString() ?? null, p_source: portalSender(m.from_email) ? domainOf(m.from_email) : 'email' });
+          if (!r?.ok) {
+            notes.push(`${o.adresse} : ${r?.motif ?? 'non fixée'}`);
+            await alert(db, `steeve-visite-${m.id}-${o.offre_id}`, r?.conflit ? 'Conflit de visite' : 'Visite à vérifier', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${r?.conflit ? 'une autre visite est prévue à moins de 90 minutes' : r?.motif}. ${resume}`, link, 'urgent');
             break;
           }
-          case 'visite_annulee': {
-            const { data: r } = await db.rpc('steeve_apply_annulation', { p_offre_id: o.offre_id, p_client_id: o.client_id });
-            notes.push(`${o.adresse} : ${r?.ok ? `visite du ${r.quand} annulée` : r?.motif}`);
-            if (r?.ok && r.message_requis) {
-              await tellClient(db, o.client_id, `annulation:${r.visite_id}`, `Bonjour ${prenom}, la visite de ${o.adresse} prévue le ${r.quand} a été annulée par l'annonceur. Votre agent cherche une nouvelle date et revient vers vous. L'équipe Immo-rama.ch`, now);
-            }
-            await alert(db, `steeve-annulation-${m.id}-${o.offre_id}`, 'Visite annulée par l’annonceur', `${prenom} ${o.client_nom ?? ''} — ${o.adresse}. ${resume}`, link, 'urgent');
-            break;
+          notes.push(`${o.adresse} : visite fixée au ${r.quand}${r.deja ? ' (déjà enregistrée)' : ''}`);
+          if (r.message_requis && !r.deja) {
+            await tellClient(db, o.client_id, `visite:${r.visite_id}:${start?.toISOString()}`, `Bonjour ${prenom}, bonne nouvelle : la visite de ${o.adresse} est fixée au ${r.quand}, confirmée par l'annonceur. Je l'ai mise dans votre agenda Logisorama. Merci de venir avec votre dossier complet (pièce d'identité, 3 dernières fiches de salaire, extrait des poursuites). En cas d'empêchement, prévenez-nous au plus vite au 021 634 31 61. L'équipe Immo-rama.ch`, now);
           }
-          case 'lien_demande_location': {
-            const { data: r } = await db.rpc('steeve_apply_lien', { p_offre_id: o.offre_id, p_client_id: o.client_id, p_lien: String(cls.lien ?? '') });
-            notes.push(`${o.adresse} : ${r?.ok ? 'lien de la demande de location ajouté au compte rendu' : r?.motif}`);
-            await alert(db, `steeve-lien-${m.id}`, 'Lien de demande de location reçu', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${r?.ok ? 'ajouté au compte rendu de la visite, la routine Postulation peut préparer le dossier.' : `à reprendre (${r?.motif}).`}`, '/admin/postulations', 'normal');
-            break;
+          break;
+        }
+        case 'visite_annulee': {
+          const { data: r } = await db.rpc('steeve_apply_annulation', { p_offre_id: o.offre_id, p_client_id: o.client_id });
+          notes.push(`${o.adresse} : ${r?.ok ? `visite du ${r.quand} annulée` : r?.motif}`);
+          if (r?.ok && r.message_requis) {
+            await tellClient(db, o.client_id, `annulation:${r.visite_id}`, `Bonjour ${prenom}, la visite de ${o.adresse} prévue le ${r.quand} a été annulée par l'annonceur. Votre agent cherche une nouvelle date et revient vers vous. L'équipe Immo-rama.ch`, now);
           }
-          case 'qr_en_piece_jointe':
-            notes.push(`${o.adresse} : QR / formulaire en pièce jointe`);
-            await alert(db, `steeve-qr-${m.id}`, 'QR ou formulaire reçu en pièce jointe', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : la régie l'a envoyé à ${m.mailbox} (« ${base.objet} »). À joindre au compte rendu pour la routine Postulation.`, link, 'normal');
-            break;
-          case 'candidature_refusee': {
-            const { data: r } = await db.rpc('steeve_apply_refus', { p_offre_id: o.offre_id, p_client_id: o.client_id });
-            notes.push(`${o.adresse} : ${r?.ok ? 'candidature non retenue' : r?.motif}`);
-            if (r?.ok) {
-              await tellClient(db, o.client_id, `refus:${r.candidature_id}`, `Bonjour ${prenom}, la régie n'a malheureusement pas retenu votre candidature pour ${o.adresse}. Nous continuons la recherche avec vous. L'équipe Immo-rama.ch`, now);
-            }
-            await alert(db, `steeve-refus-${m.id}`, 'Candidature non retenue', `${prenom} ${o.client_nom ?? ''} — ${o.adresse}. ${resume}`, link, 'normal');
-            break;
+          await alert(db, `steeve-annulation-${m.id}-${o.offre_id}`, 'Visite annulée par l’annonceur', `${prenom} ${o.client_nom ?? ''} — ${o.adresse}. ${resume}`, link, 'urgent');
+          break;
+        }
+        case 'lien_demande_location': {
+          const { data: r } = await db.rpc('steeve_apply_lien', { p_offre_id: o.offre_id, p_client_id: o.client_id, p_lien: String(cls.lien ?? '') });
+          notes.push(`${o.adresse} : ${r?.ok ? 'lien de la demande de location ajouté au compte rendu' : r?.motif}`);
+          await alert(db, `steeve-lien-${m.id}`, 'Lien de demande de location reçu', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${r?.ok ? 'ajouté au compte rendu de la visite, la routine Postulation peut préparer le dossier.' : `à reprendre (${r?.motif}).`}`, '/admin/postulations', 'normal');
+          break;
+        }
+        case 'qr_en_piece_jointe':
+          notes.push(`${o.adresse} : QR / formulaire en pièce jointe`);
+          await alert(db, `steeve-qr-${m.id}`, 'QR ou formulaire reçu en pièce jointe', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : la régie l'a envoyé à ${m.mailbox} (« ${base.objet} »). À joindre au compte rendu pour la routine Postulation.`, link, 'normal');
+          break;
+        case 'candidature_refusee': {
+          const { data: r } = await db.rpc('steeve_apply_refus', { p_offre_id: o.offre_id, p_client_id: o.client_id });
+          notes.push(`${o.adresse} : ${r?.ok ? 'candidature non retenue' : r?.motif}`);
+          if (r?.ok) {
+            await tellClient(db, o.client_id, `refus:${r.candidature_id}`, `Bonjour ${prenom}, la régie n'a malheureusement pas retenu votre candidature pour ${o.adresse}. Nous continuons la recherche avec vous. L'équipe Immo-rama.ch`, now);
           }
-          case 'pieces_demandees': {
-            // Steeve réunit lui-même les pièces (dossier du client) et les envoie à la régie ; ce qui manque est
-            // demandé au client et part dès son dépôt (tâche envoi_piece_regie, traitée juste après ce passage).
-            const codes = (Array.isArray(cls.pieces) ? cls.pieces : []).filter((p: string) => PIECES[p]);
-            await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: 'Dossier : la régie demande un complément, Steeve s’en occupe.' });
-            const { error: taskError } = await db.from('steeve_actions').insert({
-              kind: 'envoi_piece_regie', canal: 'email', source: 'auto', responsable: 'steeve', statut: 'a_faire',
-              client_id: o.client_id, offre_id: o.offre_id, mailbox: 'relocation@immo-rama.ch', destinataire: m.from_email,
-              objet: String(m.subject ?? '').slice(0, 250), controles: { pieces: codes.length ? codes : ['autre'], mail_id: m.id },
-              idempotency_key: `piece_regie:${m.id}:${o.offre_id}`, updated_at: now.toISOString(),
+          await alert(db, `steeve-refus-${m.id}`, 'Candidature non retenue', `${prenom} ${o.client_nom ?? ''} — ${o.adresse}. ${resume}`, link, 'normal');
+          break;
+        }
+        case 'pieces_demandees': {
+          // Steeve réunit lui-même les pièces (dossier du client) et les envoie à la régie ; ce qui manque est
+          // demandé au client et part dès son dépôt (tâche envoi_piece_regie, traitée juste après ce passage).
+          const codes = (Array.isArray(cls.pieces) ? cls.pieces : []).filter((p: string) => PIECES[p]);
+          await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: 'Dossier : la régie demande un complément, Steeve s’en occupe.' });
+          const { error: taskError } = await db.from('steeve_actions').insert({
+            kind: 'envoi_piece_regie', canal: 'email', source: 'auto', responsable: 'steeve', statut: 'a_faire',
+            client_id: o.client_id, offre_id: o.offre_id, mailbox: 'relocation@immo-rama.ch', destinataire: m.from_email,
+            objet: String(m.subject ?? '').slice(0, 250), controles: { pieces: codes.length ? codes : ['autre'], mail_id: m.id },
+            idempotency_key: `piece_regie:${m.id}:${o.offre_id}`, updated_at: now.toISOString(),
+          });
+          if (taskError && taskError.code !== '23505') throw new Error(`pièces : ${taskError.message}`);
+          notes.push(`${o.adresse} : pièces demandées (${codes.map((p: string) => PIECES[p]).join(', ') || 'à préciser'}) — Steeve les réunit`);
+          await alert(db, `steeve-pieces-${m.id}`, 'La régie demande des pièces', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} Steeve cherche les pièces dans le dossier et les envoie ; ce qui manque est demandé au client.`, link, 'normal');
+          break;
+        }
+        case 'annonce_retiree':
+          await db.rpc('steeve_apply_retrait', { p_offre_id: o.offre_id });
+          notes.push(`${o.adresse} : annonce retirée`);
+          await alert(db, `steeve-retrait-${m.id}`, 'Annonce retirée', `${o.adresse} : ${resume}`, link, 'normal');
+          break;
+        case 'candidature_acceptee':
+        case 'bail_envoye': {
+          // Retour au client dès la réponse de la régie ; l'équipe garde la suite (bail, garantie, signature).
+          const bail = cls.categorie === 'bail_envoye';
+          const { data: r } = await db.rpc('steeve_apply_acceptation', { p_offre_id: o.offre_id, p_client_id: o.client_id, p_bail: bail });
+          notes.push(`${o.adresse} : ${r?.ok ? (bail ? 'bail reçu' : 'candidature acceptée') : r?.motif}`);
+          if (r?.ok && !r.deja) {
+            await tellClient(db, o.client_id, `${bail ? 'bail' : 'acceptee'}:${r.candidature_id}`, bail
+              ? `Bonjour ${prenom}, la régie a envoyé le bail pour ${o.adresse}. Votre agent vous contacte pour fixer le rendez-vous de signature. L'équipe Immo-rama.ch`
+              : `Bonjour ${prenom}, excellente nouvelle : la régie a retenu votre candidature pour ${o.adresse} ! Votre agent vous contacte pour la suite (bail, garantie de loyer). L'équipe Immo-rama.ch`, now);
+          }
+          await alert(db, `steeve-${bail ? 'bail' : 'acceptee'}-${m.id}-${o.offre_id}`, bail ? 'Bail reçu de la régie' : 'Dossier retenu par la régie',
+            `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${bail ? 'bail reçu : à récupérer et faire signer.' : 'lancer la garantie FirstCaution et suivre le bail.'} ${r?.ok ? 'Le client est prévenu.' : `À vérifier : ${r?.motif}.`} (« ${base.objet} », ${m.mailbox})`, link, 'urgent');
+          break;
+        }
+        case 'inscription_visite': {
+          // Visite groupée sur inscription : la partie Chrome de la surveillance inscrit le client sur Flatfox
+          // (seulement s'il s'est dit intéressé) ; la confirmation reçue ensuite enregistre la visite.
+          const flatfox = /flatfox\.ch/i.test(String(o.lien_annonce ?? '')) || portalSender(m.from_email);
+          if (flatfox && INTEREST.includes(o.statut)) {
+            const { data: t } = await db.rpc('steeve_tache_creer', {
+              p_kind: 'inscription_visite', p_canal: 'flatfox', p_offre_id: o.offre_id, p_client_id: o.client_id, p_source: 'auto',
+              p_responsable: 'routine-chrome', p_note: `Inscription demandée par l'annonceur (« ${base.objet} »)`, p_by: null,
             });
-            if (taskError && taskError.code !== '23505') throw new Error(`pièces : ${taskError.message}`);
-            notes.push(`${o.adresse} : pièces demandées (${codes.map((p: string) => PIECES[p]).join(', ') || 'à préciser'}) — Steeve les réunit`);
-            await alert(db, `steeve-pieces-${m.id}`, 'La régie demande des pièces', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} Steeve cherche les pièces dans le dossier et les envoie ; ce qui manque est demandé au client.`, link, 'normal');
-            break;
-          }
-          case 'annonce_retiree':
-            await db.rpc('steeve_apply_retrait', { p_offre_id: o.offre_id });
-            notes.push(`${o.adresse} : annonce retirée`);
-            await alert(db, `steeve-retrait-${m.id}`, 'Annonce retirée', `${o.adresse} : ${resume}`, link, 'normal');
-            break;
-          case 'candidature_acceptee':
-          case 'bail_envoye': {
-            // Retour au client dès la réponse de la régie ; l'équipe garde la suite (bail, garantie, signature).
-            const bail = cls.categorie === 'bail_envoye';
-            const { data: r } = await db.rpc('steeve_apply_acceptation', { p_offre_id: o.offre_id, p_client_id: o.client_id, p_bail: bail });
-            notes.push(`${o.adresse} : ${r?.ok ? (bail ? 'bail reçu' : 'candidature acceptée') : r?.motif}`);
-            if (r?.ok && !r.deja) {
-              await tellClient(db, o.client_id, `${bail ? 'bail' : 'acceptee'}:${r.candidature_id}`, bail
-                ? `Bonjour ${prenom}, la régie a envoyé le bail pour ${o.adresse}. Votre agent vous contacte pour fixer le rendez-vous de signature. L'équipe Immo-rama.ch`
-                : `Bonjour ${prenom}, excellente nouvelle : la régie a retenu votre candidature pour ${o.adresse} ! Votre agent vous contacte pour la suite (bail, garantie de loyer). L'équipe Immo-rama.ch`, now);
+            if (t?.id && !t.existante) {
+              await db.from('steeve_actions').update({ corps: String(cls.date_visite || 'premier créneau disponible').slice(0, 300), updated_at: now.toISOString() }).eq('id', t.id);
             }
-            await alert(db, `steeve-${bail ? 'bail' : 'acceptee'}-${m.id}-${o.offre_id}`, bail ? 'Bail reçu de la régie' : 'Dossier retenu par la régie',
-              `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${bail ? 'bail reçu : à récupérer et faire signer.' : 'lancer la garantie FirstCaution et suivre le bail.'} ${r?.ok ? 'Le client est prévenu.' : `À vérifier : ${r?.motif}.`} (« ${base.objet} », ${m.mailbox})`, link, 'urgent');
-            break;
-          }
-          case 'inscription_visite': {
-            // Visite groupée sur inscription : la partie Chrome de la surveillance inscrit le client sur Flatfox
-            // (seulement s'il s'est dit intéressé) ; la confirmation reçue ensuite enregistre la visite.
-            const flatfox = /flatfox\.ch/i.test(String(o.lien_annonce ?? '')) || portalSender(m.from_email);
-            if (flatfox && INTEREST.includes(o.statut)) {
-              const { data: t } = await db.rpc('steeve_tache_creer', {
-                p_kind: 'inscription_visite', p_canal: 'flatfox', p_offre_id: o.offre_id, p_client_id: o.client_id, p_source: 'auto',
-                p_responsable: 'routine-chrome', p_note: `Inscription demandée par l'annonceur (« ${base.objet} »)`, p_by: null,
-              });
-              if (t?.id && !t.existante) {
-                await db.from('steeve_actions').update({ corps: String(cls.date_visite || 'premier créneau disponible').slice(0, 300), updated_at: now.toISOString() }).eq('id', t.id);
-              }
-              await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: 'Visite sur inscription auprès de la gérance : votre agent s’en occupe.' });
-              notes.push(`${o.adresse} : inscription à la visite confiée à la routine Chrome`);
-              await alert(db, `steeve-inscription-${m.id}-${o.offre_id}`, 'Visite sur inscription', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} Inscription confiée à la partie Chrome de la surveillance (Flatfox).`, link, 'normal');
-            } else {
-              await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: null });
-              notes.push(`${o.adresse} : visite sur inscription (${flatfox ? 'client pas encore intéressé' : 'hors Flatfox'})`);
-              await alert(db, `steeve-inscription-${m.id}-${o.offre_id}`, 'Visite sur inscription à traiter', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} ${flatfox ? 'Le client ne s’est pas encore dit intéressé : rien fait.' : 'Inscription hors Flatfox : à faire par l’équipe.'}`, link, flatfox ? 'normal' : 'urgent');
-            }
-            break;
-          }
-          case 'question_regie':
-          default: {
-            // Réservé à l'équipe : questions des régies (Steeve n'y répond pas).
+            await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: 'Visite sur inscription auprès de la gérance : votre agent s’en occupe.' });
+            notes.push(`${o.adresse} : inscription à la visite confiée à la routine Chrome`);
+            await alert(db, `steeve-inscription-${m.id}-${o.offre_id}`, 'Visite sur inscription', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} Inscription confiée à la partie Chrome de la surveillance (Flatfox).`, link, 'normal');
+          } else {
             await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: null });
-            const title = 'Réponse d’une régie à traiter';
-            notes.push(`${o.adresse} : ${title.toLowerCase()} (équipe)`);
-            await alert(db, `steeve-equipe-${m.id}-${o.offre_id}`, title, `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} (« ${base.objet} », ${m.mailbox}). Steeve n'a rien répondu ni changé.`, link, 'urgent');
+            notes.push(`${o.adresse} : visite sur inscription (${flatfox ? 'client pas encore intéressé' : 'hors Flatfox'})`);
+            await alert(db, `steeve-inscription-${m.id}-${o.offre_id}`, 'Visite sur inscription à traiter', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} ${flatfox ? 'Le client ne s’est pas encore dit intéressé : rien fait.' : 'Inscription hors Flatfox : à faire par l’équipe.'}`, link, flatfox ? 'normal' : 'urgent');
           }
+          break;
+        }
+        case 'question_regie':
+        default: {
+          // Réservé à l'équipe : questions des régies (Steeve n'y répond pas).
+          await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: null });
+          const title = 'Réponse d’une régie à traiter';
+          notes.push(`${o.adresse} : ${title.toLowerCase()} (équipe)`);
+          await alert(db, `steeve-equipe-${m.id}-${o.offre_id}`, title, `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} (« ${base.objet} », ${m.mailbox}). Steeve n'a rien répondu ni changé.`, link, 'urgent');
         }
       }
-      await db.from('steeve_actions').update({ statut: 'fait', note: notes.join(' ; ').slice(0, 1000), executed_at: now.toISOString(), updated_at: now.toISOString() }).eq('idempotency_key', key);
-    } catch (err) {
-      await db.from('steeve_actions').update({ statut: 'echec', motif: String((err as Error).message).slice(0, 400), updated_at: now.toISOString() }).eq('idempotency_key', key);
-      rep.erreurs.push(`lecture ${m.id} : ${(err as Error).message}`);
     }
+    await db.from('steeve_actions').update({ statut: 'fait', note: notes.join(' ; ').slice(0, 1000), executed_at: now.toISOString(), updated_at: now.toISOString() }).eq('idempotency_key', key);
+  } catch (err) {
+    await db.from('steeve_actions').update({ statut: 'echec', motif: String((err as Error).message).slice(0, 400), updated_at: now.toISOString() }).eq('idempotency_key', key);
+    rep.erreurs.push(`lecture ${m.id} : ${(err as Error).message}`);
   }
 }
 

@@ -5,6 +5,7 @@ import { costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, typ
 import { accountPhase, depositAmount, loadDossier, overview, type Db } from './context.ts';
 import { staticWelcome, STEEVE_SYSTEM_PROMPT, welcomeInstructions } from './prompt.ts';
 import { runTool, STEEVE_TOOLS, transferToAgent } from './tools.ts';
+import { abaninjaFromEnv, type AbaNinjaPort } from './abaninja.ts';
 
 export const MAX_MODEL_CALLS = 6;
 /** Au-delà, le passage s'arrête et transmet à l'agent (la fonction edge est coupée vers 150 s). */
@@ -58,7 +59,11 @@ function formatZurich(iso: string): string {
 }
 
 function describeMessage(m: any): string {
+  // Message écrit par l'administrateur et publié au nom de Steeve (conversation « Steeve » de l'admin) : il fait foi
+  // comme un message de l'équipe, même si le dossier ne le montre pas encore (ex. facture envoyée, numéro Twint).
   const who = m.sender_type === 'client' ? 'Client'
+    : m.sender_type === 'assistant' && m.payload?.steeve_admin ? 'Équipe Logisorama (message de l’administrateur, publié au nom de Steeve)'
+    : m.sender_type === 'assistant' && m.payload?.steeve_operateur ? 'Steeve (message automatique de suivi)'
     : m.sender_type === 'assistant' ? 'Steeve'
     : m.sender_type === 'admin' ? 'Équipe Logisorama'
     : 'Agent';
@@ -80,6 +85,26 @@ async function loadTranscript(db: Db, conversationId: string) {
     .order('created_at', { ascending: false })
     .limit(TRANSCRIPT_SIZE);
   return (data || []).reverse();
+}
+
+/**
+ * Règles absolues vérifiées sur chaque réponse avant publication : Steeve ne parle jamais des e-mails personnels du
+ * client (il n'y a pas accès) et ne décourage jamais un paiement. Rend la raison, ou null si la réponse est conforme.
+ */
+export function forbiddenReply(text: string): string | null {
+  const t = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'");
+  if (/(consulter|lire|voir|acces|acceder)[^.!?\n]{0,40}(tes|vos|ta|votre|ses) (e-?mails?|courriels?|boite ?(e-?)?mail|messagerie e-?mail)/.test(t)
+    || /(ton|votre) adresse (e-?mail )?(n'est|n est) pas (encore )?verifiee/.test(t)
+    || /(tes|vos) e-?mails? (personnels?|prives?)/.test(t)) {
+    return "elle parle de lire ou consulter les e-mails du client ; tu n'y as aucun accès et tu n'en parles jamais.";
+  }
+  if (/(attend|attendez|patiente|patientez)[^.!?\n]{0,25}(avant de|pour) (payer|regler|effectuer le paiement|faire le paiement|verser)/.test(t)
+    || /\bne (paie|paye|payez|regle|reglez|verse|versez) (rien|pas)\b/.test(t)
+    || /\b(ne pas|n'effectue pas|n'effectuez pas|evite de|evitez de) (payer|regler|effectuer (le|un) paiement|faire (le|un) paiement|verser)/.test(t)
+    || /(suspend|suspendez|reporte|reportez)[^.!?\n]{0,20}(paiement|versement)/.test(t)) {
+    return 'elle freine ou refuse un paiement ; tu ne dois jamais décourager le client de payer.';
+  }
+  return null;
 }
 
 /**
@@ -181,6 +206,8 @@ export async function runTurn(opts: {
   callModel: CallModel | null;
   now?: () => Date;
   deadlineMs?: number;
+  /** Comptabilité AbaNinja (par défaut : depuis les secrets du serveur). */
+  abaninja?: AbaNinjaPort | null;
 }): Promise<TurnResult> {
   const { db, runId, callModel } = opts;
   const now = opts.now ?? (() => new Date());
@@ -238,7 +265,7 @@ export async function runTurn(opts: {
 
   const dossier = await loadDossier(db, conv.client_id);
   if (!dossier) return finish({ status: 'failed', reason: 'dossier_introuvable' }, `client ${conv.client_id} introuvable`);
-  const toolCtx = { db, dossier, conversationId, now: now() };
+  const toolCtx = { db, dossier, conversationId, now: now(), abaninja: opts.abaninja === undefined ? abaninjaFromEnv() : opts.abaninja };
 
   // Repli commun : message honnête au client, demande transmise à l'agent.
   const fallback = async (status: 'capped' | 'failed', reason: string, message: string, error?: string) => {
@@ -304,6 +331,7 @@ export async function runTurn(opts: {
 
       let finalText = '';
       let transferred = false;
+      let corrected = false;
       for (let i = 0; i < MAX_MODEL_CALLS; i++) {
         if (Date.now() - startedAt > deadlineMs) throw new Error(`délai dépassé (${Math.round(deadlineMs / 1000)} s)`);
         const resp = await callModel({
@@ -329,6 +357,17 @@ export async function runTurn(opts: {
         }
         if (resp.stop_reason !== 'tool_use' || toolUses.length === 0) {
           finalText = textOf(resp.content);
+          // Garde-fou : jamais de mention des e-mails du client, jamais de frein à un paiement. Une seule réécriture.
+          const interdit = forbiddenReply(finalText);
+          if (interdit && !corrected && i + 1 < MAX_MODEL_CALLS) {
+            corrected = true;
+            totals.tools.push('garde_fou');
+            messages.push({ role: 'assistant', content: resp.content });
+            messages.push({ role: 'user', content: `Ta réponse n'a PAS été envoyée au client : ${interdit} Réécris-la entièrement en respectant les règles absolues, sans t'excuser ni mentionner cette correction.` });
+            finalText = '';
+            continue;
+          }
+          if (interdit) return fallback('failed', 'reponse_bloquee', TECHNICAL_MESSAGE, `garde-fou : ${interdit}`);
           break;
         }
 

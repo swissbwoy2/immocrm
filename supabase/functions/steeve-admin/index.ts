@@ -6,6 +6,7 @@ import { anthropicCaller } from "../_shared/steeve/anthropic.ts";
 import { handleAdminChat, historyFromConversation } from "../_shared/steeve/admin-chat.ts";
 import { runOperator } from "../_shared/steeve/operator.ts";
 import { realMailPort } from "../_shared/steeve/operator-mail.ts";
+import { abaninjaFromEnv } from "../_shared/steeve/abaninja.ts";
 
 const ALLOWED_ORIGIN = /^https:\/\/((www\.)?logisorama\.ch|id-preview--f4e29d86-2c22-4626-ac70-fd341e0305cf\.lovable\.app|f4e29d86-2c22-4626-ac70-fd341e0305cf\.lovableproject\.com)$/i;
 const MAX_BODY_BYTES = 60_000;
@@ -54,6 +55,20 @@ Deno.serve(async (req) => {
     const r = await runOperator({ db: serviceDb, mail: realMailPort(serviceDb), callModel, taskId });
     return { mode: r.mode, tache: r.tache ?? null, erreurs: r.erreurs };
   };
+  // Actions de l'application (résiliation, remboursement…) : appelées avec la session de l'admin, mêmes contrôles que l'interface.
+  const callFunction = async (fn: string, payload: Record<string, unknown>) => {
+    if (!/^[a-z0-9-]{3,60}$/.test(fn)) throw new Error("fonction invalide");
+    const r = await fetch(`${url}/functions/v1/${fn}`, {
+      method: "POST",
+      headers: { Authorization: authHeader, apikey: anonKey, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(30_000),
+    });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(String(out?.error ?? `HTTP ${r.status}`));
+    return out;
+  };
+  const abaninja = abaninjaFromEnv();
   // Conversation « Steeve » de la messagerie : l'historique vient de la base, la réponse y est publiée.
   const conversationId = typeof (body as any)?.conversation_id === "string" && /^[0-9a-f-]{36}$/i.test((body as any).conversation_id)
     ? (body as any).conversation_id as string : null;
@@ -64,7 +79,7 @@ Deno.serve(async (req) => {
       .eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(16);
     const history = historyFromConversation([...(rows ?? [])].reverse());
     if (!history) return reply(200, { reply: null });
-    const result = await handleAdminChat({ serviceDb, userDb, userId: user.id, body, callModel, runTask, history });
+    const result = await handleAdminChat({ serviceDb, userDb, userId: user.id, body, callModel, runTask, history, abaninja, callFunction });
     if (result.body.reply) {
       await serviceDb.from("messages").insert({
         conversation_id: conversationId, sender_id: "steeve", sender_type: "assistant", content: result.body.reply,
@@ -75,6 +90,6 @@ Deno.serve(async (req) => {
     return reply(result.status, result.body);
   }
 
-  const result = await handleAdminChat({ serviceDb, userDb, userId: user.id, body, callModel, runTask });
+  const result = await handleAdminChat({ serviceDb, userDb, userId: user.id, body, callModel, runTask, abaninja, callFunction });
   return reply(result.status, result.body);
 });

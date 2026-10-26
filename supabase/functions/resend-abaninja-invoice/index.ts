@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,16 @@ serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Réservé à l'équipe (pages admin « Factures AbaNinja » et « Demandes d'activation ») : sans ce contrôle,
+  // n'importe qui pouvait faire envoyer une facture à n'importe quelle adresse.
+  const caller = await verifyInternalCaller(req);
+  if (!caller.ok || !(caller.kind === 'service' || caller.kind === 'secret' || (caller.kind === 'staff' && (caller.roles ?? []).includes('admin')))) {
+    return new Response(JSON.stringify({ success: false, error: 'Accès refusé' }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 403,
+    });
   }
 
   try {
