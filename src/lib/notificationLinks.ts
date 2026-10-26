@@ -101,6 +101,14 @@ const NOTIFICATION_ROUTES: Record<string, Partial<Record<UserRole, string>>> = {
     admin: '/admin/clients',
     agent: '/agent/mes-clients',
   },
+  client_inactive: {
+    admin: '/admin/clients',
+    agent: '/agent/mes-clients',
+  },
+  client_mandate_cancelled: {
+    admin: '/admin/mandats',
+    agent: '/agent/mes-clients',
+  },
 
   // Mandat notifications
   nouvelle_demande_mandat: {
@@ -230,7 +238,7 @@ const NOTIFICATION_ROUTES: Record<string, Partial<Record<UserRole, string>>> = {
 
   // Badge notifications
   badge_earned: {
-    agent: '/agent/dashboard',
+    agent: '/agent',
   },
 
   // Apporteur notifications
@@ -360,7 +368,31 @@ function mergeMetadataIntoQuery(
 /**
  * Get the correct notification link based on type, role, and metadata
  */
+/** Chemins qui n'existent pas (anciens liens enregistrés) → page équivalente. */
+const CHEMINS_REMPLACES: Record<string, string> = {
+  '/admin/mes-clients': '/admin/clients',
+  '/agent/dashboard': '/agent',
+  '/admin/dashboard': '/admin',
+  '/client/dashboard': '/client',
+};
+
+function corrigerChemin(url: string): string {
+  const i = url.indexOf('?');
+  const path = i >= 0 ? url.slice(0, i) : url;
+  const fixed = CHEMINS_REMPLACES[path.replace(/\/+$/, '')];
+  return fixed ? fixed + (i >= 0 ? url.slice(i) : '') : url;
+}
+
 export function getCorrectNotificationLink(
+  notificationType: string,
+  currentLink: string | null,
+  role: UserRole,
+  metadata?: NotificationMetadata | null
+): string {
+  return corrigerChemin(lienNotification(notificationType, currentLink, role, metadata));
+}
+
+function lienNotification(
   notificationType: string,
   currentLink: string | null,
   role: UserRole,
