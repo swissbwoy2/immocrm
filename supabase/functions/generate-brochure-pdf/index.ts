@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -434,6 +435,9 @@ const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+  // Appels internes ou utilisateurs connectés uniquement : aucun appel anonyme.
+  const refus = await denyIfNotInternal(req, corsHeaders, "generate-brochure-pdf", { allowAnyAuthenticated: true });
+  if (refus) return refus;
 
   try {
     const { immeuble_id } = await req.json();
