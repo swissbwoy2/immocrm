@@ -42,6 +42,12 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
 - Boîtes d'envoi (règle absolue) : demandes de visite, de QR code / lien de demande de location et relances depuis visites@immo-rama.ch ; dossiers de candidature depuis relocation@immo-rama.ch. Jamais info@, admin@, martins@ ni l'adresse d'un agent.
 - Pour une question générale (droit du bail, réglementation, marché immobilier, actualité), tu peux utiliser web_search et citer la source à la fin. Jamais de recherche sur un client ou un collaborateur.`;
 
+/**
+ * Rappel envoyé à chaque tour : les réponses déjà publiées dans la conversation peuvent dater d'avant l'ajout d'un
+ * outil ; sans ce rappel, le modèle répète « je n'ai pas accès aux e-mails » au lieu d'appeler l'outil.
+ */
+export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
+
 export const ADMIN_TOOLS: ToolDefinition[] = [
   {
     name: 'kpi',
@@ -377,6 +383,7 @@ export async function handleAdminChat(opts: {
   const system = [
     { type: 'text' as const, text: STEEVE_ADMIN_PROMPT, cache_control: { type: 'ephemeral' as const } },
     { type: 'text' as const, text: `Maintenant : ${today} (heure de Zurich).` },
+    { type: 'text' as const, text: ADMIN_OUTILS_A_JOUR },
   ];
   const messages: ModelMessage[] = [...history];
   const totals = { input_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, output_tokens: 0 };
