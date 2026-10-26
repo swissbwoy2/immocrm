@@ -128,18 +128,12 @@ const Messagerie = () => {
 
   const loadUnreadCounts = async () => {
     try {
-      const { data } = await supabase
-        .from('messages')
-        .select('conversation_id')
-        .eq('masque_messagerie', false)
-        .eq('read', false)
-        .neq('sender_type', 'admin');
+      const { data } = await (supabase.rpc as any)('unread_message_counts', { p_exclude_sender: 'admin' });
 
       if (data) {
         const countsMap = new Map<string, number>();
-        data.forEach(msg => {
-          const count = countsMap.get(msg.conversation_id) || 0;
-          countsMap.set(msg.conversation_id, count + 1);
+        (data as { conversation_id: string; unread: number }[]).forEach((row) => {
+          countsMap.set(row.conversation_id, Number(row.unread) || 0);
         });
         setUnreadCountsMap(countsMap);
       }
@@ -408,12 +402,18 @@ const Messagerie = () => {
         
         setMessages(enrichedMessages);
         
-        // Marquer les messages comme lus
+        // Marquer les messages comme lus (en base puis dans les compteurs affichés)
         await supabase
           .from('messages')
           .update({ read: true })
           .eq('conversation_id', convId)
           .eq('read', false);
+        setUnreadCountsMap((prev) => {
+          if (!prev.has(convId)) return prev;
+          const next = new Map(prev);
+          next.delete(convId);
+          return next;
+        });
       }
     } catch (error) {
       console.error('Error loading messages:', error);
