@@ -138,19 +138,20 @@ export function AdminNewConversationDialog({ onConversationCreated }: AdminNewCo
         return;
       }
 
-      // Check if conversation already exists
+      // Une seule conversation par client : on ouvre la sienne si elle existe
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
         .eq('client_id', client.id)
-        .eq('agent_id', agentId)
         .eq('conversation_type', 'client-agent')
-        .single();
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
 
       if (existingConv) {
         toast({
           title: "Conversation existante",
-          description: "Une conversation existe déjà entre ce client et cet agent",
+          description: "Ouverture de la conversation du client",
           variant: "default",
         });
         setOpen(false);
