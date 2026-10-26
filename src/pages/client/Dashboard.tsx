@@ -576,7 +576,7 @@ function ClientDashboardLocation() {
             />
           </SectionErrorBoundary>
           {/* Ma journée : visites du jour */}
-          <MaJourneeBanner role="client" visites={visites} />
+          <MaJourneeBanner role="client" prenom={clientProfile?.prenom ?? null} visites={visites} />
 
           {/* 2. À faire : tout ce qui bloque ou demande une action */}
           <div className="space-y-3">

@@ -103,7 +103,11 @@ function JourneeCore({ role, prenom, items: all, className = '' }: { role: MaJou
     .sort((a, b) => a.date.getTime() - b.date.getTime()), [all, now]);
 
   const toDay = (i: Item): DayVisit => ({ id: i.id, heure: formatHeure(i.date), titre: i.titre, sous: i.sous, onClick: () => navigate(cfg.agenda) });
-  const next = items.find((i) => i.statut !== 'effectuee' && i.date.getTime() >= now.getTime() - 30 * 60000) ?? null;
+  const upcoming = items.find((i) => i.statut !== 'effectuee' && i.date.getTime() >= now.getTime() - 30 * 60000) ?? null;
+  // Client : même carte que l'admin, avec l'heure. Si toutes les visites du jour sont passées,
+  // la dernière reste affichée dans la carte (libellé « Passée ») au lieu d'un simple texte.
+  const last = role === 'client' && !upcoming && items.length > 0 ? items[items.length - 1] : null;
+  const next = upcoming ?? last;
 
   return (
     <DayBanner
@@ -111,7 +115,7 @@ function JourneeCore({ role, prenom, items: all, className = '' }: { role: MaJou
       greeting={prenom === undefined ? '' : prenom ? `Bonjour ${prenom}` : 'Bonjour'}
       dateLabel={formatJourLong(now)}
       total={items.length}
-      next={next ? toDay(next) : null}
+      next={next ? { ...toDay(next), label: next === last ? 'Passée' : undefined } : null}
       others={items.filter((i) => i !== next).map(toDay)}
       onAgenda={() => navigate(cfg.agenda)}
       agendaLabel={cfg.agendaLabel}

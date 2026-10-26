@@ -144,7 +144,7 @@ export function KpiTile({ icon: Icon, label, value, phrase, delta, deltaLabel = 
   );
 }
 
-export type DayVisit = { id: string; heure: string; titre: string; sous?: string; badge?: ReactNode; onClick: () => void };
+export type DayVisit = { id: string; heure: string; titre: string; sous?: string; badge?: ReactNode; onClick: () => void; /** Libellé au-dessus de l'heure (défaut « Proch. »). */ label?: string };
 
 /** Bandeau « Ma journée » : date, nombre de visites, prochaine visite, autres visites du jour. */
 export type DayUnit = { one: string; many: string; none: string; pastHint?: string };
@@ -181,7 +181,7 @@ export function DayBanner({ greeting, dateLabel, total, next, others, onAgenda, 
           className="imr-lg-glass mt-3 flex w-full min-w-0 items-center gap-3 rounded-2xl p-3 text-left active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span className="imr-lg-tint flex h-11 w-14 shrink-0 flex-col items-center justify-center rounded-xl">
-            <span className="text-[10px] font-medium uppercase leading-none opacity-80">Proch.</span>
+            <span className="text-[10px] font-medium uppercase leading-none opacity-80">{next.label ?? 'Proch.'}</span>
             <span className="text-sm font-semibold leading-tight tabular-nums">{next.heure}</span>
           </span>
           <span className="min-w-0 flex-1">
