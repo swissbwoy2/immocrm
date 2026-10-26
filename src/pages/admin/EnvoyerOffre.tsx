@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { OfferAttachmentUploader } from "@/components/OfferAttachmentUploader";
 import { buildOffreMessage, formatDateVisite } from "@/lib/offreMessage";
+import { formatZurichDateTime, zurichDateTimeToIso, zurichInputToIso } from "@/lib/dateZurich";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { isMandatCancelled, isMandatCancelledError, MANDAT_CANCELLED_OFFER_MESSAGE } from '@/lib/mandatCancellation';
@@ -365,9 +366,9 @@ const AdminEnvoyerOffre = () => {
       const validDates = formData.datesVisite.filter(d => d);
       if (validDates.length > 0 && offre) {
         for (const dateStr of validDates) {
-          // Convert local datetime to ISO string with timezone
-          const localDate = new Date(dateStr);
-          const isoWithTimezone = localDate.toISOString();
+          // Champ datetime-local saisi en heure suisse → instant ISO (UTC)
+          const isoWithTimezone = zurichInputToIso(dateStr);
+          if (!isoWithTimezone) continue;
           
           await supabase
             .from('visites')
@@ -701,14 +702,7 @@ const AdminEnvoyerOffre = () => {
                     <p className="font-semibold text-sm">Dates de visite proposées :</p>
                     <ul className="list-disc list-inside text-sm mt-1">
                       {formData.datesVisite.filter(d => d).map((date, i) => (
-                        <li key={i}>{new Date(date).toLocaleString('fr-FR', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric', 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}</li>
+                        <li key={i}>{formatZurichDateTime(date)}</li>
                       ))}
                     </ul>
                   </div>

@@ -472,7 +472,7 @@ export default function Visites() {
           <span>{formatShortDate(visite.date_visite)}</span>
           <Clock className="ml-auto h-4 w-4 text-muted-foreground sm:ml-3" />
           <span>
-            {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+            {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })}
           </span>
         </div>
 

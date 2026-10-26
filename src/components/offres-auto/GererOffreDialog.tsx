@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { DashBadge } from "@/components/client/dashboard/DashPrimitives";
+import { DETAIL_DIALOG, DetailHeader, DetailBody, DetailSection, DetailNotice, DetailActions } from "@/components/details/DetailPrimitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { toast } from "sonner";
-import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck, Trash2 } from "lucide-react";
+import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileCheck, Trash2, AlertTriangle, Users, Pencil, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
@@ -245,65 +245,69 @@ export function GererOffreDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Gérer l'offre</DialogTitle>
-        </DialogHeader>
+      <DialogContent className={DETAIL_DIALOG}>
+        <DetailHeader
+          titleAs={DialogTitle}
+          descriptionAs={DialogDescription}
+          eyebrow="Gérer l'offre"
+          title={clientName}
+          subtitle={
+            <span className="flex flex-col gap-0.5">
+              {offre._client?.email && <span className="break-all">{offre._client.email}</span>}
+              {phone && (
+                <a href={`tel:${phone}`} className="inline-flex items-center gap-1.5 font-medium text-primary">
+                  <Phone className="h-3.5 w-3.5" /> {phone}
+                </a>
+              )}
+            </span>
+          }
+          badge={existingVisit ? <DashBadge tone="success">Visite fixée</DashBadge> : undefined}
+        />
 
-        <div className="space-y-4">
-          {/* Infos client / annonce */}
-          <div className="rounded-lg border p-3 bg-muted/30 space-y-2 text-sm">
-            <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div>
-                <div className="font-medium">{clientName}</div>
-                <div className="text-xs text-muted-foreground">{offre._client?.email ?? ""}</div>
-                {phone && <div className="text-xs text-muted-foreground">📞 {phone}</div>}
-              </div>
-              <div className="flex gap-2 flex-wrap">
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/admin/clients/${offre.client_id}`}>
-                    <User className="h-3.5 w-3.5 mr-1" /> Fiche client
-                  </Link>
-                </Button>
-                <Button asChild size="sm" variant="outline">
-                  <Link to={`/admin/messagerie?client=${offre.client_id}`}>
-                    <MessageSquare className="h-3.5 w-3.5 mr-1" /> Conversation
-                  </Link>
-                </Button>
-                {offre.lien_annonce && (
-                  <Button asChild size="sm" variant="outline">
-                    <a href={offre.lien_annonce} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-3.5 w-3.5 mr-1" /> Annonce
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </div>
-            {offre.needs_agent_action && offre.missing_info && (
-              <div className="text-xs">
-                <Badge variant="outline" className="bg-amber-100 text-amber-800 mr-1">⚠️ À compléter</Badge>
-                <span className="text-amber-700">{offre.missing_info}</span>
-              </div>
-            )}
-            {(offre.concierge_nom || offre.concierge_tel) && (
-              <div className="text-xs text-muted-foreground">
-                Contact : {offre.concierge_nom ?? ""} {offre.concierge_tel ? `— ${offre.concierge_tel}` : ""}
-              </div>
+        <DetailBody>
+          {/* Raccourcis : fiche client, conversation, annonce */}
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+            <Button asChild variant="outline" className="min-h-11">
+              <Link to={`/admin/clients/${offre.client_id}`}>
+                <User className="mr-1.5 h-4 w-4" /> Fiche client
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="min-h-11">
+              <Link to={`/admin/messagerie?client=${offre.client_id}`}>
+                <MessageSquare className="mr-1.5 h-4 w-4" /> Conversation
+              </Link>
+            </Button>
+            {offre.lien_annonce && (
+              <Button asChild variant="outline" className="col-span-2 min-h-11 sm:col-span-1">
+                <a href={offre.lien_annonce} target="_blank" rel="noreferrer">
+                  <ExternalLink className="mr-1.5 h-4 w-4" /> Annonce
+                </a>
+              </Button>
             )}
           </div>
 
+          {offre.needs_agent_action && offre.missing_info && (
+            <DetailNotice icon={AlertTriangle} tone="warning">
+              <span className="font-semibold">À compléter : </span>{offre.missing_info}
+            </DetailNotice>
+          )}
+          {(offre.concierge_nom || offre.concierge_tel) && (
+            <DetailNotice icon={Phone}>
+              Contact : {offre.concierge_nom ?? ""} {offre.concierge_tel ? `— ${offre.concierge_tel}` : ""}
+            </DetailNotice>
+          )}
+
           {autres.length > 0 && (
-            <div className="rounded-lg border p-3 space-y-2 text-sm">
-              <div className="font-medium">Même annonce chez {autres.length} autre{autres.length > 1 ? "s" : ""} client{autres.length > 1 ? "s" : ""}</div>
-              <div className="text-xs text-muted-foreground">
+            <DetailSection title={`Même annonce chez ${autres.length} autre${autres.length > 1 ? "s" : ""} client${autres.length > 1 ? "s" : ""}`} icon={Users}>
+              <p className="text-sm text-muted-foreground">
                 Adresse, prix, pièces et visite enregistrés ici s'appliquent à tous (sauf aux clients qui ont refusé ou déjà postulé). Le statut se règle client par client.
-              </div>
-              <div className="space-y-1">
+              </p>
+              <div className="mt-2 divide-y divide-border/50">
                 {autres.map(o => (
-                  <div key={o.id} className="flex items-center justify-between gap-2">
-                    <span className="truncate">{`${o._client?.prenom ?? ""} ${o._client?.nom ?? ""}`.trim() || o._client?.email || "Client"}</span>
+                  <div key={o.id} className="flex min-h-[52px] items-center justify-between gap-2 py-2">
+                    <span className="min-w-0 truncate text-[15px]">{`${o._client?.prenom ?? ""} ${o._client?.nom ?? ""}`.trim() || o._client?.email || "Client"}</span>
                     <Select value={statutsGroupe[o.id] ?? o.statut ?? "envoyee"} onValueChange={v => setStatutsGroupe(prev => ({ ...prev, [o.id]: v }))}>
-                      <SelectTrigger className="h-8 w-[170px]"><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-10 w-[160px] shrink-0 sm:w-[180px]"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="envoyee">Envoyée</SelectItem>
                         <SelectItem value="interesse">Intéressé</SelectItem>
@@ -318,95 +322,97 @@ export function GererOffreDialog({
                   </div>
                 ))}
               </div>
-            </div>
+            </DetailSection>
           )}
 
           {/* Édition offre */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2">
-              <Label>Adresse</Label>
-              <Input value={adresse} onChange={e => setAdresse(e.target.value)} />
+          <DetailSection title="Offre" icon={Pencil}>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label>Adresse</Label>
+                <Input value={adresse} onChange={e => setAdresse(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Prix (CHF, CC)</Label>
+                <Input type="number" value={prix} onChange={e => setPrix(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Pièces</Label>
+                <Input type="number" step="0.5" value={pieces} onChange={e => setPieces(e.target.value)} />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Statut</Label>
+                <Select value={statut} onValueChange={setStatut}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="envoyee">Envoyée</SelectItem>
+                    <SelectItem value="interesse">Intéressé</SelectItem>
+                    <SelectItem value="souhaite_postuler">Souhaite postuler</SelectItem>
+                    <SelectItem value="refusee">Refusée</SelectItem>
+                    <SelectItem value="candidature">Candidature</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label>Note de suivi (visible par le client)</Label>
+                <Textarea rows={3} value={commentaires} onChange={e => setCommentaires(e.target.value)} placeholder="Ex. Visite du 20.10.2026 passée : annonceur recontacté pour une nouvelle date, en attente." />
+              </div>
             </div>
-            <div>
-              <Label>Prix (CHF, CC)</Label>
-              <Input type="number" value={prix} onChange={e => setPrix(e.target.value)} />
-            </div>
-            <div>
-              <Label>Pièces</Label>
-              <Input type="number" step="0.5" value={pieces} onChange={e => setPieces(e.target.value)} />
-            </div>
-            <div className="col-span-2">
-              <Label>Statut</Label>
-              <Select value={statut} onValueChange={setStatut}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="envoyee">Envoyée</SelectItem>
-                  <SelectItem value="interesse">Intéressé</SelectItem>
-                  <SelectItem value="souhaite_postuler">Souhaite postuler</SelectItem>
-                  <SelectItem value="refusee">Refusée</SelectItem>
-                  <SelectItem value="candidature">Candidature</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="col-span-2">
-              <Label>Note de suivi (visible par le client)</Label>
-              <Textarea rows={3} value={commentaires} onChange={e => setCommentaires(e.target.value)} placeholder="Ex. Visite du 20.10.2026 passée : annonceur recontacté pour une nouvelle date, en attente." />
-            </div>
-          </div>
-
-          <Separator />
+          </DetailSection>
 
           {/* Fixer la visite */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <CalendarPlus className="h-4 w-4" />
-              <div className="font-medium">Fixer la visite</div>
-              {existingVisit && <Badge variant="secondary">Visite existante — sera mise à jour</Badge>}
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div>
+          <DetailSection
+            title="Fixer la visite"
+            icon={CalendarPlus}
+            action={existingVisit ? <DashBadge tone="muted">Sera mise à jour</DashBadge> : undefined}
+          >
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <div className="col-span-2 space-y-1.5 sm:col-span-1">
                 <Label>Date</Label>
                 <Input type="date" value={visitDate} onChange={e => setVisitDate(e.target.value)} />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Heure</Label>
                 <Input type="time" value={visitTime} onChange={e => setVisitTime(e.target.value)} />
               </div>
-              <div>
+              <div className="space-y-1.5">
                 <Label>Fin (optionnel)</Label>
                 <Input type="time" value={visitEndTime} onChange={e => setVisitEndTime(e.target.value)} />
               </div>
             </div>
-          </div>
-        </div>
+          </DetailSection>
 
-        <DialogFooter>
-          <ConfirmDialog
-            trigger={
-              <Button variant="destructive" disabled={deleting}>
-                {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
-                Supprimer l'offre
-              </Button>
-            }
-            title="Supprimer l'offre"
-            description="Supprimer définitivement cette offre ? Cette action est irréversible et retire aussi la candidature/visite liée."
-            confirmText="Supprimer"
-            cancelText="Annuler"
-            variant="destructive"
-            onConfirm={deleteOffre}
-          />
+          <div className="flex justify-center pt-1">
+            <ConfirmDialog
+              trigger={
+                <Button variant="ghost" className="min-h-11 text-destructive hover:text-destructive" disabled={deleting}>
+                  {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                  Supprimer l'offre
+                </Button>
+              }
+              title="Supprimer l'offre"
+              description="Supprimer définitivement cette offre ? Cette action est irréversible et retire aussi la candidature/visite liée."
+              confirmText="Supprimer"
+              cancelText="Annuler"
+              variant="destructive"
+              onConfirm={deleteOffre}
+            />
+          </div>
+        </DetailBody>
+
+        <DetailActions>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving} className={showMarkDeposee ? "max-sm:hidden" : undefined}>Annuler</Button>
           {showMarkDeposee && (
-            <Button variant="secondary" onClick={markCandidatureDeposee} disabled={saving}>
+            <Button variant="outline" onClick={markCandidatureDeposee} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileCheck className="h-4 w-4 mr-2" />}
               Marquer candidature déposée
             </Button>
           )}
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Annuler</Button>
           <Button onClick={save} disabled={saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Enregistrer
           </Button>
-        </DialogFooter>
+        </DetailActions>
       </DialogContent>
     </Dialog>
   );

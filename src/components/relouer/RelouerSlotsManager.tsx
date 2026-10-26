@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { zurichDateTimeToIso } from '@/lib/dateZurich';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,8 +58,9 @@ export function RelouerSlotsManager({ requestId, mode }: Props) {
     }
     setBusy(true);
     const { data: { user } } = await supabase.auth.getUser();
-    const slot_start = new Date(`${date}T${start}:00`).toISOString();
-    const slot_end = new Date(`${date}T${end}:00`).toISOString();
+    // Saisie en heure suisse → instants ISO (UTC)
+    const slot_start = zurichDateTimeToIso(date, start) as string;
+    const slot_end = zurichDateTimeToIso(date, end) as string;
     const { error } = await supabase.from('relouer_visit_slots').insert({
       request_id: requestId,
       slot_start, slot_end,
@@ -130,9 +132,9 @@ export function RelouerSlotsManager({ requestId, mode }: Props) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">
-                    {new Date(s.slot_start).toLocaleString('fr-CH', { dateStyle: 'medium', timeStyle: 'short' })}
+                    {new Date(s.slot_start).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich', dateStyle: 'medium', timeStyle: 'short' })}
                     {' → '}
-                    {new Date(s.slot_end).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(s.slot_end).toLocaleTimeString('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {s.slot_type || 'physique'} · {s.capacity || 1} place(s)

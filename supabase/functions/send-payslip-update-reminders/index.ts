@@ -1,6 +1,7 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("send-payslip-update-reminders");
-import { renderCorporateEmail, emailButton } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailNotice, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatDateFR } from '../_shared/date-fr.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
@@ -8,11 +9,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const APP_BASE_URL = 'https://immocrm.lovable.app';
+const APP_BASE_URL = 'https://logisorama.ch';
 
 function formatDateFr(d: Date | string): string {
-  const date = typeof d === 'string' ? new Date(d) : d;
-  return date.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: 'long', year: 'numeric' });
+  // date-fr.ts : Europe/Zurich, date seule sans décalage de jour
+  return formatDateFR(d);
 }
 
 function getMonthName(monthIndex: number): string {
@@ -301,5 +302,14 @@ function buildContent(level: Level, fullName: string, targetMonth: string, lates
 }
 
 function buildEmailHtml(opts: { title: string; bodyHtml: string; ctaUrl: string; ctaLabel: string; color: string }) {
-  return renderCorporateEmail({ title: opts.title, category: 'VOTRE DOSSIER', bodyHtml: opts.bodyHtml + emailButton(opts.ctaLabel, opts.ctaUrl) });
+  // Salutation : jamais « Bonjour Le client, » (repli interne quand le nom manque)
+  const body = opts.bodyHtml
+    .replace(/<p>Bonjour (.*?),<\/p>/, (_m, name: string) =>
+      emailParagraph(name.trim() && name.trim() !== 'Le client' ? `Bonjour ${escapeEmailHtml(name.trim())},` : 'Bonjour,'))
+    // Encadrés colorés -> bloc d'alerte commun (warning / danger)
+    .replace(/<div style="background:(#[0-9a-f]{6});border-left:[^"]*">([\s\S]*?)<\/div>/gi, (_m, bg: string, inner: string) =>
+      emailNotice(inner.trim(), /fee2e2/i.test(bg) ? 'danger' : 'warning'))
+    // Liens secondaires : couleur de marque
+    .replace(/<a href="https:\/\/www\.eschkg\.ch" style="[^"]*">/g, '<a href="https://www.eschkg.ch" style="color:#205a43;font-weight:600;text-decoration:underline;">');
+  return renderCorporateEmail({ title: opts.title, category: 'VOTRE DOSSIER', bodyHtml: body + emailButton(opts.ctaLabel, opts.ctaUrl) });
 }

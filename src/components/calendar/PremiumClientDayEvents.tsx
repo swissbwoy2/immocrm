@@ -1,5 +1,6 @@
 import { differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
 import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
+import { formatZurichTime } from '@/lib/dateZurich';
 import { 
   Calendar, Clock, Home, Maximize, User, Phone, KeyRound, 
   Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus, Eye,
@@ -71,7 +72,7 @@ export function PremiumClientDayEvents({
 
   const getTimeRemaining = (eventDate: Date) => {
     const now = new Date();
-    const swissDate = toSwissTime(eventDate);
+    const swissDate = eventDate;
     
     if (swissDate < now) {
       return { text: 'Passé', color: 'bg-muted text-muted-foreground' };
@@ -189,7 +190,7 @@ export function PremiumClientDayEvents({
               {allItems.map((item, idx) => {
                 const isEvent = item.type === 'event';
                 const data = item.data;
-                const eventDate = toSwissTime(isEvent ? data.event_date : data.date_visite);
+                const eventDate = new Date(isEvent ? data.event_date : data.date_visite);
                 const timeRemaining = getTimeRemaining(eventDate);
 
                 if (!isEvent) {
@@ -494,10 +495,10 @@ export function PremiumClientDayEvents({
                       </Badge>
                     </div>
                     <h4 className="text-base font-semibold mt-2">{data.title}</h4>
-                    {!data.all_day && (
+                    {!data.all_day && formatZurichTime(data.event_date) && (
                       <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        {formatSwissTime(eventDate)}
+                        {formatZurichTime(data.event_date)}
                       </p>
                     )}
                     {data.description && (

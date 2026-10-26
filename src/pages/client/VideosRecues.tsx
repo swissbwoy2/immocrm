@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Check, X, Loader2, MapPin, Calendar, ExternalLink, Home, Ruler, Building2, CalendarDays, Camera, ClipboardList, CheckCircle2, Eye, Download, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatSwissDateTime } from '@/lib/dateUtils';
+import { formatZurichDateTime } from '@/lib/dateZurich';
+import { CompteRenduView } from '@/components/visites/VisitDetailParts';
 import { submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
 import { PremiumOffreDetailsDialog } from '@/components/premium/PremiumOffreDetailsDialog';
 import { DASH_CARD, DashPage, DashPageHeader, DashEmptyState, DashBadge } from '@/components/client/dashboard/DashPrimitives';
@@ -86,87 +87,8 @@ function InfoPill({ icon: Icon, label }: { icon: any; label: string }) {
   );
 }
 
-const L_APPRECIATION: Record<string, string> = { tres_positif: 'Très positif', positif: 'Positif', mitige: 'Mitigé', negatif: 'Négatif' };
-const L_ETAT: Record<string, string> = { excellent: 'Excellent', bon: 'Bon', moyen: 'Moyen', a_renover: 'À rénover' };
-const L_INTERET: Record<string, string> = { tres_interesse: 'Très intéressé', interesse: 'Intéressé', hesitant: 'Hésitant', non_interesse: 'Non intéressé' };
-const L_CUISINE: Record<string, string> = { agencee: 'Agencée', equipee: 'Équipée', simple: 'Simple', a_renover: 'À rénover' };
-
 function CompteRenduBlock({ cr }: { cr: CompteRenduRow }) {
-  const medias: any[] = Array.isArray(cr.medias) ? cr.medias : [];
-  const rows: { label: string; value: string }[] = [];
-  if (cr.appreciation_globale) rows.push({ label: 'Appréciation', value: L_APPRECIATION[cr.appreciation_globale] || cr.appreciation_globale });
-  if (cr.etat_general) rows.push({ label: 'État du bien', value: L_ETAT[cr.etat_general] || cr.etat_general });
-  if (cr.interet_client) rows.push({ label: 'Intérêt', value: L_INTERET[cr.interet_client] || cr.interet_client });
-  if (cr.cuisine_type) rows.push({ label: 'Cuisine', value: L_CUISINE[cr.cuisine_type] || cr.cuisine_type });
-  if (cr.ascenseur !== null && cr.ascenseur !== undefined) rows.push({ label: 'Ascenseur', value: cr.ascenseur ? 'Oui' : 'Non' });
-  if (cr.balcon !== null && cr.balcon !== undefined) rows.push({ label: 'Balcon / terrasse', value: cr.balcon ? 'Oui' : 'Non' });
-  if (cr.parking !== null && cr.parking !== undefined) rows.push({ label: 'Parking', value: cr.parking ? 'Oui' : 'Non' });
-
-  return (
-    <div className="space-y-3 rounded-xl border border-border/70 bg-muted/40 p-4">
-      <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <ClipboardList className="h-4 w-4" />
-        </span>
-        <h4 className="text-sm font-semibold text-foreground">Compte-rendu de la visite</h4>
-      </div>
-
-      {rows.length > 0 && (
-        <dl className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-          {rows.map((r) => (
-            <div key={r.label}>
-              <dt className="inline text-muted-foreground">{r.label} : </dt>
-              <dd className="inline font-medium">{r.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {cr.cuisine_description && (
-        <div className="text-sm"><span className="font-medium">Cuisine : </span><span className="whitespace-pre-wrap">{cr.cuisine_description}</span></div>
-      )}
-      {cr.points_forts?.length ? (
-        <div className="text-sm"><span className="font-medium">Points forts : </span>{cr.points_forts.join(', ')}</div>
-      ) : null}
-      {cr.points_faibles?.length ? (
-        <div className="text-sm"><span className="font-medium">Points faibles : </span>{cr.points_faibles.join(', ')}</div>
-      ) : null}
-      {cr.commentaire_libre && (
-        <div className="text-sm whitespace-pre-wrap">{cr.commentaire_libre}</div>
-      )}
-      {cr.prochaines_etapes && (
-        <div className="text-sm"><span className="font-medium">Prochaines étapes : </span><span className="whitespace-pre-wrap">{cr.prochaines_etapes}</span></div>
-      )}
-
-      {medias.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-medium">Photos, vidéos & fichiers</div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {medias.map((m: any, i: number) => (
-              <a
-                key={i}
-                href={m.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block overflow-hidden rounded-xl border border-border/70 bg-background transition-colors hover:border-foreground/40"
-              >
-                {m.type === 'image' ? (
-                  <img src={m.url} alt={m.name} className="w-full h-24 object-cover" />
-                ) : m.type === 'video' ? (
-                  <video src={m.url} controls playsInline className="w-full h-24 object-cover bg-black" />
-                ) : (
-                  <div className="flex h-24 items-center justify-center gap-1.5 text-xs text-muted-foreground">
-                    <FileText className="h-4 w-4" /> Fichier
-                  </div>
-                )}
-                <div className="truncate px-2 py-1 text-[11px] text-muted-foreground">{m.name}</div>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <CompteRenduView cr={cr} title="Compte rendu de la visite" />;
 }
 
 
@@ -249,9 +171,17 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
 
         {/* Offer details */}
         <div className="space-y-4 p-4 md:p-5">
-          <div className="flex items-start gap-2">
-            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-            <h3 className="text-base font-semibold leading-snug text-foreground">{address}</h3>
+          <div className="space-y-1">
+            <div className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-base font-semibold leading-snug text-foreground">{address}</h3>
+            </div>
+            {visite?.date_visite && (
+              <p className="flex items-center gap-2 pl-6 text-sm text-muted-foreground">
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                Visite du {formatZurichDateTime(visite.date_visite)}
+              </p>
+            )}
           </div>
 
           {offre?.prix != null && (
@@ -291,8 +221,8 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
             )}
           </div>
 
-          <div className="text-xs text-muted-foreground">
-            Reçu le {formatSwissDateTime(message?.created_at || item.cr?.envoye_au_client_at || item.visite?.date_visite || new Date().toISOString())}
+          <div className="text-sm text-muted-foreground">
+            Reçu le {formatZurichDateTime(message?.created_at || item.cr?.envoye_au_client_at || item.visite?.date_visite || new Date().toISOString())}
           </div>
 
           {/* Compte-rendu structuré (visite_comptes_rendus) */}
@@ -300,37 +230,7 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
 
           {/* Ancien compte-rendu libre (legacy visites.compte_rendu) */}
           {!item.cr && visite?.compte_rendu && typeof visite.compte_rendu === 'object' && (
-            <div className="space-y-2 rounded-xl border border-border/70 bg-muted/40 p-4">
-              <div className="mb-1 flex items-center gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <ClipboardList className="h-4 w-4" />
-                </span>
-                <h4 className="text-sm font-semibold text-foreground">Compte-rendu de la visite</h4>
-              </div>
-              <dl className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-                {visite.compte_rendu.ascenseur && (
-                  <div><dt className="inline text-muted-foreground">Ascenseur : </dt><dd className="inline font-medium">{visite.compte_rendu.ascenseur === 'oui' ? 'Oui' : 'Non'}</dd></div>
-                )}
-                {visite.compte_rendu.type_sol && (
-                  <div><dt className="inline text-muted-foreground">Sol : </dt><dd className="inline font-medium">{visite.compte_rendu.type_sol}</dd></div>
-                )}
-                {visite.compte_rendu.etat_general && (
-                  <div className="sm:col-span-2"><dt className="inline text-muted-foreground">État : </dt><dd className="inline font-medium">{visite.compte_rendu.etat_general}</dd></div>
-                )}
-                {visite.compte_rendu.contact_regie && (
-                  <div className="sm:col-span-2"><dt className="inline text-muted-foreground">Régie : </dt><dd className="inline font-medium">{visite.compte_rendu.contact_regie}</dd></div>
-                )}
-              </dl>
-              {visite.compte_rendu.avantages && (
-                <div className="text-sm"><span className="font-medium">Avantages : </span><span className="whitespace-pre-wrap">{visite.compte_rendu.avantages}</span></div>
-              )}
-              {visite.compte_rendu.inconvenients && (
-                <div className="text-sm"><span className="font-medium">Inconvénients : </span><span className="whitespace-pre-wrap">{visite.compte_rendu.inconvenients}</span></div>
-              )}
-              {visite.compte_rendu.autres_infos && (
-                <div className="text-sm"><span className="font-medium">Autres infos : </span><span className="whitespace-pre-wrap">{visite.compte_rendu.autres_infos}</span></div>
-              )}
-            </div>
+            <CompteRenduView legacy={visite.compte_rendu} title="Compte rendu de la visite" showRegie />
           )}
 
         </div>
@@ -357,7 +257,7 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
             <div className="grid grid-cols-1 gap-2">
               <Button
                 size="lg"
-                className="h-auto min-h-11 whitespace-normal rounded-full bg-emerald-600 py-2.5 text-white hover:bg-emerald-700"
+                className="h-auto min-h-12 whitespace-normal py-2.5"
                 disabled={!!saving}
                 onClick={() => handleDecision('souhaite_postuler')}
               >
@@ -371,7 +271,7 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
               <Button
                 size="lg"
                 variant="outline"
-                className="h-auto min-h-11 whitespace-normal rounded-full py-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="h-auto min-h-12 whitespace-normal py-2.5 text-destructive hover:text-destructive"
                 disabled={!!saving}
                 onClick={() => handleDecision('refuse')}
               >

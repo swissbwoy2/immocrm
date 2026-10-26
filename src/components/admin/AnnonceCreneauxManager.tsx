@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { zurichInputToIso } from '@/lib/dateZurich';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -65,7 +66,10 @@ export function AnnonceCreneauxManager({ annonce, open, onOpenChange }: {
   const add = async () => {
     if (!annonce || !value) return toast.error('Choisissez une date et une heure');
     if (activeCount >= 3) return toast.error('Maximum 3 créneaux actifs');
-    const d = new Date(value);
+    // Saisie en heure suisse → instant ISO (UTC)
+    const iso = zurichInputToIso(value);
+    if (!iso) return toast.error('Choisissez une date et une heure');
+    const d = new Date(iso);
     if (d <= new Date()) return toast.error('Le créneau doit être dans le futur');
     const c = parseCapacite(cap);
     if (c === 'invalid') return toast.error('Nombre max de visiteurs invalide');

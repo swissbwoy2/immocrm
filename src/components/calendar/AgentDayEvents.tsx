@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { formatZurichTime, formatZurichTimeRange } from '@/lib/dateZurich';
 import { 
   Calendar, Clock, User, MapPin, CheckCircle, XCircle, Trash2,
   MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Minus, Eye, Pencil
@@ -99,8 +100,7 @@ export function AgentDayEvents({
     
     visites.forEach(visite => {
       // Key = address + exact time (rounded to minute)
-      const visiteDate = new Date(visite.date_visite);
-      const timeKey = `${visiteDate.getHours()}:${visiteDate.getMinutes()}`;
+      const timeKey = formatZurichTime(visite.date_visite);
       const key = `${visite.adresse}-${timeKey}`;
       
       if (!groups.has(key)) {
@@ -219,7 +219,7 @@ export function AgentDayEvents({
                           <h4 className="text-base font-semibold text-foreground mt-2 break-words">{firstVisite.adresse}</h4>
                           <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {format(eventDate, 'HH:mm')}
+                            {formatZurichTimeRange(firstVisite.date_visite, firstVisite.date_visite_fin)}
                           </p>
                           {firstVisite.offres && (
                             <p className="text-xs text-muted-foreground mt-1">
@@ -441,10 +441,10 @@ export function AgentDayEvents({
                           )}
                         </div>
                         <h4 className="text-base font-semibold mt-2 break-words">{data.title}</h4>
-                        {!data.all_day && (
+                        {!data.all_day && formatZurichTime(data.event_date) && (
                           <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {format(eventDate, 'HH:mm')}
+                            {formatZurichTime(data.event_date)}
                           </p>
                         )}
                         {data.description && (

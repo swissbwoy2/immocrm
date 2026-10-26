@@ -1,17 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type React from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { VoiceDictationButton } from "@/components/VoiceDictationButton";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { DashBadge } from "@/components/client/dashboard/DashPrimitives";
+import { VisitMediaGrid, formatVisitDate } from "@/components/visites/VisitDetailParts";
+import { VisitVideoShareButton } from "@/components/calendar/VisitVideoShareButton";
 import { getOrCreateClientConversation } from "@/lib/clientConversation";
-import { ArrowLeft, Loader2, Send, Save, X, Plus, Image as ImageIcon, Video, FileText } from "lucide-react";
+import { ArrowLeft, Loader2, Send, Save, X, Plus, Image as ImageIcon, Video, Camera, ClipboardList, CheckCircle2 } from "lucide-react";
 
 type Media = { url: string; type: string; name: string; size: number };
 
@@ -40,13 +43,13 @@ export function labelCuisine(v: string) {
 /** Yes / No / unset tri-state selector */
 function BoolSelect({ label, value, onChange }: { label: string; value: boolean | null; onChange: (v: boolean | null) => void }) {
   return (
-    <div>
-      <Label>{label}</Label>
+    <div className="min-w-0 space-y-1.5">
+      <Label className="text-sm">{label}</Label>
       <Select
         value={value === null || value === undefined ? "" : value ? "oui" : "non"}
         onValueChange={(v) => onChange(v === "oui" ? true : v === "non" ? false : null)}
       >
-        <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
+        <SelectTrigger className="h-11"><SelectValue placeholder="Choisir" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="oui">Oui</SelectItem>
           <SelectItem value="non">Non</SelectItem>
@@ -65,11 +68,14 @@ export default function CompteRenduVisiteForm({
   visiteId,
   embedded = false,
   onSent,
+  videoShare,
 }: {
   role?: CompteRenduRole;
   visiteId?: string;
   embedded?: boolean;
   onSent?: () => void;
+  /** Active l'option « Partager une vidéo aux clients maintenant » dans l'unique entrée médias. */
+  videoShare?: { visite: any; visitesGroup?: any[]; onUploaded?: () => void };
 } = {}) {
   const params = useParams<{ id: string }>();
   const id = visiteId ?? params.id;
@@ -98,6 +104,10 @@ export default function CompteRenduVisiteForm({
   const [prochainesEtapes, setProchainesEtapes] = useState("");
   const [medias, setMedias] = useState<Media[]>([]);
   const [envoyeAt, setEnvoyeAt] = useState<string | null>(null);
+  const [mediaChooserOpen, setMediaChooserOpen] = useState(false);
+  const [videoShareOpen, setVideoShareOpen] = useState(false);
+  const captureInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -358,212 +368,293 @@ export default function CompteRenduVisiteForm({
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center h-96"><Loader2 className="animate-spin" /></div>;
+    return <div className={`flex items-center justify-center ${embedded ? "h-32" : "h-96"}`}><Loader2 className="animate-spin" /></div>;
   }
   if (!visite) {
     return <div className="p-6">Visite introuvable.</div>;
   }
 
+  const { day, time } = formatVisitDate(visite.date_visite);
+
+  const actions = (
+    <div className="grid grid-cols-2 gap-2 [&>*]:min-h-12">
+      <Button type="button" variant="outline" onClick={handleSave} disabled={saving}>
+        {saving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4" />}
+        Brouillon
+      </Button>
+      <Button type="button" onClick={handleSend} disabled={sending}>
+        {sending ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4" />}
+        {envoyeAt ? "Renvoyer au client" : "Envoyer au client"}
+      </Button>
+    </div>
+  );
+
   return (
-    <div className={embedded ? "space-y-4" : "container max-w-3xl mx-auto p-4 space-y-4 pb-24"}>
-      <div className="flex items-center justify-between">
-        {embedded ? <span /> : (
-          <Button variant="ghost" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4 mr-2" /> Retour
-          </Button>
+    <div className={embedded ? "space-y-3" : "mx-auto w-full max-w-3xl space-y-4 px-4 pb-4 pt-4 md:px-6"}>
+      {!embedded && (
+        <Button variant="ghost" onClick={() => navigate(-1)} className="-ml-2">
+          <ArrowLeft className="h-4 w-4" /> Retour
+        </Button>
+      )}
+
+      {/* En-tête */}
+      <div className={`${embedded ? "" : "imr-lg-card rounded-[22px] p-4 md:p-5"} space-y-1`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <ClipboardList className="h-[18px] w-[18px]" />
+          </span>
+          <h2 className={`${embedded ? "text-[15px]" : "text-xl"} min-w-0 flex-1 font-semibold tracking-tight text-foreground`}>Compte rendu de visite</h2>
+          {envoyeAt ? <DashBadge tone="success"><CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Envoyé au client</DashBadge> : crId ? <DashBadge tone="muted">Brouillon</DashBadge> : null}
+        </div>
+        {!embedded && (
+          <>
+            <p className="pt-1 text-[15px] font-medium text-foreground">{visite.adresse}</p>
+            <p className="text-sm text-muted-foreground">{day}{time ? ` · ${time}` : ""}</p>
+          </>
         )}
-        {envoyeAt && <Badge variant="secondary">Envoyé au client</Badge>}
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Compte-rendu de visite</CardTitle>
-          <p className="text-sm text-muted-foreground">{visite.adresse}</p>
-          <p className="text-xs text-muted-foreground">
-            {new Date(visite.date_visite).toLocaleString("fr-CH", { timeZone: "Europe/Zurich" })}
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div>
-              <Label>Appréciation globale</Label>
-              <Select value={appreciation} onValueChange={setAppreciation}>
-                <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tres_positif">Très positif</SelectItem>
-                  <SelectItem value="positif">Positif</SelectItem>
-                  <SelectItem value="mitige">Mitigé</SelectItem>
-                  <SelectItem value="negatif">Négatif</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>État du bien</Label>
-              <Select value={etat} onValueChange={setEtat}>
-                <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="excellent">Excellent</SelectItem>
-                  <SelectItem value="bon">Bon</SelectItem>
-                  <SelectItem value="moyen">Moyen</SelectItem>
-                  <SelectItem value="a_renover">À rénover</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Intérêt du client</Label>
-              <Select value={interet} onValueChange={setInteret}>
-                <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="tres_interesse">Très intéressé</SelectItem>
-                  <SelectItem value="interesse">Intéressé</SelectItem>
-                  <SelectItem value="hesitant">Hésitant</SelectItem>
-                  <SelectItem value="non_interesse">Non intéressé</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      {/* 1. Impression générale */}
+      <FormStep n={1} title="Impression générale">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Field label="Appréciation globale">
+            <Select value={appreciation} onValueChange={setAppreciation}>
+              <SelectTrigger className="h-11"><SelectValue placeholder="Choisir" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tres_positif">Très positif</SelectItem>
+                <SelectItem value="positif">Positif</SelectItem>
+                <SelectItem value="mitige">Mitigé</SelectItem>
+                <SelectItem value="negatif">Négatif</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="État du bien">
+            <Select value={etat} onValueChange={setEtat}>
+              <SelectTrigger className="h-11"><SelectValue placeholder="Choisir" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="excellent">Excellent</SelectItem>
+                <SelectItem value="bon">Bon</SelectItem>
+                <SelectItem value="moyen">Moyen</SelectItem>
+                <SelectItem value="a_renover">À rénover</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+          <Field label="Intérêt du client">
+            <Select value={interet} onValueChange={setInteret}>
+              <SelectTrigger className="h-11"><SelectValue placeholder="Choisir" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="tres_interesse">Très intéressé</SelectItem>
+                <SelectItem value="interesse">Intéressé</SelectItem>
+                <SelectItem value="hesitant">Hésitant</SelectItem>
+                <SelectItem value="non_interesse">Non intéressé</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+      </FormStep>
 
-          {/* Caractéristiques du bien */}
-          <div className="space-y-3 rounded-lg border p-3 bg-muted/20">
-            <Label className="text-sm font-semibold">Caractéristiques du bien</Label>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-              <div>
-                <Label>Cuisine</Label>
-                <Select value={cuisineType} onValueChange={setCuisineType}>
-                  <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
-                  <SelectContent>
-                    {CUISINE_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <BoolSelect label="Ascenseur" value={ascenseur} onChange={setAscenseur} />
-              <BoolSelect label="Balcon / terrasse" value={balcon} onChange={setBalcon} />
-              <BoolSelect label="Parking" value={parking} onChange={setParking} />
-            </div>
-            <div>
-              <Label>Description de la cuisine</Label>
-              <Textarea
-                rows={2}
-                value={cuisineDescription}
-                onChange={(e) => setCuisineDescription(e.target.value)}
-                placeholder="Ex. cuisine agencée récente, vitrocéramique, lave-vaisselle…"
-              />
-            </div>
-          </div>
-
-          <ChipList
-            label="Points forts"
-            items={pointsForts}
-            input={pointFortInput}
-            setInput={setPointFortInput}
-            onAdd={(v: string) => { setPointsForts([...pointsForts, v]); setPointFortInput(""); }}
-            onRemove={(i: number) => setPointsForts(pointsForts.filter((_, idx) => idx !== i))}
+      {/* 2. Caractéristiques */}
+      <FormStep n={2} title="Caractéristiques du bien">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Field label="Cuisine">
+            <Select value={cuisineType} onValueChange={setCuisineType}>
+              <SelectTrigger className="h-11"><SelectValue placeholder="Choisir" /></SelectTrigger>
+              <SelectContent>
+                {CUISINE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+          <BoolSelect label="Ascenseur" value={ascenseur} onChange={setAscenseur} />
+          <BoolSelect label="Balcon / terrasse" value={balcon} onChange={setBalcon} />
+          <BoolSelect label="Parking" value={parking} onChange={setParking} />
+        </div>
+        <Field label="Description de la cuisine">
+          <Textarea
+            rows={2}
+            value={cuisineDescription}
+            onChange={(e) => setCuisineDescription(e.target.value)}
+            placeholder="Ex. cuisine agencée récente, vitrocéramique, lave-vaisselle…"
+            className="text-[15px]"
           />
-          <ChipList
-            label="Points faibles"
-            items={pointsFaibles}
-            input={pointFaibleInput}
-            setInput={setPointFaibleInput}
-            onAdd={(v: string) => { setPointsFaibles([...pointsFaibles, v]); setPointFaibleInput(""); }}
-            onRemove={(i: number) => setPointsFaibles(pointsFaibles.filter((_, idx) => idx !== i))}
+        </Field>
+      </FormStep>
+
+      {/* 3. Points forts / faibles */}
+      <FormStep n={3} title="Points forts et points faibles">
+        <ChipList
+          label="Points forts"
+          tone="success"
+          items={pointsForts}
+          input={pointFortInput}
+          setInput={setPointFortInput}
+          onAdd={(v: string) => { setPointsForts([...pointsForts, v]); setPointFortInput(""); }}
+          onRemove={(i: number) => setPointsForts(pointsForts.filter((_, idx) => idx !== i))}
+        />
+        <ChipList
+          label="Points faibles"
+          tone="warning"
+          items={pointsFaibles}
+          input={pointFaibleInput}
+          setInput={setPointFaibleInput}
+          onAdd={(v: string) => { setPointsFaibles([...pointsFaibles, v]); setPointFaibleInput(""); }}
+          onRemove={(i: number) => setPointsFaibles(pointsFaibles.filter((_, idx) => idx !== i))}
+        />
+      </FormStep>
+
+      {/* 4. Commentaire et suite */}
+      <FormStep n={4} title="Commentaire et suite">
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-sm">Commentaire libre</Label>
+            <VoiceDictationButton onTranscript={(t) => setCommentaire(t)} />
+          </div>
+          <Textarea rows={4} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} placeholder="Vos observations détaillées sur le bien… (ou dictez avec le micro)" className="text-[15px]" />
+        </div>
+        <Field label="Prochaines étapes">
+          <Textarea rows={2} value={prochainesEtapes} onChange={(e) => setProchainesEtapes(e.target.value)} placeholder="Ce qu'on fait après cette visite…" className="text-[15px]" />
+        </Field>
+      </FormStep>
+
+      {/* 5. Médias — une seule entrée « Ajouter photo / vidéo » */}
+      <FormStep n={5} title="Photos, vidéos et fichiers">
+        <input
+          ref={captureInputRef}
+          type="file"
+          accept="image/*,video/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ""; }}
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*,video/*,application/pdf,.doc,.docx,.txt"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const files = Array.from(e.target.files || []);
+            files.forEach(handleUpload);
+            e.target.value = "";
+          }}
+        />
+        {medias.length > 0 ? (
+          <VisitMediaGrid
+            medias={medias}
+            renderAction={(_m, i) => (
+              <button
+                type="button"
+                aria-label="Retirer ce média"
+                onClick={() => setMedias(medias.filter((_, idx) => idx !== i))}
+                className="absolute right-1.5 top-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           />
-
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <Label>Commentaire libre</Label>
-              <VoiceDictationButton onTranscript={(t) => setCommentaire(t)} />
-            </div>
-            <Textarea rows={4} value={commentaire} onChange={(e) => setCommentaire(e.target.value)} placeholder="Vos observations détaillées sur le bien... (ou utilisez le bouton 🎙️ Dicter)" />
-          </div>
-          <div>
-            <Label>Prochaines étapes</Label>
-            <Textarea rows={2} value={prochainesEtapes} onChange={(e) => setProchainesEtapes(e.target.value)} placeholder="Ce qu'on fait après cette visite..." />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Photos, vidéos & fichiers</Label>
-            <div className="flex flex-wrap gap-2">
-              {medias.map((m, i) => (
-                <div key={i} className="relative w-24 h-24 border rounded overflow-hidden bg-muted">
-                  {m.type === "image" ? (
-                    <img src={m.url} alt={m.name} className="w-full h-full object-cover" />
-                  ) : m.type === "video" ? (
-                    <div className="flex flex-col items-center justify-center h-full text-xs"><Video className="h-6 w-6" /><span className="truncate w-full px-1">{m.name}</span></div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-xs"><FileText className="h-6 w-6" /><span className="truncate w-full px-1">{m.name}</span></div>
-                  )}
-                  <button onClick={() => setMedias(medias.filter((_, idx) => idx !== i))} className="absolute top-0 right-0 bg-background/80 rounded-bl p-0.5">
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              <label className="w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer text-xs text-muted-foreground hover:border-primary">
-                {uploading ? <Loader2 className="animate-spin h-5 w-5" /> : <><Plus className="h-5 w-5 mb-1" /><span>Caméra</span></>}
-                <input
-                  type="file"
-                  accept="image/*,video/*"
-                  capture="environment"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = ""; }}
-                />
-              </label>
-              <label className="w-24 h-24 border-2 border-dashed rounded flex flex-col items-center justify-center cursor-pointer text-xs text-muted-foreground hover:border-primary">
-                <ImageIcon className="h-5 w-5 mb-1" /><span>Fichiers</span>
-                <input
-                  type="file"
-                  accept="image/*,video/*,application/pdf,.doc,.docx,.txt"
-                  multiple
-                  className="hidden"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    files.forEach(handleUpload);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex gap-2 sticky bottom-4">
-        <Button variant="outline" onClick={handleSave} disabled={saving} className="flex-1">
-          {saving ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-          Enregistrer brouillon
+        ) : (
+          <p className="text-sm text-muted-foreground">Aucun média pour l'instant. Les photos et vidéos ajoutées ici sont envoyées avec le compte rendu.</p>
+        )}
+        <Button type="button" variant="outline" className="h-12 w-full" disabled={uploading} onClick={() => setMediaChooserOpen(true)}>
+          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+          {uploading ? "Envoi en cours…" : "Ajouter photo / vidéo"}
         </Button>
-        <Button onClick={handleSend} disabled={sending} className="flex-1">
-          {sending ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-          {envoyeAt ? "Renvoyer au client" : "Envoyer au client"}
-        </Button>
-      </div>
+      </FormStep>
+
+      <Dialog open={mediaChooserOpen} onOpenChange={setMediaChooserOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Ajouter photo / vidéo</DialogTitle>
+            <DialogDescription>Ajoutez des médias au compte rendu{videoShare ? " ou partagez une vidéo tout de suite aux clients" : ""}.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Button type="button" className="h-12 justify-start" onClick={() => { setMediaChooserOpen(false); captureInputRef.current?.click(); }}>
+              <Camera className="h-4 w-4" /> Prendre une photo ou une vidéo
+            </Button>
+            <Button type="button" variant="outline" className="h-12 justify-start" onClick={() => { setMediaChooserOpen(false); galleryInputRef.current?.click(); }}>
+              <ImageIcon className="h-4 w-4" /> Choisir dans la galerie ou les fichiers
+            </Button>
+            {videoShare && (
+              <Button type="button" variant="outline" className="h-auto min-h-12 justify-start whitespace-normal py-2.5 text-left" onClick={() => { setMediaChooserOpen(false); setVideoShareOpen(true); }}>
+                <Video className="h-4 w-4" />
+                <span className="flex flex-col">
+                  <span>Partager une vidéo aux clients maintenant</span>
+                  <span className="text-xs font-normal text-muted-foreground">Envoi immédiat : messagerie, notification et WhatsApp</span>
+                </span>
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {videoShare && (
+        <VisitVideoShareButton
+          visite={videoShare.visite}
+          visitesGroup={videoShare.visitesGroup}
+          onUploaded={videoShare.onUploaded}
+          hideTrigger
+          chooserOpen={videoShareOpen}
+          onChooserOpenChange={setVideoShareOpen}
+        />
+      )}
+
+      {embedded ? (
+        <div className="pt-1">{actions}</div>
+      ) : (
+        <div className="sticky bottom-0 z-20 -mx-4 border-t border-border/60 bg-background/90 px-4 pt-3 backdrop-blur-xl md:-mx-6 md:px-6 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+          {actions}
+        </div>
+      )}
     </div>
   );
 }
 
-function ChipList({ label, items, input, setInput, onAdd, onRemove }: any) {
+/** Étape numérotée du formulaire, dans une carte verre. */
+function FormStep({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
-    <div>
-      <Label>{label}</Label>
+    <section className="imr-lg-card space-y-3 rounded-[22px] p-4" aria-label={title}>
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">{n}</span>
+        <h3 className="text-[15px] font-semibold text-foreground">{title}</h3>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 space-y-1.5">
+      <Label className="text-sm">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function ChipList({ label, items, input, setInput, onAdd, onRemove, tone = "neutral" }: any) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-sm">{label}</Label>
       <div className="flex gap-2">
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && input.trim()) { e.preventDefault(); onAdd(input.trim()); } }}
           placeholder="Ajouter et appuyer sur Entrée"
+          className="h-11 text-[15px]"
         />
-        <Button type="button" variant="outline" onClick={() => input.trim() && onAdd(input.trim())}>
+        <Button type="button" variant="outline" size="icon" aria-label={`Ajouter (${label})`} onClick={() => input.trim() && onAdd(input.trim())}>
           <Plus className="h-4 w-4" />
         </Button>
       </div>
       {items.length > 0 && (
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="flex flex-wrap gap-1.5 pt-1">
           {items.map((it: string, i: number) => (
-            <Badge key={i} variant="secondary" className="gap-1">
+            <span key={i} className={`inline-flex min-h-9 items-center gap-1 rounded-full pl-3 pr-1 text-sm font-medium ${tone === "success" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : tone === "warning" ? "bg-amber-500/10 text-amber-700 dark:text-amber-400" : "bg-muted text-foreground"}`}>
               {it}
-              <button onClick={() => onRemove(i)}><X className="h-3 w-3" /></button>
-            </Badge>
+              <button type="button" aria-label={`Retirer ${it}`} onClick={() => onRemove(i)} className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-foreground/10"><X className="h-3.5 w-3.5" /></button>
+            </span>
           ))}
         </div>
       )}

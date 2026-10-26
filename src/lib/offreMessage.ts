@@ -1,3 +1,4 @@
+import { toDate as toZurichDate } from '@/lib/dateZurich';
 /**
  * Gabarit UNIQUE du message d'offre envoyé au client.
  * Utilisé par les envois manuels (agent/admin) ET par les routines automatiques.
@@ -34,8 +35,9 @@ export function cleanValue(v: unknown): string | null {
 }
 
 export function formatDateVisite(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
+  // Valeur datetime-local (sans fuseau) = heure suisse, quel que soit le fuseau de l'appareil.
+  const d = toZurichDate(dateStr);
+  if (!d) return dateStr;
   return d.toLocaleString('fr-CH', {
     weekday: 'long',
     year: 'numeric',

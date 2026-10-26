@@ -1,6 +1,7 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("notify-admin-new-phone-appointment");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailDetails, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatDateFR, formatTimeFR } from '../_shared/date-fr.ts';
 // Notify admin (email + WhatsApp + in-app) when a new bureau RDV is booked.
 // Public endpoint (no auth) — called right after the public form insert.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
@@ -39,31 +40,30 @@ Deno.serve(async (req) => {
       });
     }
 
-    const start = new Date(appt.slot_start);
-    const dateStr = start.toLocaleDateString('fr-CH', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Zurich',
-    });
-    const timeStr = start.toLocaleTimeString('fr-CH', {
-      hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich',
-    });
+    const dateStr = formatDateFR(appt.slot_start, { weekday: true });
+    const timeStr = formatTimeFR(appt.slot_start);
 
     const result: any = { email: false, wa: false, notif: 0 };
 
     // 1) EMAIL admin (Resend)
     if (RESEND_API_KEY) {
       try {
-        const html = renderCorporateEmail({ title: 'Nouveau rendez-vous au bureau', category: "SUIVI ÉQUIPE", bodyHtml: `<div style="background: #f3f4ed; border-radius: 12px; padding: 24px;">
-              <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
-                <tr><td style="padding: 6px 0; color: #666; width: 110px;">Date</td><td style="padding: 6px 0; font-weight: 600;">${dateStr}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Heure</td><td style="padding: 6px 0; font-weight: 600;">${timeStr}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Nom</td><td style="padding: 6px 0; font-weight: 600;">${appt.prospect_name || '—'}</td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Téléphone</td><td style="padding: 6px 0; font-weight: 600;"><a href="tel:${appt.prospect_phone}">${appt.prospect_phone || '—'}</a></td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Email</td><td style="padding: 6px 0; font-weight: 600;"><a href="mailto:${appt.prospect_email}">${appt.prospect_email || '—'}</a></td></tr>
-                <tr><td style="padding: 6px 0; color: #666;">Source</td><td style="padding: 6px 0;">${appt.source_form || '—'}</td></tr>
-                ${appt.notes_admin ? `<tr><td style="padding: 6px 0; color: #666; vertical-align: top;">Note</td><td style="padding: 6px 0; font-style: italic;">${appt.notes_admin}</td></tr>` : ''}
-              </table>
-            </div>
-            ` });
+        const tel = String(appt.prospect_phone || '');
+        const mail = String(appt.prospect_email || '');
+        const html = renderCorporateEmail({
+          title: 'Nouveau rendez-vous au bureau',
+          preview: `${appt.prospect_name || 'Un prospect'} — ${dateStr} à ${timeStr}`,
+          category: "SUIVI ÉQUIPE",
+          bodyHtml: emailDetails([
+            ['Date', dateStr],
+            ['Heure', timeStr],
+            ['Nom', appt.prospect_name || '—'],
+            { label: 'Téléphone', html: tel ? `<a href="tel:${escapeEmailHtml(tel.replace(/[^\d+]/g, ''))}" style="color:inherit;">${escapeEmailHtml(tel)}</a>` : '—' },
+            { label: 'Email', html: mail ? `<a href="mailto:${escapeEmailHtml(mail)}" style="color:inherit;">${escapeEmailHtml(mail)}</a>` : '—' },
+            ['Source', appt.source_form || '—'],
+            ...(appt.notes_admin ? [['Note', appt.notes_admin] as [string, unknown]] : []),
+          ]),
+        });
 
         const res = await sendTrackedEmail('https://api.resend.com/emails', {
           method: 'POST',

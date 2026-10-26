@@ -1,6 +1,6 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("candidat-suivi-emails");
-import { renderCorporateEmail, emailButton } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailNotice, emailParagraph } from '../_shared/email-shell.ts';
 // Campagne de suivi candidat (planifiée 2×/jour).
 // - Rappels de visite (rappel_48h, rappel_24h) : canal transactionnel (sendTemplateEmail).
 // - Activation (activation_bienvenue, activation_post_visite) : canal marketing via Resend,
@@ -26,12 +26,12 @@ const esc = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;')
 
 function activationHtml(prenom: string, unsubscribeUrl: string): string {
-  return renderCorporateEmail({title:'Pas le temps de visiter ?', preview:"Pas le temps de chercher ? On s’occupe de tout", category:'VOTRE RECHERCHE', bodyHtml:`
-    ${prenom ? `<p>Bonjour ${esc(prenom)},</p>` : ''}
-    <p>La recherche d'un appartement peut vite devenir stressante. Laissez nos agents immobiliers faire le travail pour vous ! Recherche, visites, postulations : on s'occupe de tout, de A à Z, pour vous trouver votre futur logement. Activez votre recherche en un clic.</p>
-    <div style="padding:22px;background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;color:#193d2c;">Recherche · Visites · Postulations</div>
-    ${emailButton('Activer ma recherche','https://logisorama.ch/nouveau-mandat')}
-  `, footerHtml:`Agence de relocation en Suisse romande<br><a href="${esc(unsubscribeUrl)}" style="color:#205a43;">Se désinscrire de ces e-mails</a>`});
+  return renderCorporateEmail({title:'Pas le temps de visiter ?', preview:"Pas le temps de chercher ? On s’occupe de tout", category:'VOTRE RECHERCHE', bodyHtml:
+    emailParagraph(prenom ? `Bonjour ${esc(prenom)},` : 'Bonjour,') +
+    emailParagraph("La recherche d'un appartement peut vite devenir stressante. Laissez nos agents immobiliers faire le travail pour vous ! Recherche, visites, postulations : on s'occupe de tout, de A à Z, pour vous trouver votre futur logement. Activez votre recherche en un clic.") +
+    emailNotice('<strong>Recherche · Visites · Postulations</strong>', 'info') +
+    emailButton('Activer ma recherche','https://logisorama.ch/nouveau-mandat'),
+    footerHtml:`Agence de relocation en Suisse romande<br><a href="${esc(unsubscribeUrl)}" style="color:#66736a;text-decoration:underline;">Se désinscrire de ces e-mails</a>`});
 }
 
 async function sendActivation(email: string, prenom: string, subject: string): Promise<boolean> {

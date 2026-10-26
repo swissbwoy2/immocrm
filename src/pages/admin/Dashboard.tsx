@@ -23,7 +23,7 @@ import {
   ActionGrid, DayBanner, FoldSection, KpiTile, StaffSectionTitle, StaffShell, type ActionTileItem, type DayVisit,
 } from '@/components/dashboard-staff/StaffDashParts';
 import {
-  formatHeure, formatJourLong, inLastDays, prochaineVisite, s, totalEnAttente, variation, visitesDuJour,
+  formatHeure, formatJourLong, grouperVisitesParBien, inLastDays, libelleClients, prochaineVisite, s, totalEnAttente, variation, visitesDuJour,
 } from '@/components/dashboard-staff/staffDashboardModel';
 import { AdminStatsSection } from '@/components/stats/AdminStatsSection';
 import { RecommendationStats } from '@/components/stats/RecommendationStats';
@@ -31,6 +31,7 @@ import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSect
 import { ChargesAgenceDialog } from '@/components/admin/dashboard/ChargesAgenceDialog';
 import { RemboursementsDialog, type RemboursementRow, type PendingRefund } from '@/components/admin/dashboard/RemboursementsDialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DETAIL_DIALOG, DetailHeader, DetailBody, KeyFacts, DetailSection, DetailNotice, DetailActions, dateCH } from '@/components/details/DetailPrimitives';
 import {
   ACTIVATION_PAYEE, PERIODS, isTestAccount, chargeCategoryLabel, computeFinance, formatCHF, inPeriod, monthRange, periodRange,
   type ChargeRow, type DetailKey, type FinanceInput, type PeriodKey,
@@ -158,7 +159,7 @@ export default function AdminDashboard() {
         fetchAll((a, b) => supabase.from('client_agents').select('client_id, agent_id, commission_split, is_primary').order('client_id').range(a, b)),
         fetchAll((a, b) => supabase.from('transactions').select('*').order('id').range(a, b)),
         countRows(supabase.from('offres').select('id', { count: 'exact', head: true }).eq('statut', 'souhaite_postuler')),
-        fetchAll((a, b) => supabase.from('visites').select('id, statut, date_visite, client_decision, agent_id, adresse, client_id').order('id').range(a, b)),
+        fetchAll((a, b) => supabase.from('visites').select('id, statut, date_visite, client_decision, agent_id, adresse, client_id, offre_id').order('id').range(a, b)),
         fetchAll((a, b) => supabase.from('candidatures').select('id, statut, date_depot, created_at, signature_effectuee, signature_effectuee_at, cles_remises, cles_remises_at').order('id').range(a, b)),
         fetchAll((a, b) => supabase.from('mandates').select('id, acompte_montant, created_at').order('id').range(a, b)),
         fetchAll((a, b) => supabase.from('demandes_mandat').select('id, statut, date_paiement, montant_acompte, created_at, type_recherche, prenom, nom, email').order('id').range(a, b)),
@@ -416,17 +417,21 @@ export default function AdminDashboard() {
   const duJour = visitesDuJour(visites as any[], now);
   const prochaine = prochaineVisite(duJour, now);
   const STATUT_VISITE: Record<string, string> = { planifiee: 'Planifiée', confirmee: 'Confirmée', proposee: 'Proposée', deleguee: 'Déléguée', effectuee: 'Effectuée' };
-  const toDayVisit = (v: Row): DayVisit => ({
-    id: v.id,
-    heure: formatHeure(v.date_visite),
-    titre: v.adresse || `Visite · ${agentNom(v.agent_id)}`,
-    sous: [
-      (() => { const c = clients.find((x) => x.id === v.client_id); return c ? `${c.prenom ?? ''} ${c.nom ?? ''}`.trim() : null; })(),
-      agentNom(v.agent_id),
-      STATUT_VISITE[v.statut] || v.statut,
-    ].filter(Boolean).join(' · '),
-    onClick: () => navigate('/admin/calendrier'),
-  });
+  // Une offre = une visite : les clients d'un même bien au même créneau sont regroupés.
+  const groupesJour = grouperVisitesParBien(duJour as any[]) as Row[][];
+  const groupeProchain = prochaine ? groupesJour.find((g) => g.includes(prochaine)) ?? null : null;
+  const toDayVisit = (g: Row[]): DayVisit => {
+    const v = g[0];
+    const nomsClients = g.map((x) => { const c = clients.find((y) => y.id === x.client_id); return c ? `${c.prenom ?? ''} ${c.nom ?? ''}`.trim() : null; });
+    const agentsGroupe = Array.from(new Set(g.map((x) => agentNom(x.agent_id))));
+    return {
+      id: v.id,
+      heure: formatHeure(v.date_visite),
+      titre: v.adresse || `Visite · ${agentsGroupe[0]}`,
+      sous: [libelleClients(nomsClients), agentsGroupe.join(', '), STATUT_VISITE[v.statut] || v.statut].filter(Boolean).join(' · '),
+      onClick: () => navigate('/admin/calendrier'),
+    };
+  };
 
   /* ---------- Cette semaine ---------- */
   const semaine = {
@@ -522,7 +527,7 @@ export default function AdminDashboard() {
 
   const teamRetards = team.map((a) => ({
     ...a,
-    visitesJour: duJour.filter((v) => v.agent_id === a.id).length,
+    visitesJour: grouperVisitesParBien(duJour.filter((v) => v.agent_id === a.id) as any[]).length,
     sansRetour: todo.visitesSansRetour.filter((v) => v.agent_id === a.id).length,
   }));
 
@@ -555,9 +560,9 @@ export default function AdminDashboard() {
                 <DayBanner
                   greeting={prenom ? `Bonjour ${prenom}` : 'Bonjour'}
                   dateLabel={formatJourLong(now)}
-                  total={duJour.length}
-                  next={prochaine ? toDayVisit(prochaine) : null}
-                  others={duJour.filter((v) => v !== prochaine).map(toDayVisit)}
+                  total={groupesJour.length}
+                  next={groupeProchain ? toDayVisit(groupeProchain) : null}
+                  others={groupesJour.filter((g) => g !== groupeProchain).map(toDayVisit)}
                   onAgenda={() => navigate('/admin/calendrier')}
                   agendaLabel="Calendrier"
                 />
@@ -829,44 +834,52 @@ export default function AdminDashboard() {
       </StaffShell>
 
       <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
-        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+        <DialogContent className={DETAIL_DIALOG}>
           {detail && (() => {
             const rows = fin.details[detail.key];
             const total = rows.reduce((s, r) => s + r.montant, 0);
             return (
               <>
-                <DialogHeader>
-                  <DialogTitle>{detail.title}</DialogTitle>
-                  <DialogDescription>
-                    {p.label} · {rows.length} ligne{rows.length > 1 ? 's' : ''} · {formatCHF(total)}
-                  </DialogDescription>
-                </DialogHeader>
-                {rows.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Rien sur cette période.</p>
-                ) : (
-                  <div className="divide-y divide-border/60">
-                    {rows.map((r, i) => (
-                      <div key={i} className="flex items-center gap-3 py-2.5">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground">{r.label}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {r.date ? new Date(r.date).toLocaleDateString('fr-CH') : '—'}{r.note ? ` · ${r.note}` : ''}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatCHF(r.montant)}</span>
+                <DetailHeader
+                  titleAs={DialogTitle}
+                  descriptionAs={DialogDescription}
+                  title={detail.title}
+                  subtitle={`${p.label} · ${rows.length} ligne${rows.length > 1 ? 's' : ''}`}
+                />
+                <DetailBody>
+                  <KeyFacts items={[{ label: 'Total', value: formatCHF(total), emphasis: true, wide: true }]} />
+                  <DetailSection>
+                    {rows.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-muted-foreground">Rien sur cette période.</p>
+                    ) : (
+                      <div className="divide-y divide-border/50">
+                        {rows.map((r, i) => (
+                          <div key={i} className="flex min-h-[52px] items-center gap-3 py-2.5">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[15px] font-medium text-foreground">{r.label}</p>
+                              <p className="truncate text-[13px] text-muted-foreground">
+                                {r.date ? dateCH(r.date) : '—'}{r.note ? ` · ${r.note}` : ''}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">{formatCHF(r.montant)}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-                {detail.key === 'commissionsAgents' && fin.commissionsSurFiches > 0 && (
-                  <p className="text-xs text-muted-foreground">Moins {formatCHF(fin.commissionsSurFiches)} déjà payés sur les fiches de salaire de la période.</p>
-                )}
-                <p className="text-xs text-muted-foreground">Les comptes de test (adresse @immo-rama.ch ou nom « Test ») ne sont jamais comptés.</p>
-                {detail.path && (
-                  <Button variant="outline" className="h-11 w-full rounded-full" onClick={() => { const to = detail.path as string; setDetail(null); navigate(to); }}>
-                    Ouvrir la page
-                  </Button>
-                )}
+                    )}
+                  </DetailSection>
+                  {detail.key === 'commissionsAgents' && fin.commissionsSurFiches > 0 && (
+                    <DetailNotice>Moins {formatCHF(fin.commissionsSurFiches)} déjà payés sur les fiches de salaire de la période.</DetailNotice>
+                  )}
+                  <p className="text-[13px] text-muted-foreground">Les comptes de test (adresse @immo-rama.ch ou nom « Test ») ne sont jamais comptés.</p>
+                </DetailBody>
+                <DetailActions>
+                  <Button variant="outline" onClick={() => setDetail(null)}>Fermer</Button>
+                  {detail.path && (
+                    <Button onClick={() => { const to = detail.path as string; setDetail(null); navigate(to); }}>
+                      Ouvrir la page
+                    </Button>
+                  )}
+                </DetailActions>
               </>
             );
           })()}

@@ -1,4 +1,5 @@
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailDetails, emailList, emailParagraph, emailSubheading, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatDateFR, formatTimeFR } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "../_shared/tracked-resend.ts";
@@ -105,7 +106,7 @@ serve(async (req) => {
             remindersToSend.push({
               candidature: { ...candidature, offre, client },
               recipientEmail: clientProfile.email,
-              recipientName: `${clientProfile.prenom} ${clientProfile.nom}`,
+              recipientName: `${clientProfile.prenom ?? ""} ${clientProfile.nom ?? ""}`.trim(),
               recipientRole: 'client',
               recipientUserId: clientProfile.id,
             });
@@ -143,7 +144,7 @@ serve(async (req) => {
               remindersToSend.push({
                 candidature: { ...candidature, offre, client },
                 recipientEmail: agentProfile.email,
-                recipientName: `${agentProfile.prenom} ${agentProfile.nom}`,
+                recipientName: `${agentProfile.prenom ?? ""} ${agentProfile.nom ?? ""}`.trim(),
                 recipientRole: 'agent',
                 recipientUserId: agentProfile.id,
               });
@@ -160,19 +161,9 @@ serve(async (req) => {
 
     for (const reminder of remindersToSend) {
       const { candidature, recipientEmail, recipientName, recipientRole, recipientUserId } = reminder;
-      const signatureDate = new Date(candidature.date_signature_choisie);
-
-      const formattedDate = signatureDate.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich',
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      });
-
-      const formattedTime = signatureDate.toLocaleTimeString("fr-CH", { timeZone: 'Europe/Zurich',
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      // Europe/Zurich ; si seule la date est connue (minuit), pas d'heure fictive
+      const formattedDate = formatDateFR(candidature.date_signature_choisie, { weekday: true });
+      const formattedTime = formatTimeFR(candidature.date_signature_choisie);
 
       const adresse = candidature.offre?.adresse || "Adresse non spécifiée";
       const lieuSignature = candidature.lieu_signature || "Chemin de l'Esparcette 5, 1023 Crissier";
@@ -181,41 +172,31 @@ serve(async (req) => {
       const emailOptOut = await canSendNotificationEmail(supabase, { userId: recipientUserId, email: recipientEmail });
       if (resend && emailOptOut.allowed) {
         try {
-          const emailHtml = renderCorporateEmail({ title: 'Rappel : signature du bail demain', category: "VOTRE LOGEMENT", bodyHtml: `
-                  <p style="margin:0 0 18px;">Bonjour ${recipientName},</p>
-                  <p style="margin:0 0 18px;">Ceci est un rappel automatique pour la <strong>signature de votre bail</strong> prévue <strong>demain</strong>.</p>
-
-                  <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
-                    <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
-                      <span style="color:#677a6c;font-weight:600;">Date :</span>
-                      <span style="color:#202b22;">${formattedDate}</span>
-                    </div>
-                    <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
-                      <span style="color:#677a6c;font-weight:600;">Heure :</span>
-                      <span style="color:#202b22;">${formattedTime}</span>
-                    </div>
-                    <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
-                      <span style="color:#677a6c;font-weight:600;">Lieu :</span>
-                      <span style="color:#202b22;">${lieuSignature}</span>
-                    </div>
-                    <div style="padding:8px 0;border-bottom:1px solid #e7ebe5;">
-                      <span style="color:#677a6c;font-weight:600;">Bien concerné :</span>
-                      <span style="color:#202b22;">${adresse}</span>
-                    </div>
-                  </div>
-
-                  <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Documents à apporter :</h3>
-                  <ul>
-                    <li style="margin-bottom:8px;">Pièce d'identité valide</li>
-                    <li style="margin-bottom:8px;">Attestation d'assurance RC ménage</li>
-                    <li style="margin-bottom:8px;">Garantie de loyer (si applicable)</li>
-                    <li style="margin-bottom:8px;">Premier loyer + charges</li>
-                  </ul>
-
-                  <p style="margin:0 0 18px;">N'hésitez pas à contacter votre agent si vous avez des questions.</p>` });
+          const emailHtml = renderCorporateEmail({
+            title: 'Rappel : signature du bail demain',
+            preview: `Signature de votre bail ${formattedDate}${formattedTime ? ` à ${formattedTime}` : ""} — ${lieuSignature}`,
+            category: "VOTRE LOGEMENT",
+            bodyHtml:
+              emailParagraph(recipientName.trim() ? `Bonjour ${escapeEmailHtml(recipientName.trim())},` : "Bonjour,") +
+              emailParagraph("Ceci est un rappel automatique pour la <strong>signature de votre bail</strong> prévue <strong>demain</strong>.") +
+              emailDetails([
+                ["Date", formattedDate],
+                ["Heure", formattedTime || "À confirmer avec votre agent"],
+                ["Lieu", lieuSignature],
+                ["Bien concerné", adresse],
+              ]) +
+              emailSubheading("Documents à apporter") +
+              emailList([
+                "Pièce d'identité valide",
+                "Attestation d'assurance RC ménage",
+                "Garantie de loyer (si applicable)",
+                "Premier loyer + charges",
+              ]) +
+              emailParagraph("N'hésitez pas à contacter votre agent si vous avez des questions."),
+          });
 
           const emailResponse = await resend.emails.send({
-            from: "ImmoRama <noreply@resend.dev>",
+            from: "Logisorama <support@logisorama.ch>",
             to: [recipientEmail],
             subject: `✍️ Rappel : Signature du bail demain - ${adresse}`,
             html: emailHtml,
@@ -233,7 +214,7 @@ serve(async (req) => {
         p_user_id: recipientUserId,
         p_type: "signature_reminder",
         p_title: "✍️ Rappel : Signature du bail demain",
-        p_message: `Signature prévue le ${formattedDate} à ${formattedTime}\n📍 ${lieuSignature}`,
+        p_message: `Signature prévue le ${formattedDate}${formattedTime ? ` à ${formattedTime}` : ""}\n📍 ${lieuSignature}`,
         p_link: recipientRole === 'agent' ? '/agent/candidatures' : '/client/mes-candidatures',
         p_metadata: {
           candidature_id: candidature.id,

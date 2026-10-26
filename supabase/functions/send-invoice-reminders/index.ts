@@ -1,6 +1,7 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("send-invoice-reminders");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailDetails, emailNotice, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatCHF } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { requireAuth } from "../_shared/require-admin.ts";
 
@@ -62,23 +63,25 @@ serve(async (req) => {
       // Send reminder email to client
       if (resendApiKey) {
         try {
-          const emailHtml = renderCorporateEmail({ title: 'Rappel de paiement', category: "VOTRE FACTURATION", bodyHtml: `<p style="margin:0 0 18px;">Bonjour ${invoice.prenom} ${invoice.nom},</p>
-
-              <p style="margin:0 0 18px;">Nous vous rappelons que votre facture <strong>${invoice.abaninja_invoice_ref || 'N/A'}</strong> d'un montant de <strong>${montant} CHF</strong> est en attente de paiement depuis <strong>${daysPending} jours</strong>.</p>
-
-              <p style="margin:0 0 18px;">Votre mandat de recherche ne sera activé qu'après réception du paiement.</p>
-
-              <div style="background: #fef2f2; border: 1px solid #dc2626; border-radius: 8px; padding: 15px; margin: 20px 0;">
-                <p style="margin: 0; color: #dc2626;"><strong>⚠Important :</strong> Sans paiement, nous ne pouvons pas commencer vos recherches immobilières.</p>
-              </div>
-
-              <p style="margin:0 0 18px;">Si vous avez déjà effectué le paiement, merci de nous en informer.</p>
-
-              <p style="margin:0 0 18px;">Pour toute question, n'hésitez pas à nous contacter.</p>
-
-              <p style="margin:0 0 18px;">Cordialement,<br>L'équipe Immo-Rama</p>
-
-              ` });
+          const fullName = `${invoice.prenom ?? ''} ${invoice.nom ?? ''}`.trim();
+          const emailHtml = renderCorporateEmail({
+            title: 'Rappel de paiement',
+            preview: `Votre facture ${invoice.abaninja_invoice_ref || ''} de ${formatCHF(montant)} est en attente de paiement.`,
+            category: "VOTRE FACTURATION",
+            bodyHtml:
+              emailParagraph(fullName ? `Bonjour ${escapeEmailHtml(fullName)},` : 'Bonjour,') +
+              emailParagraph(`Nous vous rappelons que votre facture <strong>${escapeEmailHtml(invoice.abaninja_invoice_ref || 'N/A')}</strong> d'un montant de <strong>${formatCHF(montant)}</strong> est en attente de paiement depuis <strong>${daysPending} jours</strong>.`) +
+              emailDetails([
+                ['Facture', invoice.abaninja_invoice_ref || 'N/A'],
+                ['Montant', formatCHF(montant)],
+                ['En attente depuis', `${daysPending} jours`],
+              ]) +
+              emailParagraph("Votre mandat de recherche ne sera activé qu'après réception du paiement.") +
+              emailNotice('<strong>Important :</strong> Sans paiement, nous ne pouvons pas commencer vos recherches immobilières.', 'danger') +
+              emailParagraph("Si vous avez déjà effectué le paiement, merci de nous en informer.") +
+              emailParagraph("Pour toute question, n'hésitez pas à nous contacter.") +
+              emailParagraph("Cordialement,<br>L'équipe Immo-Rama"),
+          });
 
           const emailResponse = await sendTrackedEmail('https://api.resend.com/emails', {
             method: 'POST',

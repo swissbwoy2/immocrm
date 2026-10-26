@@ -23,7 +23,7 @@ import {
 } from '@/components/dashboard-staff/StaffDashParts';
 import { CandidaturesActionList, ProjectionList, ReactionsList } from '@/components/dashboard-staff/AgentDashLists';
 import {
-  VISITE_A_VENIR_STATUTS, formatHeure, formatJourLong, inLastDays, inNextDays, prochaineVisite, s, startOfDay,
+  VISITE_A_VENIR_STATUTS, formatHeure, formatJourLong, grouperVisitesParBien, inLastDays, inNextDays, libelleClients, prochaineVisite, s, startOfDay,
   totalEnAttente, variation, visitesDuJour,
 } from '@/components/dashboard-staff/staffDashboardModel';
 
@@ -352,13 +352,17 @@ export default function AgentDashboard() {
   );
   const duJour = visitesDuJour(visites, now);
   const prochaine = prochaineVisite(duJour, now);
-  const toDayVisit = (v: any): DayVisit => {
+  // Une offre = une visite : les clients d'un même bien au même créneau sont regroupés.
+  const groupesJour = grouperVisitesParBien(duJour);
+  const groupeProchain = prochaine ? groupesJour.find((g) => g.includes(prochaine)) ?? null : null;
+  const toDayVisit = (g: any[]): DayVisit => {
+    const v = g[0];
     const offre = v.offres;
     return {
       id: v.id,
       heure: formatHeure(v.date_visite),
-      titre: offre?.adresse || 'Adresse à confirmer',
-      sous: [nomClient(v.client_id, v.clients?.user_id), offre?.pieces ? `${offre.pieces} pièces` : null, v.est_deleguee ? 'déléguée' : null].filter(Boolean).join(' · '),
+      titre: offre?.adresse || v.adresse || 'Adresse à confirmer',
+      sous: [libelleClients(g.map((x) => nomClient(x.client_id, x.clients?.user_id))), offre?.pieces ? `${offre.pieces} pièces` : null, g.some((x) => x.est_deleguee) ? 'déléguée' : null].filter(Boolean).join(' · '),
       onClick: () => navigate('/agent/visites'),
     };
   };
@@ -517,9 +521,9 @@ export default function AgentDashboard() {
               <DayBanner
                 greeting="Bonjour"
                 dateLabel={formatJourLong(now)}
-                total={duJour.length}
-                next={prochaine ? toDayVisit(prochaine) : null}
-                others={duJour.filter(v => v !== prochaine).map(toDayVisit)}
+                total={groupesJour.length}
+                next={groupeProchain ? toDayVisit(groupeProchain) : null}
+                others={groupesJour.filter((g) => g !== groupeProchain).map(toDayVisit)}
                 onAgenda={() => navigate('/agent/calendrier')}
                 agendaLabel="Calendrier"
               />
@@ -573,7 +577,7 @@ export default function AgentDashboard() {
                           </p>
                           <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                             <Calendar className="h-3.5 w-3.5" />
-                            {dateVisite.toLocaleDateString('fr-CH')} à {dateVisite.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                            {dateVisite.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })} à {dateVisite.toLocaleTimeString('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })}
                           </p>
                           <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-primary">
                             <UserIcon className="h-3.5 w-3.5" /> Délégué par {clientName}

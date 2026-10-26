@@ -5,24 +5,34 @@ import { estPrixDAchat } from '@/lib/achatOffreActions';
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
+import {
+  DETAIL_DIALOG,
+  DetailHeader,
+  DetailBody,
+  KeyFacts,
+  DetailSection,
+  DetailRow,
+  DetailText,
+  DetailContact,
+  DetailActions,
+  chfDetail,
+  dateCH,
+  dateTimeCH,
+} from '@/components/details/DetailPrimitives';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { CandidatureWorkflowInteractive } from '@/components/CandidatureWorkflowInteractive';
-import { 
-  Home, 
-  Maximize, 
-  Building, 
-  Calendar, 
-  KeyRound, 
-  User, 
-  Phone, 
+import {
+  Home,
+  Maximize,
+  Building,
+  Calendar,
+  KeyRound,
+  User,
   MessageSquare,
   Layers,
   Send,
@@ -31,24 +41,18 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  ArrowRight,
-  Sparkles,
   CalendarDays,
   FileText,
   CreditCard,
   ThumbsUp,
   ThumbsDown,
   Minus,
-  Image,
   Video,
-  ChevronRight,
-  MapPin
+  MapPin,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 
 interface PremiumAgentOffreDetailsDialogProps {
   open: boolean;
@@ -146,26 +150,13 @@ export function PremiumAgentOffreDetailsDialog({
   if (!offre) return null;
 
   const statusConfig = STATUS_CONFIG[offre.statut] || STATUS_CONFIG.envoyee;
+  const statusTone: 'neutral' | 'success' | 'warning' | 'danger' =
+    offre.statut === 'refusee' ? 'danger'
+      : ['acceptee', 'visite_planifiee', 'visite_effectuee'].includes(offre.statut) ? 'success'
+      : ['interesse', 'souhaite_postuler', 'offre_envisagee', 'candidature_deposee'].includes(offre.statut) ? 'warning'
+      : 'neutral';
   const StatusIcon = statusConfig.icon;
   const currentStep = statusConfig.step;
-
-  const InfoRow = ({ icon: Icon, label, value, href }: { icon: any; label: string; value: string | null | undefined; href?: string }) => {
-    if (!value) return null;
-    const content = (
-      <div className="flex items-start gap-3 py-2.5 px-3 rounded-xl border border-border/70 bg-card hover:bg-muted/40 transition-colors">
-        <Icon className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <span className="text-xs text-muted-foreground">{label}</span>
-          <p className={cn("text-sm font-medium", href && "text-primary hover:underline")}>{value}</p>
-        </div>
-      </div>
-    );
-    
-    if (href) {
-      return <a href={href} className="block">{content}</a>;
-    }
-    return content;
-  };
 
   const getRecommandationInfo = (recommandation: string | null) => {
     if (!recommandation) return null;
@@ -179,407 +170,239 @@ export function PremiumAgentOffreDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
-        {/* Premium Header */}
-        <div className="relative p-6 border-b border-border/70">
-          <DialogHeader className="relative">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <MapPin className="h-4 w-4" />
-                  </span>
-                  <span>Offre envoyée</span>
-                </div>
-                <DialogTitle className="text-lg font-semibold line-clamp-2 leading-tight">
-                  <AddressLink 
-                    address={offre.adresse}
-                    showIcon={false}
-                    className="text-lg font-semibold"
-                  />
-                </DialogTitle>
-                <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5" />
-                    <span>{offre.clients?.profiles?.prenom} {offre.clients?.profiles?.nom}</span>
-                  </div>
-                  <span>•</span>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{format(new Date(offre.date_envoi), "dd MMM yyyy", { locale: fr })}</span>
-                  </div>
-                </div>
-              </div>
-              <Badge 
-                className={cn(
-                  "shrink-0 rounded-full font-semibold",
-                  statusConfig.bgColor,
-                  statusConfig.color,
-                  statusConfig.borderColor,
-                  "border"
-                )}
-              >
-                <StatusIcon className="h-3.5 w-3.5 mr-1.5" />
-                {statusConfig.label}
-              </Badge>
-            </div>
-          </DialogHeader>
-        </div>
+      <DialogContent className={DETAIL_DIALOG}>
+        <DetailHeader
+          titleAs={DialogTitle}
+          descriptionAs={DialogDescription}
+          eyebrow={
+            <span className="inline-flex items-center gap-1.5">
+              <MapPin className="h-3.5 w-3.5 text-primary" />
+              Offre envoyée
+            </span>
+          }
+          title={
+            <AddressLink
+              address={offre.adresse}
+              showIcon={false}
+              className="text-[19px] font-semibold sm:text-xl"
+            />
+          }
+          subtitle={
+            <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-1.5">
+                <User className="h-3.5 w-3.5" />
+                {offre.clients?.profiles?.prenom} {offre.clients?.profiles?.nom}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                {dateCH(offre.date_envoi, { day: 'numeric', month: 'short', year: 'numeric' })}
+              </span>
+            </span>
+          }
+          badge={
+            <DashBadge tone={statusTone}>
+              <StatusIcon className="mr-1.5 h-3.5 w-3.5" />
+              {statusConfig.label}
+            </DashBadge>
+          }
+        />
 
-        <ScrollArea className="max-h-[calc(90vh-220px)]">
-          <div className="p-6 space-y-6">
-            {/* Prix Premium */}
-            <div className="relative overflow-hidden p-5 bg-muted/40 rounded-2xl border border-border/70">
-              <div className="absolute top-2 right-2">
-                <Sparkles className="h-5 w-5 text-primary/40" />
-              </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-primary">
-                  CHF {Number(offre.prix).toLocaleString('fr-CH')}
-                </div>
-                <div className="text-sm text-muted-foreground mt-1">par mois</div>
-              </div>
-            </div>
+        <DetailBody>
+          <KeyFacts
+            items={[
+              { label: estPrixDAchat(offre.prix) ? 'Prix de vente' : 'Loyer / mois', value: chfDetail(offre.prix) ?? '-', emphasis: true, wide: true },
+              { label: 'Pièces', value: offre.pieces || '-', icon: Home },
+              { label: 'Surface', value: offre.surface ? `${offre.surface} m²` : '-', icon: Maximize },
+              { label: 'Étage', value: offre.etage || '-', icon: Layers },
+            ]}
+          />
 
-            {/* Progress Timeline */}
-            {offre.statut !== 'refusee' && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  Progression
-                </h4>
-                <div className="flex items-center gap-1 p-3 rounded-xl border border-border/70 bg-card">
-                  {TIMELINE_STEPS.map((step, i) => (
-                    <div key={step.step} className="flex items-center flex-1">
-                      <div className="relative flex-1">
-                        <div 
-                          className={cn(
-                            "h-2 rounded-full transition-all duration-500",
-                            currentStep >= step.step 
-                              ? "bg-primary" 
-                              : "bg-muted"
+          {/* Progression */}
+          {offre.statut !== 'refusee' && (
+            <DetailSection title="Progression" icon={TrendingUp}>
+              <div className="flex items-center gap-1 pt-5">
+                {TIMELINE_STEPS.map((step) => (
+                  <div key={step.step} className="relative flex-1">
+                    <div
+                      className={cn(
+                        "h-2 rounded-full",
+                        currentStep >= step.step ? "bg-primary" : "bg-muted"
+                      )}
+                    />
+                    {currentStep === step.step && (
+                      <div className="absolute -top-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs font-medium text-primary">
+                        {step.label}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </DetailSection>
+          )}
+
+          {/* Candidature Workflow */}
+          {candidature && (
+            <DetailSection title="Workflow candidature" icon={FileText}>
+              <CandidatureWorkflowInteractive
+                currentStatut={candidature.statut}
+                candidature={candidature}
+                onProgressWorkflow={async () => {}}
+                onChooseDate={() => {}}
+              />
+            </DetailSection>
+          )}
+
+          {/* Caractéristiques & contacts */}
+          {(offre.type_bien || offre.disponibilite || offre.contact_gerance || offre.contact_annonceur || offre.contact_visite) && (
+            <DetailSection title="Caractéristiques" icon={Home}>
+              <DetailRow icon={Building} label="Type de bien" value={offre.type_bien} />
+              <DetailRow icon={Calendar} label="Disponibilité" value={offre.disponibilite} />
+              <DetailRow icon={Building} label="Contact gérance" value={offre.contact_gerance} />
+              <DetailRow icon={Building} label="Contact annonceur" value={offre.contact_annonceur} />
+              <DetailRow icon={Calendar} label="Contact visite" value={offre.contact_visite} />
+            </DetailSection>
+          )}
+
+          {/* Visite associée */}
+          {visite && (
+            <DetailSection
+              title="Visite associée"
+              icon={CalendarDays}
+              action={
+                <div className="flex items-center gap-1.5">
+                  {visite.est_deleguee && <DashBadge tone="muted">Déléguée</DashBadge>}
+                  <DashBadge tone={visite.statut === 'effectuee' ? 'success' : visite.statut === 'confirmee' ? 'primary' : 'neutral'}>
+                    {visite.statut === 'effectuee' ? 'Effectuée' : visite.statut === 'confirmee' ? 'Confirmée' : 'Planifiée'}
+                  </DashBadge>
+                </div>
+              }
+            >
+              <DetailRow
+                icon={Calendar}
+                label="Date de la visite"
+                value={visite.date_visite ? dateTimeCH(visite.date_visite) : null}
+              />
+              <div className="mt-2">
+                <VisitLiveButton
+                  visiteId={visite.id}
+                  dateVisite={visite.date_visite}
+                  className="w-full rounded-full"
+                />
+              </div>
+
+              {visite.statut === 'effectuee' && visite.feedback_agent && (
+                <div className="mt-4 space-y-3 border-t border-border/50 pt-4">
+                  {visite.recommandation_agent && (() => {
+                    const info = getRecommandationInfo(visite.recommandation_agent);
+                    if (!info) return null;
+                    const Icon = info.icon;
+                    return (
+                      <DashBadge tone={visite.recommandation_agent === 'recommande' ? 'success' : visite.recommandation_agent === 'deconseille' ? 'danger' : 'warning'}>
+                        <Icon className="mr-1 h-3 w-3" />
+                        {info.label}
+                      </DashBadge>
+                    );
+                  })()}
+                  <DetailText>{visite.feedback_agent}</DetailText>
+
+                  {visite.medias && Array.isArray(visite.medias) && visite.medias.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {visite.medias.map((media: any, index: number) => (
+                        <a
+                          key={index}
+                          href={media.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="relative h-16 w-16 overflow-hidden rounded-xl bg-muted"
+                        >
+                          {media.type?.startsWith('image') ? (
+                            <img src={media.url} alt="" className="h-full w-full object-cover" />
+                          ) : (
+                            <div className="flex h-full w-full items-center justify-center">
+                              <Video className="h-6 w-6 text-muted-foreground" />
+                            </div>
                           )}
-                        />
-                        {currentStep === step.step && (
-                          <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-medium text-primary whitespace-nowrap">
-                            {step.label}
-                          </div>
-                        )}
-                      </div>
-                      {i < TIMELINE_STEPS.length - 1 && <div className="w-1" />}
+                        </a>
+                      ))}
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
-            )}
+              )}
+            </DetailSection>
+          )}
 
-            {/* Candidature Workflow */}
-            {candidature && (
-              <div className="space-y-3">
-                <h4 className="text-sm font-semibold flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  Workflow Candidature
-                </h4>
-                <div className="p-4 bg-card rounded-2xl border border-border/70">
-                  <CandidatureWorkflowInteractive
-                    currentStatut={candidature.statut}
-                    candidature={candidature}
-                    onProgressWorkflow={async () => {}}
-                    onChooseDate={() => {}}
-                  />
-                </div>
-              </div>
-            )}
+          {/* Transaction */}
+          {transaction && (
+            <DetailSection
+              title="Transaction"
+              icon={CreditCard}
+              bare
+              action={
+                <DashBadge tone={transaction.statut === 'cloturee' ? 'success' : 'warning'}>
+                  {transaction.statut === 'cloturee' ? 'Clôturée' : 'En cours'}
+                </DashBadge>
+              }
+            >
+              <KeyFacts
+                columns={3}
+                items={[
+                  { label: 'Commission totale', value: chfDetail(transaction.commission_totale) ?? '-', emphasis: true },
+                  { label: 'Part agent', value: chfDetail(transaction.part_agent) ?? '-' },
+                ]}
+              />
+            </DetailSection>
+          )}
 
-            {/* Caractéristiques */}
-            <div className="space-y-3">
-              <h4 className="text-sm font-semibold flex items-center gap-2">
-                <Home className="h-4 w-4 text-primary" />
-                Caractéristiques
-              </h4>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="p-4 rounded-xl bg-card border border-border/70">
-                  <div className="text-2xl font-bold text-foreground">
-                    {offre.pieces || '-'}
-                  </div>
-                  <div className="text-xs text-muted-foreground">pièces</div>
-                </div>
-                <div className="p-4 rounded-xl bg-card border border-border/70">
-                  <div className="text-2xl font-bold text-foreground">
-                    {offre.surface || '-'}
-                  </div>
-                  <div className="text-xs text-muted-foreground">m²</div>
-                </div>
-                <div className="p-4 rounded-xl bg-card border border-border/70">
-                  <div className="text-2xl font-bold text-foreground">
-                    {offre.etage || '-'}
-                  </div>
-                  <div className="text-xs text-muted-foreground">étage</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <InfoRow icon={Building} label="Type de bien" value={offre.type_bien} />
-                <InfoRow icon={Calendar} label="Disponibilité" value={offre.disponibilite} />
-                <InfoRow icon={Building} label="Contact gérance" value={offre.contact_gerance} />
-                <InfoRow icon={Building} label="Contact annonceur" value={offre.contact_annonceur} />
-                <InfoRow icon={Calendar} label="Contact visite" value={offre.contact_visite} />
-              </div>
+          {offre.description && (
+            <DetailSection title="Description">
+              <DetailText>{offre.description}</DetailText>
+            </DetailSection>
+          )}
 
-            </div>
+          {(offre.code_immeuble || offre.concierge_nom || offre.locataire_nom) && (
+            <DetailSection title="Informations pratiques" icon={Layers}>
+              <DetailRow icon={KeyRound} label="Code immeuble" value={offre.code_immeuble} />
+              {offre.concierge_nom && (
+                <DetailContact icon={User} role="Concierge" name={offre.concierge_nom} phone={offre.concierge_tel} />
+              )}
+              {offre.locataire_nom && (
+                <DetailContact icon={User} role="Locataire actuel" name={offre.locataire_nom} phone={offre.locataire_tel} />
+              )}
+            </DetailSection>
+          )}
 
-            {/* Section Visite */}
-            {visite && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    <CalendarDays className="h-4 w-4 text-primary" />
-                    Visite associée
-                    {visite.est_deleguee && (
-                      <Badge variant="outline" className="text-xs">Déléguée</Badge>
-                    )}
-                  </h4>
-                  <div className={cn(
-                    "p-4 rounded-2xl border transition-all",
-                    visite.statut === 'effectuee' 
-                      ? "bg-emerald-500/10 border-emerald-500/30" 
-                      : visite.statut === 'confirmee'
-                        ? "bg-primary/10 border-primary/30"
-                        : "bg-card border-border/70"
-                  )}>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">
-                          {format(new Date(visite.date_visite), "EEEE dd MMMM yyyy 'à' HH:mm", { locale: fr })}
-                        </span>
-                      </div>
-                      <Badge variant={visite.statut === 'effectuee' ? 'default' : 'secondary'} className="rounded-full">
-                        {visite.statut === 'effectuee' ? 'Effectuée' : visite.statut === 'confirmee' ? 'Confirmée' : 'Planifiée'}
-                      </Badge>
-                    </div>
+          {offre.commentaires && (
+            <DetailSection title="Vos commentaires" icon={MessageSquare}>
+              <DetailText>{offre.commentaires}</DetailText>
+            </DetailSection>
+          )}
 
-                    {/* Live de visite */}
-                    <div className="mb-3">
-                      <VisitLiveButton
-                        visiteId={visite.id}
-                        dateVisite={visite.date_visite}
-                        className="w-full rounded-full"
-                      />
-                    </div>
+          {offre.lien_annonce && offre.lien_annonce.trim() && (
+            <DetailSection title="Annonce originale" bare>
+              <LinkPreviewCard url={offre.lien_annonce} showInline />
+            </DetailSection>
+          )}
+        </DetailBody>
 
-
-
-                    {/* Feedback si visite effectuée */}
-                    {visite.statut === 'effectuee' && visite.feedback_agent && (
-                      <div className="space-y-3 mt-4 pt-4 border-t border-border/50">
-                        {visite.recommandation_agent && (
-                          <div className="flex items-center gap-2">
-                            {(() => {
-                              const info = getRecommandationInfo(visite.recommandation_agent);
-                              if (!info) return null;
-                              const Icon = info.icon;
-                              return (
-                                <Badge className={cn(info.bg, info.color, "border-0 rounded-full")}>
-                                  <Icon className="h-3 w-3 mr-1" />
-                                  {info.label}
-                                </Badge>
-                              );
-                            })()}
-                          </div>
-                        )}
-                        <div className="p-3 bg-background rounded-xl border border-border/70">
-                          <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                            {visite.feedback_agent}
-                          </p>
-                        </div>
-
-                        {/* Médias */}
-                        {visite.medias && Array.isArray(visite.medias) && visite.medias.length > 0 && (
-                          <div className="flex gap-2 flex-wrap">
-                            {visite.medias.map((media: any, index: number) => (
-                              <a
-                                key={index}
-                                href={media.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="relative group w-16 h-16 rounded-lg overflow-hidden border border-border/50 hover:border-primary/50 transition-colors"
-                              >
-                                {media.type?.startsWith('image') ? (
-                                  <img src={media.url} alt="" className="w-full h-full object-cover" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center bg-muted">
-                                    <Video className="h-6 w-6 text-muted-foreground" />
-                                  </div>
-                                )}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Section Transaction */}
-            {transaction && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-primary" />
-                    Transaction
-                    <Badge variant={transaction.statut === 'cloturee' ? 'default' : 'secondary'} className="text-xs">
-                      {transaction.statut === 'cloturee' ? 'Clôturée' : 'En cours'}
-                    </Badge>
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-                      <div className="text-xs text-muted-foreground">Commission totale</div>
-                      <div className="text-xl font-bold text-primary">
-                        CHF {Number(transaction.commission_totale).toLocaleString('fr-CH')}
-                      </div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-card border border-border/70">
-                      <div className="text-xs text-muted-foreground">Part agent</div>
-                      <div className="text-xl font-bold">
-                        CHF {Number(transaction.part_agent).toLocaleString('fr-CH')}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Description */}
-            {offre.description && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold">Description</h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap leading-relaxed">
-                    {offre.description}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Informations pratiques */}
-            {(offre.code_immeuble || offre.concierge_nom || offre.locataire_nom) && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    <Layers className="h-4 w-4 text-primary" />
-                    Informations pratiques
-                  </h4>
-                  <div className="space-y-2">
-                    <InfoRow icon={KeyRound} label="Code immeuble" value={offre.code_immeuble} />
-                    
-                    {offre.concierge_nom && (
-                      <div className="p-3 rounded-xl bg-muted/40 border border-border/70 space-y-2">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <User className="h-3 w-3" />
-                          Concierge
-                        </div>
-                        <p className="text-sm font-medium">{offre.concierge_nom}</p>
-                        {offre.concierge_tel && (
-                          <a 
-                            href={`tel:${offre.concierge_tel}`}
-                            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                          >
-                            <Phone className="h-3 w-3" />
-                            {offre.concierge_tel}
-                          </a>
-                        )}
-                      </div>
-                    )}
-
-                    {offre.locataire_nom && (
-                      <div className="p-3 rounded-xl bg-muted/40 border border-border/70 space-y-2">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <User className="h-3 w-3" />
-                          Locataire actuel
-                        </div>
-                        <p className="text-sm font-medium">{offre.locataire_nom}</p>
-                        {offre.locataire_tel && (
-                          <a 
-                            href={`tel:${offre.locataire_tel}`}
-                            className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                          >
-                            <Phone className="h-3 w-3" />
-                            {offre.locataire_tel}
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* Commentaires */}
-            {offre.commentaires && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-primary" />
-                    Vos commentaires
-                  </h4>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap p-4 bg-muted/40 rounded-xl border border-border/70">
-                    {offre.commentaires}
-                  </p>
-                </div>
-              </>
-            )}
-
-            {/* Lien vers l'annonce */}
-            {offre.lien_annonce && offre.lien_annonce.trim() && (
-              <>
-                <Separator />
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold">Annonce originale</h4>
-                  <LinkPreviewCard url={offre.lien_annonce} showInline />
-                </div>
-              </>
-            )}
-          </div>
-        </ScrollArea>
-
-        {/* Footer Actions */}
-        <DialogFooter className="p-4 bg-muted/40 border-t border-border/70">
-          <div className="flex gap-2 w-full">
+        <DetailActions>
+          <Button variant="outline" onClick={() => onOpenChange(false)} className={offre?.client_id && onResend ? 'max-sm:hidden' : undefined}>
+            Fermer
+          </Button>
+          {offre?.client_id && (
             <Button
               variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="flex-1 rounded-full"
+              onClick={() => { onOpenChange(false); navigate(`${espace}/clients/${offre.client_id}`); }}
             >
-              Fermer
+              {estPrixDAchat(offre.prix) ? "Dossier d'achat du client" : 'Fiche client'}
             </Button>
-            {offre?.client_id && (
-              <Button
-                variant="outline"
-                onClick={() => { onOpenChange(false); navigate(`${espace}/clients/${offre.client_id}`); }}
-                className="flex-1 rounded-full"
-              >
-                {estPrixDAchat(offre.prix) ? "Dossier d'achat du client" : 'Fiche client'}
-              </Button>
-            )}
-            {onResend && (
-              <Button
-                onClick={onResend}
-                className="flex-1 gap-2 rounded-full"
-              >
-                <Send className="h-4 w-4" />
-                Renvoyer
-              </Button>
-            )}
-          </div>
-        </DialogFooter>
+          )}
+          {onResend && (
+            <Button onClick={onResend} className="gap-2">
+              <Send className="h-4 w-4" />
+              Renvoyer
+            </Button>
+          )}
+        </DetailActions>
       </DialogContent>
     </Dialog>
   );

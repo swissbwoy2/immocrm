@@ -6,6 +6,7 @@ import {
   MessageSquare, Star, Phone, Mail, Eye
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -68,9 +69,9 @@ export function PremiumVisiteVenteCard({ visite, onUpdateStatut }: PremiumVisite
         <div className="flex flex-col md:flex-row md:items-center gap-4">
           {/* Date et heure */}
           <div className="flex-shrink-0 text-center p-3 bg-muted/50 rounded-lg min-w-[80px]">
-            <p className="text-2xl font-bold">{format(new Date(visite.date_visite), 'dd', { locale: fr })}</p>
-            <p className="text-sm text-muted-foreground">{format(new Date(visite.date_visite), 'MMM', { locale: fr })}</p>
-            <p className="text-sm font-medium mt-1">{format(new Date(visite.date_visite), 'HH:mm')}</p>
+            <p className="text-2xl font-bold">{formatInTimeZone(new Date(visite.date_visite), 'Europe/Zurich', 'dd', { locale: fr })}</p>
+            <p className="text-sm text-muted-foreground">{formatInTimeZone(new Date(visite.date_visite), 'Europe/Zurich', 'MMM', { locale: fr })}</p>
+            <p className="text-sm font-medium mt-1">{formatInTimeZone(new Date(visite.date_visite), 'Europe/Zurich', 'HH:mm')}</p>
           </div>
 
           {/* Infos visiteur */}

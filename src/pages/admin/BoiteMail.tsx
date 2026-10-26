@@ -49,6 +49,7 @@ import {
 import { cn } from '@/lib/utils';
 import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { downloadBlob } from '@/lib/candidatureDocs';
+import { buildAgencySignature, stripAgencySignature } from '@/lib/mailSignature';
 import {
   addressLabel,
   base64ToBlob,
@@ -386,7 +387,7 @@ export default function BoiteMail() {
       cc: formatList(message.cc_list),
       bcc: formatList(message.bcc_list),
       subject: message.subject || '',
-      text: message.body_text || (message.body_html ? message.body_html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n\n').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim() : ''),
+      text: draftText(message),
       attachments: (message.attachments || []).filter((a) => !a.inline).map((a) => ({
         key: `${message.id}-${a.part}`, filename: a.filename, size: a.size, mime: a.mime, message_id: message.id, part: a.part,
       })),
@@ -714,6 +715,27 @@ export default function BoiteMail() {
   );
 }
 
+/** Texte d'un brouillon à modifier, sans la signature de l'agence (elle est remise à l'envoi). */
+function htmlToPlain(html: string): string {
+  return cleanSnippetKeepLines(
+    html.replace(/<br\s*\/?>/gi, '\n').replace(/<\/(p|div|tr|li)>/gi, '\n').replace(/<[^>]+>/g, ''),
+  );
+}
+
+function cleanSnippetKeepLines(s: string): string {
+  return s
+    .split('\n')
+    .map((l) => cleanSnippet(l))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function draftText(m: MailMessage): string {
+  if (m.body_html && /data-immo-signature/.test(m.body_html)) return htmlToPlain(stripAgencySignature(m.body_html));
+  return m.body_text || (m.body_html ? htmlToPlain(m.body_html) : '');
+}
+
 function MailSettingsDialog({
   open, onOpenChange, boxes, onSaved, onPasswords,
 }: { open: boolean; onOpenChange: (o: boolean) => void; boxes: MailBox[]; onSaved: () => void; onPasswords: () => void }) {
@@ -790,8 +812,30 @@ function MailSettingsDialog({
                     <Input id={`name-${b.id}`} className="h-11 rounded-xl" value={edits[b.id]?.name || ''} onChange={(e) => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], name: e.target.value } }))} />
                   </div>
                   <div className="grid gap-1.5">
-                    <Label htmlFor={`sig-${b.id}`}>Signature (HTML simple accepté)</Label>
-                    <Textarea id={`sig-${b.id}`} rows={3} className="rounded-xl text-base md:text-sm" value={edits[b.id]?.signature || ''} onChange={(e) => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], signature: e.target.value } }))} />
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label htmlFor={`sig-${b.id}`}>Signature</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="min-h-10"
+                        onClick={() => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], signature: buildAgencySignature(b.address, s[b.id]?.name || b.display_name) } }))}
+                      >
+                        Signature type de l'agence
+                      </Button>
+                    </div>
+                    {edits[b.id]?.signature ? (
+                      <div
+                        className="max-h-72 overflow-auto rounded-xl border border-border/60 bg-white p-3 [&_img]:max-w-full"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(edits[b.id].signature, { FORBID_TAGS: ['script', 'style', 'iframe', 'form'] }) }}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Aucune signature.</p>
+                    )}
+                    <details className="text-sm">
+                      <summary className="cursor-pointer py-1 text-muted-foreground">Modifier le code HTML</summary>
+                      <Textarea id={`sig-${b.id}`} rows={6} className="mt-2 rounded-xl font-mono text-xs" value={edits[b.id]?.signature || ''} onChange={(e) => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], signature: e.target.value } }))} />
+                    </details>
                   </div>
                 </div>
                 {tests[b.id] && <p className="mt-3 break-words rounded-xl bg-muted/50 px-3 py-2 text-sm text-muted-foreground">{tests[b.id]}</p>}

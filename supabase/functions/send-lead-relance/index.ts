@@ -1,4 +1,4 @@
-import { renderCorporateEmail, emailButton, escapeEmailHtml } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, EMAIL_THEME, emailBadge, emailButton, emailDivider, emailList, emailListingCard, emailParagraph, emailSubheading, escapeEmailHtml, formatCHF } from '../_shared/email-shell.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
@@ -17,211 +17,72 @@ interface Offre {
 }
 
 function formatPrix(prix: number): string {
-  return prix.toLocaleString('fr-CH').replace(/,/g, "'");
+  // Format suisse « 2'400 » (toLocaleString fr-CH produit une espace fine, pas une apostrophe)
+  return formatCHF(prix).replace(/^CHF /, '');
 }
+
+const T = EMAIL_THEME;
 
 function generateOffreCard(offre: Offre): string {
   const piecesLabel = offre.pieces <= 1.5 ? 'Studio' : `${offre.pieces} pièces`;
-  const surfaceLabel = offre.surface ? `${offre.surface}m²` : '';
-  const badge = offre.statut === 'envoyee' ? '<span style="display:inline-block;background:#f3f4ed;color:#5c665e;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;">Disponible</span>'
-    : '<span style="display:inline-block;background:#fef9c3;color:#5c665e;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;">En cours</span>';
-
-  return `<td class="email-stack" width="50%" style="padding:8px;vertical-align:top;">
-  <div style="border:1px solid #e5e7eb;border-radius:5px;overflow:hidden;">
-    <div style="padding:12px;">
-      <div style="font-size:16px;font-weight:800;color:#5c665e;">CHF ${formatPrix(offre.prix)}/mois</div>
-      <div style="font-size:13px;color:#5c665e;font-weight:600;margin-top:4px;">📍 ${escapeEmailHtml(offre.adresse || 'Suisse romande')}</div>
-      <div style="font-size:12px;color:#5c665e;margin-top:4px;">${piecesLabel}${surfaceLabel ? ' • ' + surfaceLabel : ''}</div>
-      <div style="margin-top:8px;">${badge}</div>
-    </div>
-  </div>
-</td>`;
+  const surfaceLabel = offre.surface ? `${offre.surface} m²` : '';
+  const badge = offre.statut === 'envoyee' ? emailBadge('Disponible', 'green') : emailBadge('En cours', 'warning');
+  return emailListingCard({
+    title: offre.adresse || 'Suisse romande',
+    meta: [piecesLabel, surfaceLabel].filter(Boolean).join(' · '),
+    price: offre.prix ? `CHF ${formatPrix(offre.prix)}/mois` : undefined,
+    badgeHtml: badge,
+  });
 }
 
 function generateOffresSection(offres: Offre[]): string {
   if (offres.length === 0) return '';
+  return emailDivider() +
+    emailSubheading('📬 Offres déjà envoyées à nos clients') +
+    emailParagraph('Voici un extrait des biens que nos agents ont proposés cette semaine', true) +
+    offres.map(generateOffreCard).join('') +
+    emailButton(`Voir toutes les offres disponibles →`, `https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email&utm_content=offres`, 'secondary');
+}
 
-  let rows = '';
+function statTile(value: string, label: string): string {
+  return `<td class="email-stack" width="33%" valign="top" style="padding:0 5px 10px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${T.panel}" style="background:${T.panel};border:1px solid ${T.border};border-radius:${T.panelRadius};border-collapse:separate;"><tr><td align="center" style="padding:18px 8px;"><p style="margin:0;font-size:26px;line-height:32px;font-weight:700;color:${T.green};">${value}</p><p style="margin:4px 0 0;font-size:12px;line-height:18px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:${T.muted};">${label}</p></td></tr></table></td>`;
+}
 
-  for (let i = 0; i < offres.length; i += 2) {
-    const card1 = generateOffreCard(offres[i]);
-    const card2 = i + 1 < offres.length
-      ? generateOffreCard(offres[i + 1])
-      : '<td class="email-stack" width="50%" style="padding:8px;"></td>';
-    rows += `<tr>${card1}${card2}</tr>`;
-  }
-
-  return `
-
-<tr><td style="padding:25px 0 10px;text-align:center;">
-  <h2 style="margin:0;font-size:20px;font-weight:700;color:#205a43;">📬 Offres déjà envoyées à nos clients</h2>
-  <p style="margin:6px 0 0;font-size:13px;color:#5c665e;">Voici un extrait des biens que nos agents ont proposés cette semaine</p>
-</td></tr>
-<tr><td style="padding:15px 20px;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    ${rows}
-  </table>
-</td></tr>
-
-
-<tr><td style="padding:10px 0 25px;text-align:center;">
-  ${emailButton(`Voir toutes les offres disponibles →`, `https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email&utm_content=offres`)}
-</td></tr>`;
+function stepTile(icon: string, title: string, text: string): string {
+  return `<td class="email-stack" width="33%" valign="top" align="center" style="padding:0 8px 14px;"><p style="margin:0 0 6px;font-size:30px;line-height:36px;">${icon}</p><p style="margin:0;font-size:15px;line-height:22px;font-weight:600;color:${T.heading};">${title}</p><p style="margin:4px 0 0;font-size:14px;line-height:21px;color:${T.muted};">${text}</p></td>`;
 }
 
 function generateMarketingEmail(prenom: string, localite: string, budget: string, offres: Offre[]): string {
-  return renderCorporateEmail({title:`${prenom}, tu cherches un appartement ? Est-ce que c’est toujours le cas ?`, category:'VOTRE RECHERCHE', bodyHtml:`<table role="presentation" width="100%" cellspacing="0" cellpadding="0">
-<tr><td style="padding:10px 0 25px;">
-  <p style="margin:0;font-size:15px;color:#5c665e;line-height:1.7;text-align:center;">
-    On sait que la recherche d'un logement en Suisse romande, c'est <strong>un vrai parcours du combattant</strong>. Avec un taux de vacance inférieur à 1%${localite ? ' dans la région de <strong>' + escapeEmailHtml(localite) + '</strong>' : ''}, les bons appartements partent en quelques heures.
-  </p>
-  <p style="margin:15px 0 0;font-size:15px;color:#5c665e;line-height:1.7;text-align:center;">
-    C'est exactement pour ça qu'on a créé <strong>Logisorama</strong> : un service de recherche de logement qui travaille <em>pour toi</em>, pas contre toi. Et si tu n'as pas encore trouvé, <strong>on a de bonnes nouvelles</strong>.
-  </p>
-</td></tr>
-
-
-<tr><td style="padding:0 40px;"><div style="height:1px;background:#f3f4ed;"></div></td></tr>
-
-
-<tr><td style="padding:25px 0;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td class="email-stack" width="33%" style="text-align:center;padding:10px;">
-        <div style="background:#f3f4ed;border-radius:5px;padding:20px 10px;">
-          <div style="font-size:28px;font-weight:800;color:#5c665e;">1100+</div>
-          <div style="font-size:11px;color:#5c665e;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Offres actives</div>
-        </div>
-      </td>
-      <td class="email-stack" width="33%" style="text-align:center;padding:10px;">
-        <div style="background:#f3f4ed;border-radius:5px;padding:20px 10px;">
-          <div style="font-size:28px;font-weight:800;color:#5c665e;">95%</div>
-          <div style="font-size:11px;color:#5c665e;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Satisfaction</div>
-        </div>
-      </td>
-      <td class="email-stack" width="33%" style="text-align:center;padding:10px;">
-        <div style="background:#f3f4ed;border-radius:5px;padding:20px 10px;">
-          <div style="font-size:28px;font-weight:800;color:#5c665e;">48h</div>
-          <div style="font-size:11px;color:#5c665e;margin-top:4px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Délai moyen</div>
-        </div>
-      </td>
-    </tr>
-  </table>
-</td></tr>
-
-
-<tr><td style="padding:10px 0 5px;text-align:center;">
-  <h2 style="margin:0;font-size:20px;font-weight:700;color:#205a43;">Comment ça marche ?</h2>
-  <p style="margin:8px 0 0;font-size:14px;color:#5c665e;">3 étapes simples pour trouver ton logement</p>
-</td></tr>
-
-<tr><td style="padding:20px 0 25px;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td class="email-stack" width="33%" style="text-align:center;padding:10px;vertical-align:top;">
-        <div style="font-size:36px;margin-bottom:8px;">🔍</div>
-        <div style="font-size:14px;font-weight:700;color:#5c665e;">1. On cherche</div>
-        <div style="font-size:12px;color:#5c665e;margin-top:4px;line-height:1.4;">On active ta recherche personnalisée${budget ? ' dans ton budget de ' + escapeEmailHtml(budget) : ''}</div>
-      </td>
-      <td class="email-stack" width="33%" style="text-align:center;padding:10px;vertical-align:top;">
-        <div style="font-size:36px;margin-bottom:8px;">🏠</div>
-        <div style="font-size:14px;font-weight:700;color:#5c665e;">2. Tu visites</div>
-        <div style="font-size:12px;color:#5c665e;margin-top:4px;line-height:1.4;">On organise les visites, tu choisis ton créneau</div>
-      </td>
-      <td class="email-stack" width="33%" style="text-align:center;padding:10px;vertical-align:top;">
-        <div style="font-size:36px;margin-bottom:8px;">🔑</div>
-        <div style="font-size:14px;font-weight:700;color:#5c665e;">3. Tu emménages</div>
-        <div style="font-size:12px;color:#5c665e;margin-top:4px;line-height:1.4;">On gère le dossier, la régie, et le bail</div>
-      </td>
-    </tr>
-  </table>
-</td></tr>
-
-
-<tr><td style="padding:0 40px;"><div style="height:1px;background:#f3f4ed;"></div></td></tr>
-
-
-<tr><td style="padding:20px 0 5px;">
-  <h2 style="margin:0;font-size:18px;font-weight:700;color:#205a43;text-align:center;">Ce qu'on fait pour toi</h2>
-</td></tr>
-
-<tr><td style="padding:15px 0 25px;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    <tr><td style="padding:8px 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="width:32px;vertical-align:top;"><div style="background:#f3f4ed;border-radius:50%;width:28px;height:28px;text-align:center;line-height:28px;font-size:14px;">✅</div></td>
-        <td style="padding-left:12px;"><span style="font-size:15px;color:#5c665e;font-weight:500;">Recherche personnalisée et ciblée dans ta région</span></td>
-      </tr></table>
-    </td></tr>
-    <tr><td style="padding:8px 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="width:32px;vertical-align:top;"><div style="background:#f3f4ed;border-radius:50%;width:28px;height:28px;text-align:center;line-height:28px;font-size:14px;">✅</div></td>
-        <td style="padding-left:12px;"><span style="font-size:15px;color:#5c665e;font-weight:500;">Visites organisées et accompagnées (ou déléguées)</span></td>
-      </tr></table>
-    </td></tr>
-    <tr><td style="padding:8px 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="width:32px;vertical-align:top;"><div style="background:#f3f4ed;border-radius:50%;width:28px;height:28px;text-align:center;line-height:28px;font-size:14px;">✅</div></td>
-        <td style="padding-left:12px;"><span style="font-size:15px;color:#5c665e;font-weight:500;">Dossier optimisé pour convaincre les régies</span></td>
-      </tr></table>
-    </td></tr>
-    <tr><td style="padding:8px 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-        <td style="width:32px;vertical-align:top;"><div style="background:#f3f4ed;border-radius:50%;width:28px;height:28px;text-align:center;line-height:28px;font-size:14px;">✅</div></td>
-        <td style="padding-left:12px;"><span style="font-size:15px;color:#5c665e;font-weight:500;">Garantie 90 jours — trouvé ou remboursé</span></td>
-      </tr></table>
-    </td></tr>
-  </table>
-</td></tr>
-
-
-<tr><td style="padding:10px 0 30px;text-align:center;">
-  ${emailButton(`Activer ma recherche →`, `https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email`)}
-</td></tr>
-
-
-<tr><td style="padding:0 40px;"><div style="height:1px;background:#f3f4ed;"></div></td></tr>
-
-${generateOffresSection(offres)}
-
-
-<tr><td style="padding:0 40px;"><div style="height:1px;background:#f3f4ed;"></div></td></tr>
-
-
-<tr><td style="padding:25px 0;text-align:center;">
-  <div style="font-size:22px;letter-spacing:2px;">⭐⭐⭐⭐⭐</div>
-  <p style="margin:8px 0 0;font-size:14px;color:#5c665e;line-height:1.5;">
-    "Service exceptionnel, j'ai trouvé mon appartement en 3 semaines ! L'équipe est réactive et professionnelle."
-  </p>
-  <p style="margin:4px 0 0;font-size:13px;color:#5c665e;">— Sarah M., Lausanne • Google Reviews</p>
-</td></tr>
-
-
-<tr><td style="padding:0 40px;"><div style="height:1px;background:#f3f4ed;"></div></td></tr>
-
-
-<tr><td style="padding:25px 0;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-    <tr>
-      <td style="vertical-align:top;">
-        <div style="font-size:16px;font-weight:700;color:#5c665e;">Christ Ramazani</div>
-        <div style="font-size:13px;color:#5c665e;margin-top:2px;">Fondateur & CEO — Immo-rama.ch</div>
-        <div style="margin-top:8px;">
-          <a href="tel:+41764839199" style="font-size:13px;color:#205a43;text-decoration:none;">📞 +41 76 483 91 99</a>
-        </div>
-        <div style="margin-top:3px;">
-          <a href="mailto:info@immo-rama.ch" style="font-size:13px;color:#205a43;text-decoration:none;">✉️ info@immo-rama.ch</a>
-        </div>
-        <div style="margin-top:8px;">
-          <a href="https://www.linkedin.com/company/immo-rama" style="text-decoration:none;font-size:13px;color:#205a43;margin-right:12px;">LinkedIn</a>
-          <a href="https://www.instagram.com/immo_rama" style="text-decoration:none;font-size:13px;color:#205a43;">Instagram</a>
-        </div>
-      </td>
-    </tr>
-  </table>
-</td></tr>
-
-</table>`,footerHtml:'Immo-rama.ch · Chemin de l’Esparcette 5, 1023 Crissier<br>Pour ne plus recevoir ces emails, répondez « STOP » à cet email.'});
+  const budgetLabel = budget && /^\s*[\d'’ .,]+\s*$/.test(String(budget))
+    ? formatCHF(String(budget).replace(/['’ ]/g, ''))
+    : String(budget || '');
+  return renderCorporateEmail({
+    title: `${prenom}, tu cherches un appartement ? Est-ce que c’est toujours le cas ?`,
+    preview: 'Logisorama cherche, organise les visites et gère ton dossier : active ta recherche.',
+    category: 'VOTRE RECHERCHE',
+    bodyHtml:
+      emailParagraph(`On sait que la recherche d'un logement en Suisse romande, c'est <strong>un vrai parcours du combattant</strong>. Avec un taux de vacance inférieur à 1%${localite ? ' dans la région de <strong>' + escapeEmailHtml(localite) + '</strong>' : ''}, les bons appartements partent en quelques heures.`) +
+      emailParagraph(`C'est exactement pour ça qu'on a créé <strong>Logisorama</strong> : un service de recherche de logement qui travaille <em>pour toi</em>, pas contre toi. Et si tu n'as pas encore trouvé, <strong>on a de bonnes nouvelles</strong>.`) +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:8px 0 14px;"><tr>${statTile('1100+', 'Offres actives')}${statTile('95%', 'Satisfaction')}${statTile('48h', 'Délai moyen')}</tr></table>` +
+      emailSubheading('Comment ça marche ?') +
+      emailParagraph('3 étapes simples pour trouver ton logement', true) +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 10px;"><tr>${
+        stepTile('🔍', '1. On cherche', `On active ta recherche personnalisée${budgetLabel ? ' dans ton budget de ' + escapeEmailHtml(budgetLabel) : ''}`)
+      }${stepTile('🏠', '2. Tu visites', 'On organise les visites, tu choisis ton créneau')}${stepTile('🔑', '3. Tu emménages', 'On gère le dossier, la régie, et le bail')}</tr></table>` +
+      emailSubheading("Ce qu'on fait pour toi") +
+      emailList([
+        '✅ Recherche personnalisée et ciblée dans ta région',
+        '✅ Visites organisées et accompagnées (ou déléguées)',
+        '✅ Dossier optimisé pour convaincre les régies',
+        '✅ Garantie 90 jours — trouvé ou remboursé',
+      ]).replace('padding:0 0 0 20px', 'padding:0;list-style:none') +
+      emailButton(`Activer ma recherche →`, `https://logisorama.ch/nouveau-mandat?utm_source=relance&utm_medium=email`) +
+      generateOffresSection(offres) +
+      emailDivider() +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 18px;"><tr><td align="center"><p style="margin:0;font-size:20px;letter-spacing:2px;">⭐⭐⭐⭐⭐</p><p style="margin:8px 0 0;font-size:15px;line-height:23px;color:${T.text};font-style:italic;">"Service exceptionnel, j'ai trouvé mon appartement en 3 semaines ! L'équipe est réactive et professionnelle."</p><p style="margin:6px 0 0;font-size:13px;line-height:20px;color:${T.muted};">— Sarah M., Lausanne • Google Reviews</p></td></tr></table>`,
+    signatureHtml: `<strong style="color:${T.heading};">Christ Ramazani</strong><br>Fondateur & CEO — Immo-rama.ch<br><a href="tel:+41764839199" style="color:${T.green};text-decoration:none;">📞 +41 76 483 91 99</a> · <a href="mailto:info@immo-rama.ch" style="color:${T.green};text-decoration:none;">✉️ info@immo-rama.ch</a><br><a href="https://www.linkedin.com/company/immo-rama" style="color:${T.green};text-decoration:none;">LinkedIn</a> · <a href="https://www.instagram.com/immo_rama" style="color:${T.green};text-decoration:none;">Instagram</a>`,
+    footerHtml: 'Immo-rama.ch · Chemin de l’Esparcette 5, 1023 Crissier<br>Pour ne plus recevoir ces emails, répondez « STOP » à cet email.',
+  });
 }
 
 async function fetchRandomOffres(supabase: ReturnType<typeof createClient>): Promise<Offre[]> {

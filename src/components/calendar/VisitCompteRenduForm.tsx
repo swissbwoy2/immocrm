@@ -164,12 +164,14 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
   };
 
   return (
-    <div className="space-y-4 border border-primary/20 rounded-lg p-4 bg-muted/30">
+    <div className="imr-lg-card space-y-4 rounded-[22px] p-4">
       <div className="flex items-center gap-2">
-        <ClipboardList className="w-5 h-5 text-primary" />
-        <h4 className="font-semibold">Compte-rendu de la visite</h4>
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <ClipboardList className="h-4 w-4" />
+        </span>
+        <h4 className="text-[15px] font-semibold">Compte rendu de la visite</h4>
         {savedAt && (
-          <span className="ml-auto inline-flex items-center gap-1 text-xs text-emerald-600">
+          <span className="ml-auto inline-flex items-center gap-1 text-sm text-emerald-600">
             <CheckCircle2 className="w-3.5 h-3.5" /> Enregistré
           </span>
         )}
@@ -183,10 +185,10 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
             onValueChange={(v) => update('ascenseur', v as 'oui' | 'non')}
             className="flex gap-4"
           >
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex min-h-11 items-center gap-2 cursor-pointer">
               <RadioGroupItem value="oui" id="asc-oui" /> Oui
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className="flex min-h-11 items-center gap-2 cursor-pointer">
               <RadioGroupItem value="non" id="asc-non" /> Non
             </label>
           </RadioGroup>
@@ -195,6 +197,7 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
         <div className="space-y-1.5">
           <Label htmlFor="cr-sol">Type de sol</Label>
           <Input
+            className="h-11 text-[15px]"
             id="cr-sol"
             placeholder="parquet, carrelage…"
             value={form.type_sol}
@@ -205,6 +208,7 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
         <div className="space-y-1.5 md:col-span-2">
           <Label htmlFor="cr-etat">État général</Label>
           <Input
+            className="h-11 text-[15px]"
             id="cr-etat"
             placeholder="neuf, rénové, ancien…"
             value={form.etat_general}
@@ -235,6 +239,7 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
         <div className="space-y-1.5 md:col-span-2">
           <Label htmlFor="cr-regie">Contact régie</Label>
           <Input
+            className="h-11 text-[15px]"
             id="cr-regie"
             placeholder="Nom + téléphone / email"
             value={form.contact_regie}
@@ -256,9 +261,9 @@ export function VisitCompteRenduForm({ visite, visitesGroup, onSaved }: Props) {
       <VisitCompteRenduAttachments visite={visite} visitesGroup={visitesGroup} onChanged={() => onSaved?.()} />
 
       <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-          💾 Enregistrer et envoyer au client
+        <Button onClick={handleSave} disabled={saving} className="min-h-12 w-full sm:w-auto">
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+          Enregistrer et envoyer au client
         </Button>
       </div>
     </div>

@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { UnifiedCandidature } from '@/hooks/useCandidatCandidatures';
+import { formatZurichDateTime } from '@/lib/dateZurich';
 
 export const needsVisitConfirm = (c: UnifiedCandidature) =>
   c.source === 'location' && !c.annulee && !!c.date_visite && new Date(c.date_visite).getTime() < Date.now() && c.raw?.visite_confirmee == null;
@@ -53,16 +54,24 @@ export function VisiteConfirmGate({ list, force, forceStep, onClose }: { list: U
 
   return (
     <Dialog open onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle>{step === 'visite' ? 'Avez-vous visité cet objet ?' : 'Souhaitez-vous déposer votre dossier ?'}</DialogTitle>
-          <DialogDescription>{current.adresse}</DialogDescription>
+      <DialogContent className="max-w-md gap-0 p-0 pt-3 sm:rounded-[26px] md:pt-0" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogHeader className="space-y-2 px-4 pb-3 pt-2 pr-14 text-left sm:px-6 sm:pt-6">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{step === 'visite' ? 'Après la visite' : 'Votre dossier'}</span>
+          <DialogTitle className="text-[22px] font-semibold leading-tight tracking-tight">{step === 'visite' ? 'Avez-vous visité cet objet ?' : 'Souhaitez-vous déposer votre dossier ?'}</DialogTitle>
+          <DialogDescription asChild>
+            <div className="imr-lg-glass space-y-0.5 rounded-2xl px-3.5 py-3 text-left">
+              <span className="block text-[15px] font-medium text-foreground">{current.adresse}</span>
+              {current.date_visite && <span className="block text-sm text-muted-foreground">Visite du {formatZurichDateTime(current.date_visite, { year: false })}</span>}
+            </div>
+          </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button className="min-h-[44px] flex-1 rounded-full" disabled={busy} onClick={() => answer(true)}>{busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Oui</Button>
-          <Button variant="outline" className="min-h-[44px] flex-1 rounded-full" disabled={busy} onClick={() => answer(false)}>Non</Button>
+        <div className="space-y-2 border-t border-border/60 px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:px-6 sm:pb-5">
+          <div className="flex flex-col gap-2 sm:flex-row-reverse">
+            <Button className="h-12 flex-1" disabled={busy} onClick={() => answer(true)}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}Oui</Button>
+            <Button variant="outline" className="h-12 flex-1" disabled={busy} onClick={() => answer(false)}>Non</Button>
+          </div>
+          <button type="button" className="block min-h-11 w-full text-sm text-muted-foreground underline" onClick={close}>Répondre plus tard</button>
         </div>
-        <button type="button" className="text-xs text-muted-foreground underline" onClick={close}>Répondre plus tard</button>
       </DialogContent>
     </Dialog>
   );
