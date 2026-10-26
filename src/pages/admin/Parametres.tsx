@@ -15,6 +15,7 @@ import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog'
 import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { AdminDefaultGoalsManager } from '@/components/stats/AdminDefaultGoalsManager';
 import { GoogleCalendarConnect } from '@/components/settings/GoogleCalendarConnect';
+import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { DashboardBannerManager } from '@/components/settings/DashboardBannerManager';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useNavigate } from 'react-router-dom';
@@ -392,6 +393,11 @@ export default function AdminParametres() {
                   </SettingRow>
                 </SettingsList>
               </SettingsCard>
+
+              {/* Alertes sur le téléphone (push) */}
+              <GlassSlot>
+                <PushNotificationsCard />
+              </GlassSlot>
 
               {/* Configuration Email */}
               <SettingsCard
