@@ -739,7 +739,7 @@ export default function AdminCalendrier() {
 
       {/* Visite detail dialog */}
       <Dialog open={visiteDetailDialogOpen} onOpenChange={setVisiteDetailDialogOpen}>
-        <DialogContent className={VISIT_DIALOG_CLASS}>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
           {selectedVisiteGroup && selectedVisiteGroup.length > 0 ? (() => {
             const v0 = selectedVisiteGroup[0];
             const o = v0.offres;
@@ -800,15 +800,13 @@ export default function AdminCalendrier() {
                       { label: 'Étage', value: o?.etage },
                       { label: 'Loyer / prix', value: o?.prix ? formatCHF(o.prix) : undefined },
                       { label: 'Disponibilité', value: o?.disponibilite },
+                      { label: 'Code immeuble', value: o?.code_immeuble ? <span className="font-mono">{o.code_immeuble}</span> : undefined },
                     ]}
                   />
 
                   {/* Contacts sur place */}
-                  {(o?.concierge_nom || o?.locataire_nom || o?.code_immeuble) && (
+                  {(o?.concierge_nom || o?.locataire_nom) && (
                     <VisitSection icon={Phone} title="Contact sur place">
-                      {o.code_immeuble && (
-                        <VisitPersonRow role="Code immeuble" name={<span className="font-mono">{o.code_immeuble}</span>} />
-                      )}
                       {o.concierge_nom && (
                         <VisitPersonRow
                           role="Concierge"

@@ -67,7 +67,7 @@ export function ClientEventDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={VISIT_DIALOG_CLASS}>
+      <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
         {/* ---------- VISITE ---------- */}
         {visite && (
           <>

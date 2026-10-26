@@ -127,7 +127,7 @@ export default function CoursierCalendrier() {
 
       {/* Fiche de visite — même contenu que l'admin, limité à ses missions */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className={VISIT_DIALOG_CLASS}>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
           {rep ? (
             <>
               <VisitHero

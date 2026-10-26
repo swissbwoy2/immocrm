@@ -1663,7 +1663,7 @@ export default function AgentVisites() {
 
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className={VISIT_DIALOG_CLASS}>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
           {selectedVisite ? (
             <>
               <VisitHero

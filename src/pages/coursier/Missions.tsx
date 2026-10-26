@@ -291,7 +291,7 @@ export default function CoursierMissions() {
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className={VISIT_DIALOG_CLASS}>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
           {sm ? (
             <>
               <VisitHero

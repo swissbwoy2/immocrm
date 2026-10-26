@@ -1364,7 +1364,7 @@ export default function AgentCalendrier() {
 
       {/* Detail dialog enrichi */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className={VISIT_DIALOG_CLASS}>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
           {selectedVisite ? (() => {
             const o = selectedVisite.offres;
             return (
@@ -1420,17 +1420,15 @@ export default function AgentCalendrier() {
                         { label: 'Étage', value: o.etage },
                         { label: 'Loyer', value: o.prix !== null && o.prix !== undefined && o.prix !== '' ? formatCHF(o.prix, ' / mois') : undefined },
                         { label: 'Disponibilité', value: o.disponibilite },
+                        { label: 'Code immeuble', value: o.code_immeuble ? <span className="font-mono">{o.code_immeuble}</span> : undefined },
                         { label: 'Offre envoyée le', value: o.date_envoi ? formatZurichDateTime(o.date_envoi, { short: true, year: true }) : undefined },
                       ]}
                     />
                   )}
 
                   {/* Contact sur place */}
-                  {o && (o.concierge_nom || o.locataire_nom || o.code_immeuble) && (
+                  {o && (o.concierge_nom || o.locataire_nom) && (
                     <VisitSection icon={Phone} title="Contact sur place">
-                      {o.code_immeuble && (
-                        <VisitPersonRow role="Code immeuble" name={<span className="font-mono">{o.code_immeuble}</span>} />
-                      )}
                       {o.concierge_nom && (
                         <VisitPersonRow
                           role="Concierge"

@@ -170,7 +170,7 @@ export function MesVisitesAVenirBand({ visites }: Props) {
       </div>
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
-        <DialogContent className={VISIT_DIALOG_CLASS}>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
           {selected ? <VisiteDetail visite={selected} /> : <DialogTitle className="sr-only">Ma visite</DialogTitle>}
         </DialogContent>
       </Dialog>

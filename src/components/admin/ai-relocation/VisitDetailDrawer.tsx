@@ -33,7 +33,7 @@ export function VisitDetailDrawer({ visit, open, onOpenChange }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto overscroll-contain p-0 sm:max-w-xl">
+      <SheetContent className="w-full overflow-y-auto overscroll-contain p-0 sm:max-w-xl" onOpenAutoFocus={(e) => e.preventDefault()}>
         <VisitHero
           TitleAs={SheetTitle}
           date={visit.confirmed_date}

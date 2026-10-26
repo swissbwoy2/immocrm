@@ -57,7 +57,7 @@ export function formatVisitDate(iso?: string | null, endIso?: string | null) {
 }
 
 /**
- * En-tête du détail de visite : photo arrondie (si disponible), statut, date et heure en grand, adresse avec lien carte.
+ * En-tête du détail de visite : statut, date et heure en grand, adresse avec lien carte, puis photo arrondie (si disponible).
  * `TitleAs` permet de passer `DialogTitle` / `SheetTitle` pour l'accessibilité.
  */
 export function VisitHero({
@@ -75,19 +75,14 @@ export function VisitHero({
 }) {
   const { day, time } = formatVisitDate(date, endDate);
   return (
-    <header className="space-y-3 px-4 pb-2 pt-2 pr-14 sm:px-6 sm:pt-6 sm:pr-16">
-      {photoUrl && (
-        <div className="overflow-hidden rounded-[20px] bg-muted">
-          <img src={photoUrl} alt="" className="h-40 w-full object-cover sm:h-52" loading="lazy" />
-        </div>
-      )}
+    <header className="space-y-3 px-4 pb-2 pt-2 sm:px-6 sm:pt-6">
       {(kicker || badges) && (
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5 pr-12">
           {kicker && <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{kicker}</span>}
           {badges}
         </div>
       )}
-      <TitleAs className="block text-left">
+      <TitleAs className={`block text-left ${kicker || badges ? '' : 'pr-12'}`}>
         {day ? (
           <>
             <span className="block text-[22px] font-semibold leading-tight tracking-tight text-foreground sm:text-2xl">{day}</span>
@@ -100,6 +95,11 @@ export function VisitHero({
       {day && title && <p className="text-[15px] font-medium text-foreground">{title}</p>}
       {address && (
         <AddressLink address={address} className="text-[15px] font-medium leading-snug text-foreground" iconClassName="h-4 w-4 text-primary" showExternalIcon />
+      )}
+      {photoUrl && (
+        <div className="overflow-hidden rounded-[20px] bg-muted">
+          <img src={photoUrl} alt="" className="h-40 w-full object-cover sm:h-52" loading="lazy" onError={(e) => { const p = e.currentTarget.parentElement; if (p) p.style.display = 'none'; }} />
+        </div>
       )}
       {children}
     </header>
@@ -195,7 +195,7 @@ export function VisitActionBar({ primary, children }: { primary?: React.ReactNod
     <div className="sticky bottom-0 z-20 border-t border-border/60 bg-background/90 px-4 pt-3 backdrop-blur-xl sm:px-6 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:pb-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
         {children && (
-          <div className="flex flex-wrap gap-2 sm:mr-auto [&>*]:min-h-11">{children}</div>
+          <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:mr-auto sm:flex-wrap sm:overflow-visible sm:px-0 [&>*]:min-h-11 [&>*]:shrink-0">{children}</div>
         )}
         {primary && <div className="flex flex-col gap-2 sm:flex-row [&>*]:min-h-11 [&>*]:w-full sm:[&>*]:w-auto">{primary}</div>}
       </div>

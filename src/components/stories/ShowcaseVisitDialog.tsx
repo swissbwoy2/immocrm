@@ -19,7 +19,7 @@ interface Props {
 export function ShowcaseVisitDialog({ item, onOpenChange }: Props) {
   return (
     <Dialog open={!!item} onOpenChange={onOpenChange}>
-      <DialogContent className={`${VISIT_DIALOG_CLASS} z-[200]`}>
+      <DialogContent className={`${VISIT_DIALOG_CLASS} z-[200]`} onOpenAutoFocus={(e) => e.preventDefault()}>
         {item ? <Body item={item} /> : <DialogTitle className="sr-only">Visite</DialogTitle>}
       </DialogContent>
     </Dialog>
