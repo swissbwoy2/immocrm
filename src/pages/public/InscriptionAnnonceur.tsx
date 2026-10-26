@@ -526,8 +526,8 @@ export default function InscriptionAnnonceur() {
                           onCheckedChange={(checked) => updateField('acceptCGU', checked)}
                         />
                         <label htmlFor="acceptCGU" className="text-sm leading-tight cursor-pointer">
-                          J'accepte les <Link to="/cgu" className="text-primary hover:underline">Conditions Générales d'Utilisation</Link> et 
-                          la <Link to="/confidentialite" className="text-primary hover:underline">Politique de Confidentialité</Link>
+                          J'accepte les <Link to="/conditions-generales" className="text-primary hover:underline">Conditions Générales d'Utilisation</Link> et 
+                          la <Link to="/politique-confidentialite" className="text-primary hover:underline">Politique de Confidentialité</Link>
                         </label>
                       </div>
 
