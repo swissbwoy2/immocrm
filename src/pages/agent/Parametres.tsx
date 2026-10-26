@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Camera, Save, Mail, Phone, User, Settings, Bell, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { PushNotificationsCard } from '@/components/settings/PushNotificationsCard';
 import { notifBannersEnabled, setNotifBannersEnabled } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -326,6 +327,9 @@ export default function AgentParametres() {
             />
           </div>
         </section>
+
+        {/* Alertes sur le téléphone (push) */}
+        <PushNotificationsCard />
 
         {/* Google Agenda */}
         <GoogleCalendarConnect />
