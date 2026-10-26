@@ -121,7 +121,9 @@ export function anthropicCaller(apiKey: string): CallModel {
         'anthropic-version': '2023-06-01',
       },
       // Sans outil (site public) : le champ est omis.
-      body: JSON.stringify(req.tools.length ? req : { ...req, tools: undefined }),
+      // Réflexion désactivée : sur Claude Haiku 5.5 (et les modèles 5.5), elle est active par défaut et ses jetons
+      // comptent dans max_tokens ; Steeve épuisait sa limite à réfléchir, sans écrire de réponse.
+      body: JSON.stringify({ ...(req.tools.length ? req : { ...req, tools: undefined }), thinking: { type: 'disabled' } }),
     });
     if (!res.ok) {
       const detail = (await res.text()).slice(0, 500);
