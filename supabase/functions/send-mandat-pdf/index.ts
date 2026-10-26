@@ -4,6 +4,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "../_shared/tracked-resend.ts";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"), "send-mandat-pdf");
 
@@ -846,6 +847,23 @@ const handler = async (req: Request): Promise<Response> => {
         }
       }
     );
+
+    // Page publique : client_id ignoré ; demande_id accepté seulement pour la demande qui vient d'être créée
+    // avec le même e-mail (moins de 2 h). L'équipe et les appels internes gardent tous les identifiants.
+    const appelantMandat = await verifyInternalCaller(req);
+    if (!appelantMandat.ok) {
+      data.client_id = undefined;
+      if (data.demande_id) {
+        const { data: dem } = await supabaseAdmin
+          .from('demandes_mandat')
+          .select('email, created_at')
+          .eq('id', data.demande_id)
+          .maybeSingle();
+        const recente = !!dem?.created_at && Date.now() - new Date(dem.created_at).getTime() < 2 * 60 * 60 * 1000;
+        const memeEmail = (dem?.email ?? '').trim().toLowerCase() === (data.email ?? '').trim().toLowerCase();
+        if (!dem || !recente || !memeEmail) data.demande_id = undefined;
+      }
+    }
 
     // Generate PDF
     const pdfBytes = await generateMandatPDF(data);
