@@ -1,17 +1,15 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { isSameDay, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { isSameDay } from 'date-fns';
 import { CalendarCheck, Users, Navigation, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { DashBadge, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PremiumDayEvents } from '@/components/calendar/PremiumDayEvents';
 import { CalendarEvent } from '@/components/calendar/types';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Label } from '@/components/ui/label';
-import { AddressLink } from '@/components/AddressLink';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitSection, formatCHF, offrePhotoUrl } from '@/components/visites/VisitDetailParts';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import CompteRenduVisite from '@/pages/agent/CompteRenduVisite';
@@ -81,11 +79,15 @@ export default function CoursierCalendrier() {
 
   if (loading) {
     return (
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
-        <div className="animate-pulse space-y-4">
-          {[...Array(3)].map((_, i) => <div key={i} className="h-40 bg-muted rounded-xl" />)}
+      <DashPage>
+        <div className="animate-pulse space-y-4" role="status" aria-label="Chargement de l'agenda">
+          <div className="h-8 w-56 rounded-lg bg-muted" />
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="h-96 rounded-[22px] bg-muted lg:col-span-2" />
+            <div className="h-96 rounded-[22px] bg-muted" />
+          </div>
         </div>
-      </main>
+      </DashPage>
     );
   }
 
@@ -95,12 +97,11 @@ export default function CoursierCalendrier() {
     : 0;
 
   return (
-    <main className="flex-1 overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="p-4 md:p-8 space-y-6">
-        <PremiumPageHeader
-          icon={CalendarCheck}
-          title="Calendrier des missions"
-          subtitle="Vos visites regroupées — compte-rendu et envoi au client depuis la fiche"
+    <DashPage>
+      <div className="space-y-6">
+        <DashPageHeader
+          title="Agenda des missions"
+          subtitle={`${groups.length} visite${groups.length > 1 ? 's' : ''} acceptée${groups.length > 1 ? 's' : ''} ou terminée${groups.length > 1 ? 's' : ''} · touchez une visite pour le compte rendu`}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 min-w-0 w-full">
@@ -117,7 +118,7 @@ export default function CoursierCalendrier() {
             />
           </div>
 
-          <div className="lg:col-span-1 min-w-0 h-[400px] md:h-[600px]">
+          <div className="lg:col-span-1 min-w-0 h-[440px] md:h-[600px]">
             <PremiumDayEvents
               date={selectedDate}
               events={[]}
@@ -130,112 +131,94 @@ export default function CoursierCalendrier() {
 
       {/* Fiche de visite — même contenu que l'admin, limité à ses missions */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Détails de la visite</DialogTitle>
-          </DialogHeader>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
+          {rep ? (
+            <>
+              <VisitHero
+                TitleAs={DialogTitle}
+                date={rep.date_visite}
+                endDate={rep.date_visite_fin}
+                kicker="Détails de la visite"
+                badges={
+                  <>
+                    <DashBadge tone={rep.statut_coursier === 'termine' ? 'success' : 'warning'}>
+                      {rep.statut_coursier === 'termine' ? 'Terminée' : 'En cours'}
+                    </DashBadge>
+                    <DashBadge tone="muted">
+                      <Users className="mr-1 h-3 w-3" />
+                      {clientsCount} client{clientsCount > 1 ? 's' : ''}
+                    </DashBadge>
+                  </>
+                }
+                address={rep.adresse}
+                photoUrl={offrePhotoUrl(rep.offres)}
+                title={rep.offres?.titre}
+              />
 
-          {rep && (
-            <div className="space-y-6">
-              <div className="p-4 bg-muted rounded-lg space-y-2">
-                <AddressLink address={rep.adresse} className="font-semibold text-lg" iconClassName="h-5 w-5 text-primary" />
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  <Clock className="h-3.5 w-3.5" />
-                  {format(new Date(rep.date_visite), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
-                  {rep.date_visite_fin && ` → ${format(new Date(rep.date_visite_fin), 'HH:mm')}`}
-                </p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge className="bg-primary/10 text-primary border-primary/30">
-                    <Users className="h-3 w-3 mr-1" />
-                    {clientsCount} client{clientsCount > 1 ? 's' : ''}
-                  </Badge>
-                  <Badge className={rep.statut_coursier === 'termine'
-                    ? 'bg-green-500/10 text-green-600 border-green-500/30'
-                    : 'bg-amber-500/10 text-amber-600 border-amber-500/30'}>
-                    {rep.statut_coursier === 'termine' ? 'Terminée' : 'En cours'}
-                  </Badge>
-                  <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(rep.adresse || '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                  >
-                    <Navigation className="h-3 w-3" /> Itinéraire
-                  </a>
-                </div>
-              </div>
+              <VisitBody>
+                {rep.offres && (
+                  <VisitInfoTiles
+                    items={[
+                      { label: 'Type', value: rep.offres.type_bien },
+                      { label: 'Pièces', value: rep.offres.pieces },
+                      { label: 'Surface', value: rep.offres.surface ? `${rep.offres.surface} m²` : undefined },
+                      { label: 'Étage', value: rep.offres.etage },
+                      { label: 'Loyer / prix', value: rep.offres.prix ? formatCHF(rep.offres.prix) : undefined },
+                    ]}
+                  />
+                )}
 
-              {rep.offres && (
-                <div>
-                  <Label className="text-sm font-medium mb-3 block">Caractéristiques du bien</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {rep.offres.prix && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <p className="text-xs text-muted-foreground">Prix</p>
-                        <p className="font-bold text-primary">{Number(rep.offres.prix).toLocaleString('fr-CH')} CHF</p>
-                      </div>
-                    )}
-                    {rep.offres.pieces && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <p className="text-xs text-muted-foreground">Pièces</p>
-                        <p className="font-bold">{rep.offres.pieces}</p>
-                      </div>
-                    )}
-                    {rep.offres.surface && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <p className="text-xs text-muted-foreground">Surface</p>
-                        <p className="font-bold">{rep.offres.surface} m²</p>
-                      </div>
-                    )}
-                    {rep.offres.etage && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <p className="text-xs text-muted-foreground">Étage</p>
-                        <p className="font-bold">{rep.offres.etage}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
+                {rep.offres?.description && (
+                  <VisitSection icon={CalendarCheck} title="Description">
+                    <VisitNote>{rep.offres.description}</VisitNote>
+                  </VisitSection>
+                )}
 
-              {rep.offres?.description && (
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Description</Label>
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm whitespace-pre-wrap">{rep.offres.description}</p>
-                  </div>
-                </div>
-              )}
+                {rep.offres?.lien_annonce && (
+                  <VisitSection icon={Navigation} title="Annonce">
+                    <div className="min-w-0 overflow-hidden">
+                      <LinkPreviewCard url={rep.offres.lien_annonce} showInline />
+                    </div>
+                  </VisitSection>
+                )}
 
-              {rep.offres?.lien_annonce && (
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Annonce</Label>
-                  <LinkPreviewCard url={rep.offres.lien_annonce} showInline />
-                </div>
-              )}
+                {rep.notes && (
+                  <VisitSection icon={Clock} title="Notes">
+                    <VisitNote tone="warning">{rep.notes}</VisitNote>
+                  </VisitSection>
+                )}
 
-              {rep.notes && (
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Notes</Label>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{rep.notes}</p>
-                </div>
-              )}
+                {/* Vidéo(s) de la visite */}
+                <VisitVideoPlayer medias={rep.medias} />
 
-              {/* Vidéo(s) de la visite */}
-              <VisitVideoPlayer medias={rep.medias} />
-
-              {/* Compte-rendu complet + médias + envoi à TOUS les clients du groupe */}
-              <div className="border border-primary/20 rounded-lg p-4 bg-muted/30">
+                {/* Compte-rendu complet + médias + envoi à TOUS les clients du groupe */}
                 <CompteRenduVisite
                   role="coursier"
                   visiteId={rep.id}
                   embedded
                   onSent={() => loadData()}
                 />
-              </div>
-            </div>
+              </VisitBody>
+
+              <VisitActionBar
+                primary={
+                  <Button asChild>
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(rep.adresse || '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Navigation className="h-4 w-4" /> Itinéraire
+                    </a>
+                  </Button>
+                }
+              />
+            </>
+          ) : (
+            <DialogTitle className="sr-only">Détails de la visite</DialogTitle>
           )}
         </DialogContent>
       </Dialog>
-    </main>
+    </DashPage>
   );
 }

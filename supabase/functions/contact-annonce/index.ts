@@ -1,6 +1,6 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("contact-annonce");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailDetails, emailNotice, emailParagraph } from '../_shared/email-shell.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -138,16 +138,20 @@ serve(async (req: Request): Promise<Response> => {
 
 
     if (RESEND_API_KEY && to) {
-      const html = renderCorporateEmail({ title: 'Nouveau message concernant votre annonce', category: "VOTRE ANNONCE", bodyHtml: `
-        <p style="margin:0 0 18px;"><strong>${esc(annonce.titre)}</strong>${annonce.reference ? ` — réf. ${esc(annonce.reference)}` : ""}<br/>
-        <a href="${url}">${url}</a></p>
-        <hr/>
-        <p style="margin:0 0 18px;"><strong>Nom :</strong> ${esc(nom)}<br/>
-        <strong>E-mail :</strong> ${esc(email)}<br/>
-        <strong>Téléphone :</strong> ${esc(telephone) || "—"}</p>
-        <p style="white-space:pre-wrap;background:#f6f8f7;padding:12px;border-radius:8px">${esc(message)}</p>
-        <p style="color:#6b7280;font-size:12px">Message envoyé via le portail d'annonces Logisorama.</p>
-      ` });
+      const html = renderCorporateEmail({
+        title: 'Nouveau message concernant votre annonce',
+        preview: `${nom} vous a écrit au sujet de « ${annonce.titre} ».`,
+        category: "VOTRE ANNONCE",
+        bodyHtml:
+          emailParagraph(`<strong>${esc(annonce.titre)}</strong>${annonce.reference ? ` — réf. ${esc(annonce.reference)}` : ""}<br/><a href="${esc(url)}" style="color:#205a43;word-break:break-all;">${esc(url)}</a>`) +
+          emailDetails([
+            ["Nom", nom],
+            { label: "E-mail", html: `<a href="mailto:${esc(email)}" style="color:inherit;">${esc(email)}</a>` },
+            ["Téléphone", telephone || "—"],
+          ]) +
+          emailNotice(esc(message).replace(/\r?\n/g, "<br>"), "neutral", "Message") +
+          emailParagraph("Message envoyé via le portail d'annonces Logisorama.", true),
+      });
 
       const res = await sendTrackedEmail("https://api.resend.com/emails", {
         method: "POST",

@@ -2,6 +2,8 @@ import drueyVisit from "./templates/druey-visite.html?raw";
 import premium from "./reference.html?raw";
 import candidature from "./templates/candidature.html?raw";
 import cancellation from "./templates/visite-annulee.html?raw";
+import { CANDIDATE_NEWSLETTER_TEMPLATES } from "./candidate-sequence";
+import { RC_NEWSLETTER_TEMPLATE } from "./rc-campaign";
 
 export const NEWSLETTER_TEMPLATES = [
   {
@@ -53,3 +55,24 @@ export const NEWSLETTER_TEMPLATES = [
     html: cancellation,
   },
 ] as const;
+
+export const NEWSLETTER_TEMPLATE_SECTIONS = [
+  {
+    id: "client-services",
+    name: "Clients & candidats · Votre dossier",
+    description: "Univers bleu de l’espace client. Offres et services pour compléter le dossier.",
+    templates: [RC_NEWSLETTER_TEMPLATE],
+  },
+  {
+    id: "candidates",
+    name: "Candidats · Activer la recherche",
+    description: "Six emails pour les chercheurs à louer non convertis. Arrêt à la signature du mandat et à l’activation du service.",
+    templates: CANDIDATE_NEWSLETTER_TEMPLATES,
+  },
+  {
+    id: "other",
+    name: "Autres modèles",
+    description: "Invitations, compte premium et messages de visite.",
+    templates: NEWSLETTER_TEMPLATES,
+  },
+];

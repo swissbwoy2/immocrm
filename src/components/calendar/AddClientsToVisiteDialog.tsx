@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
-import { UserPlus } from 'lucide-react';
+import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
+import { CalendarDays, UserPlus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -306,10 +307,12 @@ export const AddClientsToVisiteDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!sending) onOpenChange(o); }}>
-      <DialogContent className="max-w-2xl flex flex-col max-h-[92dvh] p-0 gap-0">
-        <DialogHeader className="p-6 pb-3 shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
+      <DialogContent className="max-w-2xl flex flex-col max-h-[92dvh] p-0 pt-3 md:pt-0 gap-0 sm:rounded-[26px] overflow-hidden">
+        <DialogHeader className="px-4 pb-3 pt-2 pr-14 sm:px-6 sm:pt-6 shrink-0 text-left">
+          <DialogTitle className="flex items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <UserPlus className="h-[18px] w-[18px]" />
+            </span>
             Ajouter des clients à cette visite
           </DialogTitle>
           <DialogDescription className="hidden sm:block">
@@ -318,14 +321,14 @@ export const AddClientsToVisiteDialog = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-4 space-y-4">
-          <div className="p-4 border rounded-lg space-y-2">
-            <h4 className="font-semibold">{adresse}</h4>
-            <div className="flex flex-wrap gap-2">
-              {sourceOffre.prix != null && <Badge variant="secondary">CHF {sourceOffre.prix.toLocaleString('fr-CH')}.-</Badge>}
-              {sourceOffre.pieces != null && <Badge variant="outline">{sourceOffre.pieces} pièces</Badge>}
-              {sourceOffre.surface != null && <Badge variant="outline">{sourceOffre.surface} m²</Badge>}
-              <Badge>📅 {visitDateLabel}</Badge>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 pb-4 space-y-4">
+          <div className="imr-lg-card space-y-2 rounded-[22px] p-4">
+            <p className="text-lg font-semibold leading-snug text-foreground first-letter:uppercase">{visitDateLabel}</p>
+            <p className="text-[15px] font-medium text-foreground">{adresse}</p>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {sourceOffre.prix != null && <DashBadge tone="neutral">CHF {sourceOffre.prix.toLocaleString('fr-CH')}.-</DashBadge>}
+              {sourceOffre.pieces != null && <DashBadge tone="muted">{sourceOffre.pieces} pièces</DashBadge>}
+              {sourceOffre.surface != null && <DashBadge tone="muted">{sourceOffre.surface} m²</DashBadge>}
             </div>
           </div>
 
@@ -344,12 +347,12 @@ export const AddClientsToVisiteDialog = ({
           </div>
         </div>
 
-        <DialogFooter className="shrink-0 border-t bg-background p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>
+        <DialogFooter className="shrink-0 border-t border-border/60 bg-background/90 backdrop-blur-xl px-4 pt-3 sm:px-6 pb-[max(env(safe-area-inset-bottom),0.75rem)] sm:pb-4 gap-2">
+          <Button variant="outline" className="min-h-11" onClick={() => onOpenChange(false)} disabled={sending}>
             Annuler
           </Button>
-          <Button onClick={handleAdd} disabled={sending || selectedClientIds.length === 0}>
-            <UserPlus className="h-4 w-4 mr-2" />
+          <Button className="min-h-11" onClick={handleAdd} disabled={sending || selectedClientIds.length === 0}>
+            <UserPlus className="h-4 w-4" />
             {sending ? 'Envoi...' : `Ajouter ${selectedClientIds.length} client(s)`}
           </Button>
         </DialogFooter>

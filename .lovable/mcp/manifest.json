@@ -19,7 +19,7 @@
       {
         "name": "list_pending_postulations",
         "title": "Postulations à faire",
-        "description": "Liste les postulations en attente de dépôt (offres au statut « souhaite_postuler »), avec le client concerné.",
+        "description": "Liste les postulations en attente de dépôt (offres au statut « souhaite_postuler »), avec le client concerné. Les demandes dont la préparation est en file, prête ou bloquée apparaissent en premier, avec job_id, statut, priorité, résumé et éléments manquants. Le champ steeve donne l'état du registre partagé : si deja_envoye est vrai ou si un envoi est en cours, ne refais rien pour cette offre.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -125,6 +125,46 @@
             "postulation_id",
             "filename",
             "content_base64"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "report_postulation_progress",
+        "title": "Signaler l'avancement d'une postulation",
+        "description": "Signale l'avancement d'une postulation au registre partagé avec Steeve. etape = pdf_prepare (PDF de candidature déposé), brouillon_pret (brouillon complet déposé dans les Brouillons de relocation@immo-rama.ch : Steeve le contrôle puis l'envoie, tu ne l'envoies pas toi-même) ou bloque (préparation impossible, note obligatoire avec la cause). Si le dossier est déjà envoyé, la réponse le dit : ne refais rien.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "postulation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "postulation_id renvoyé par list_pending_postulations (identifiant de l'offre)."
+            },
+            "etape": {
+              "type": "string",
+              "enum": [
+                "pdf_prepare",
+                "brouillon_pret",
+                "bloque"
+              ]
+            },
+            "note": {
+              "type": "string",
+              "maxLength": 500,
+              "description": "Précision courte (objet du brouillon, cause du blocage…)."
+            }
+          },
+          "required": [
+            "postulation_id",
+            "etape"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"

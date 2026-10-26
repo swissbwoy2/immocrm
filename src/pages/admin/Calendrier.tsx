@@ -17,7 +17,7 @@ import { PremiumEventFilters } from '@/components/calendar/PremiumEventFilters';
 import type { EventFormData } from '@/components/calendar/EventForm';
 import { PremiumDayEvents } from '@/components/calendar/PremiumDayEvents';
 import type { PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { DASH_CARD, DashBadge, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { AddressLink } from '@/components/AddressLink';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
-import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
+import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitPersonRow, VisitSection, VisitStatusBadge, formatCHF, offrePhotoUrl } from '@/components/visites/VisitDetailParts';
 import CompteRenduVisiteForm from '@/components/visites/CompteRenduVisiteForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
@@ -552,27 +552,26 @@ export default function AdminCalendrier() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-auto h-full">
-      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
+    <DashPage className="space-y-4 md:space-y-6">
       {/* Header */}
-      <PremiumPageHeader
+      <DashPageHeader
         title="Calendrier"
         subtitle="Gérez les rendez-vous, rappels et visites"
-        icon={CalendarIcon}
         action={
-          <Button onClick={() => setShowEventForm(true)} size="sm" className="gap-2">
+          <Button onClick={() => setShowEventForm(true)} size="sm" className="gap-2 rounded-full">
             <Plus className="h-4 w-4" />
             Nouvel événement
           </Button>
         }
       />
+      {loading && <p className="text-xs text-muted-foreground" role="status">Chargement des événements…</p>}
 
       {/* Mobile: Filters collapsible */}
       <details className="lg:hidden">
-        <summary className="text-sm font-medium cursor-pointer p-3 bg-muted/50 rounded-xl backdrop-blur-sm border border-border/50">
+        <summary className={`${DASH_CARD} cursor-pointer p-3 text-sm font-medium text-foreground`}>
           Filtres avancés
         </summary>
-        <div className="mt-3 animate-fade-in">
+        <div className="mt-3">
           <PremiumEventFilters
             agents={agents}
             clients={clients}
@@ -589,31 +588,26 @@ export default function AdminCalendrier() {
       </details>
 
       {/* Confirmed-only toggle */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Button
-          size="sm"
-          variant={confirmedOnly ? 'default' : 'outline'}
-          onClick={() => setConfirmedOnly(true)}
-        >
-          Confirmées par le client
-        </Button>
-        <Button
-          size="sm"
-          variant={confirmedOnly ? 'outline' : 'default'}
-          onClick={() => setConfirmedOnly(false)}
-        >
-          Toutes
-        </Button>
-      </div>
+      <DashFilterPills
+        label="Visites affichées"
+        options={[
+          { key: 'confirmees', label: 'Confirmées par le client' },
+          { key: 'toutes', label: 'Toutes' },
+        ]}
+        value={confirmedOnly ? 'confirmees' : 'toutes'}
+        onChange={(key) => setConfirmedOnly(key === 'confirmees')}
+      />
 
       <CreneauxAVenirStrip />
 
 
       {/* Batch Calendar Export */}
       {filteredVisites.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap p-3 rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm">
-          <Download className="h-4 w-4 text-muted-foreground" />
-          <span className="text-sm font-medium mr-1">Exporter au calendrier :</span>
+        <div className={`${DASH_CARD} flex flex-wrap items-center gap-2 p-3 md:p-4`}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+            <Download className="h-4 w-4" />
+          </span>
+          <span className="text-sm font-semibold text-foreground mr-1">Exporter au calendrier :</span>
           {[
             { label: "Aujourd'hui", filter: (v: any) => isToday(new Date(v.date_visite)) },
             { label: 'Cette semaine', filter: (v: any) => isThisWeek(new Date(v.date_visite), { weekStartsOn: 1 }) },
@@ -661,7 +655,7 @@ export default function AdminCalendrier() {
                   downloadMultiEventICSFile(icsEvents, `visites_${label.replace(/[^a-zA-Z]/g, '_').toLowerCase()}.ics`);
                   toast.success(`${groups.length} visite(s) exportée(s)${filtered.length > groups.length ? ` (${filtered.length - groups.length} doublon(s) regroupé(s))` : ''}`);
                 }}
-                className="gap-1.5"
+                className="gap-1.5 rounded-full"
               >
                 {label} ({filtered.length})
               </Button>
@@ -673,7 +667,7 @@ export default function AdminCalendrier() {
       {/* Main content - responsive grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 md:gap-6 min-w-0 w-full">
         {/* Filters sidebar - desktop only */}
-        <div className="hidden lg:block lg:col-span-1 min-w-0 animate-fade-in" style={{ animationDelay: '0ms' }}>
+        <div className="hidden lg:block lg:col-span-1 min-w-0">
           <PremiumEventFilters
             agents={agents}
             clients={clients}
@@ -690,7 +684,7 @@ export default function AdminCalendrier() {
 
         {/* Calendar */}
         <div className="lg:col-span-2 min-w-0 overflow-hidden">
-          <Suspense fallback={<div className="h-72 rounded bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
+          <Suspense fallback={<div className="h-72 rounded-2xl bg-muted/40" role="status" aria-label="Chargement du calendrier" />}>
           <EventManagerCalendar
             events={filteredEvents}
             visites={filteredVisites}
@@ -745,181 +739,121 @@ export default function AdminCalendrier() {
 
       {/* Visite detail dialog */}
       <Dialog open={visiteDetailDialogOpen} onOpenChange={setVisiteDetailDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto animate-fade-in">
-          <DialogHeader>
-            <DialogTitle>Détails de la visite</DialogTitle>
-          </DialogHeader>
-
-          {selectedVisiteGroup?.[0]?.id && (
-            <div className="rounded-xl border border-[hsl(158_55%_45%)]/30 bg-[hsl(158_55%_45%)]/5 p-3">
-              <VisitLiveButton
-                visiteId={selectedVisiteGroup[0].id}
-                dateVisite={selectedVisiteGroup[0].date_visite}
-                size="default"
-                className="w-full"
-              />
-            </div>
-          )}
-          
-          
-          {selectedVisiteGroup && selectedVisiteGroup.length > 0 && (
-            <div className="space-y-6">
-              {/* AUTO badge */}
-              {selectedVisiteGroup[0].offres?.envoi_auto && (
-                <div className="flex items-center gap-2 p-3 rounded-lg bg-violet-600/10 border border-violet-600/30">
-                  <Badge className="bg-violet-600 hover:bg-violet-600 text-white">🤖 Offre automatique</Badge>
-                  <span className="text-sm text-violet-900 dark:text-violet-200">
-                    Visite programmée par la recherche automatique
-                  </span>
-                </div>
-              )}
-
-              {/* Intérêt client */}
-              <div className="p-3 rounded-lg border border-border/60 flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium">Intérêt du client :</span>{selectedVisiteGroup[0].est_deleguee ? <Badge className="bg-blue-600 text-white ml-1">Visite déléguée</Badge> : isVisiteConfirmedByClient(selectedVisiteGroup[0].offres?.statut) ? <Badge className="bg-emerald-600 text-white ml-1">Client s'en occupe</Badge> : <Badge variant="outline" className="ml-1">Décision en attente</Badge>}
-                <ClientInteretBadge statutOffre={selectedVisiteGroup[0].offres?.statut} />
-                {getInteretState(selectedVisiteGroup[0].offres?.statut).key === 'attente' && (
-                  <span className="text-xs text-amber-700">
-                    À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.
-                  </span>
-                )}
-              </div>
-
-              {/* Header with address */}
-              <div className="p-4 bg-muted rounded-lg">
-                <AddressLink
-                  address={selectedVisiteGroup[0].adresse}
-                  className="font-semibold text-lg"
-                  iconClassName="h-5 w-5 text-primary"
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
+          {selectedVisiteGroup && selectedVisiteGroup.length > 0 ? (() => {
+            const v0 = selectedVisiteGroup[0];
+            const o = v0.offres;
+            const uniqueClients = getUniqueVisitesByClient(selectedVisiteGroup);
+            return (
+              <>
+                <VisitHero
+                  TitleAs={DialogTitle}
+                  date={v0.date_visite}
+                  endDate={v0.date_visite_fin}
+                  kicker="Détails de la visite"
+                  badges={
+                    <>
+                      <VisitStatusBadge statut={v0.statut} />
+                      {v0.est_deleguee
+                        ? <DashBadge tone="primary">Visite déléguée</DashBadge>
+                        : isVisiteConfirmedByClient(o?.statut)
+                          ? <DashBadge tone="success">Client s'en occupe</DashBadge>
+                          : <DashBadge tone="muted">Décision en attente</DashBadge>}
+                      {o?.envoi_auto && <DashBadge tone="neutral">Offre automatique</DashBadge>}
+                    </>
+                  }
+                  address={v0.adresse}
+                  photoUrl={offrePhotoUrl(o)}
+                  title={o?.titre}
                 />
-                <p className="text-sm text-muted-foreground mt-2">
-                  {format(new Date(selectedVisiteGroup[0].date_visite), "EEEE d MMMM yyyy 'à' HH:mm", { locale: fr })}
-                </p>
-              </div>
 
-              {/* Link preview if available */}
-              {selectedVisiteGroup[0].offres?.lien_annonce && (
-                <div>
-                  <Label className="text-sm font-medium">Lien de l'annonce</Label>
-                  <div className="mt-2">
-                    <LinkPreviewCard url={selectedVisiteGroup[0].offres.lien_annonce} showInline />
-                  </div>
-                </div>
-              )}
-
-              {/* Property characteristics */}
-              {selectedVisiteGroup[0].offres && (
-                <div>
-                  <Label className="text-sm font-medium mb-3 block">Caractéristiques du bien</Label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {selectedVisiteGroup[0].offres.prix && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <p className="text-xs text-muted-foreground">Prix</p>
-                        <p className="font-bold text-primary">{selectedVisiteGroup[0].offres.prix.toLocaleString()} CHF</p>
-                      </div>
-                    )}
-                    {selectedVisiteGroup[0].offres.pieces && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <p className="text-xs text-muted-foreground">Pièces</p>
-                        <p className="font-bold">{selectedVisiteGroup[0].offres.pieces}</p>
-                      </div>
-                    )}
-                    {selectedVisiteGroup[0].offres.surface && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <p className="text-xs text-muted-foreground">Surface</p>
-                        <p className="font-bold">{selectedVisiteGroup[0].offres.surface} m²</p>
-                      </div>
-                    )}
-                    {selectedVisiteGroup[0].offres.etage && (
-                      <div className="p-3 bg-muted rounded-lg text-center">
-                        <p className="text-xs text-muted-foreground">Étage</p>
-                        <p className="font-bold">{selectedVisiteGroup[0].offres.etage}</p>
-                      </div>
-                    )}
-                  </div>
-                  {selectedVisiteGroup[0].offres.disponibilite && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Disponibilité : {selectedVisiteGroup[0].offres.disponibilite}
-                    </p>
+                <VisitBody>
+                  {v0.id && (
+                    <VisitLiveButton
+                      visiteId={v0.id}
+                      dateVisite={v0.date_visite}
+                      size="default"
+                      className="h-12 w-full"
+                    />
                   )}
-                </div>
-              )}
 
-              {/* Description */}
-              {selectedVisiteGroup[0].offres?.description && (
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Description</Label>
-                  <div className="p-4 bg-muted/50 rounded-lg">
-                    <p className="text-sm whitespace-pre-wrap">{selectedVisiteGroup[0].offres.description}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Contacts */}
-              {(selectedVisiteGroup[0].offres?.concierge_nom || selectedVisiteGroup[0].offres?.locataire_nom) && (
-                <div>
-                  <Label className="text-sm font-medium mb-3 block">Contacts</Label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {selectedVisiteGroup[0].offres.concierge_nom && (
-                      <div className="p-3 border rounded-lg">
-                        <div className="flex items-center gap-2 text-sm font-medium mb-1">
-                          <Building2 className="h-4 w-4" />
-                          Concierge
-                        </div>
-                        <p className="text-sm">{selectedVisiteGroup[0].offres.concierge_nom}</p>
-                        {selectedVisiteGroup[0].offres.concierge_tel && (
-                          <a 
-                            href={`tel:${selectedVisiteGroup[0].offres.concierge_tel}`} 
-                            className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline"
-                          >
-                            <Phone className="h-3 w-3" />
-                            {selectedVisiteGroup[0].offres.concierge_tel}
-                          </a>
-                        )}
-                      </div>
-                    )}
-                    {selectedVisiteGroup[0].offres.locataire_nom && (
-                      <div className="p-3 border rounded-lg">
-                        <div className="flex items-center gap-2 text-sm font-medium mb-1">
-                          <Home className="h-4 w-4" />
-                          Locataire actuel
-                        </div>
-                        <p className="text-sm">{selectedVisiteGroup[0].offres.locataire_nom}</p>
-                        {selectedVisiteGroup[0].offres.locataire_tel && (
-                          <a 
-                            href={`tel:${selectedVisiteGroup[0].offres.locataire_tel}`} 
-                            className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline"
-                          >
-                            <Phone className="h-3 w-3" />
-                            {selectedVisiteGroup[0].offres.locataire_tel}
-                          </a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Clients concerned (dédupliqués) */}
-              {(() => {
-                const uniqueClients = getUniqueVisitesByClient(selectedVisiteGroup);
-                return (
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <Label className="text-sm font-medium">
-                        Clients concernés ({uniqueClients.length})
-                      </Label>
-                      <Button size="sm" variant="outline" onClick={() => setAddClientsDialogOpen(true)}>
-                        ➕ Ajouter des clients
-                      </Button>
+                  {/* Intérêt du client */}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Intérêt du client</span>
+                      <ClientInteretBadge statutOffre={o?.statut} />
                     </div>
-                    <ul className="space-y-2">
-                      {uniqueClients.map((visite: any) => (
-                        <li key={visite.client_id} className="flex items-center justify-between p-2 border rounded-lg">
-                          <span className="text-sm">{getClientName(visite.client_id) || 'Client inconnu'}</span>
-                          <Button 
-                            size="sm" 
+                    {getInteretState(o?.statut).key === 'attente' && (
+                      <VisitNote tone="warning">À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.</VisitNote>
+                    )}
+                    {o?.envoi_auto && (
+                      <p className="text-sm text-muted-foreground">Visite programmée par la recherche automatique</p>
+                    )}
+                  </div>
+
+                  {/* Infos clés */}
+                  <VisitInfoTiles
+                    items={[
+                      { icon: Home, label: 'Type', value: o?.type_bien },
+                      { label: 'Pièces', value: o?.pieces },
+                      { label: 'Surface', value: o?.surface ? `${o.surface} m²` : undefined },
+                      { label: 'Étage', value: o?.etage },
+                      { label: 'Loyer / prix', value: o?.prix ? formatCHF(o.prix) : undefined },
+                      { label: 'Disponibilité', value: o?.disponibilite },
+                      { label: 'Code immeuble', value: o?.code_immeuble ? <span className="font-mono">{o.code_immeuble}</span> : undefined },
+                    ]}
+                  />
+
+                  {/* Contacts sur place */}
+                  {(o?.concierge_nom || o?.locataire_nom) && (
+                    <VisitSection icon={Phone} title="Contact sur place">
+                      {o.concierge_nom && (
+                        <VisitPersonRow
+                          role="Concierge"
+                          name={o.concierge_nom}
+                          sub={o.concierge_tel || undefined}
+                          action={o.concierge_tel ? (
+                            <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label={`Appeler ${o.concierge_nom}`}>
+                              <a href={`tel:${o.concierge_tel}`}><Phone className="h-4 w-4" /></a>
+                            </Button>
+                          ) : undefined}
+                        />
+                      )}
+                      {o.locataire_nom && (
+                        <VisitPersonRow
+                          role="Locataire actuel"
+                          name={o.locataire_nom}
+                          sub={o.locataire_tel || undefined}
+                          action={o.locataire_tel ? (
+                            <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label={`Appeler ${o.locataire_nom}`}>
+                              <a href={`tel:${o.locataire_tel}`}><Phone className="h-4 w-4" /></a>
+                            </Button>
+                          ) : undefined}
+                        />
+                      )}
+                    </VisitSection>
+                  )}
+
+                  {/* Participants */}
+                  <VisitSection
+                    icon={User}
+                    title={`Participants (${uniqueClients.length} client${uniqueClients.length > 1 ? 's' : ''})`}
+                    action={
+                      <Button size="sm" variant="outline" className="min-h-9" onClick={() => setAddClientsDialogOpen(true)}>
+                        <Plus className="h-4 w-4" /> Ajouter
+                      </Button>
+                    }
+                  >
+                    {uniqueClients.map((visite: any) => (
+                      <VisitPersonRow
+                        key={visite.client_id}
+                        role="Client"
+                        name={getClientName(visite.client_id) || 'Client inconnu'}
+                        action={
+                          <Button
+                            size="sm"
                             variant="outline"
+                            className="min-h-10"
                             onClick={() => {
                               setVisiteDetailDialogOpen(false);
                               navigate(`/admin/clients/${visite.client_id}`);
@@ -927,126 +861,119 @@ export default function AdminCalendrier() {
                           >
                             Voir client
                           </Button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })()}
+                        }
+                      />
+                    ))}
+                    {v0.agent_id && (
+                      <VisitPersonRow role="Agent responsable" name={getAgentName(v0.agent_id) || 'Agent'} />
+                    )}
+                  </VisitSection>
 
-              {/* Agent */}
-              {selectedVisiteGroup[0].agent_id && (
-                <div className="pt-4 border-t">
-                  <Label className="text-sm font-medium mb-1 block">Agent responsable</Label>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{getAgentName(selectedVisiteGroup[0].agent_id)}</span>
-                  </div>
-                </div>
-              )}
+                  {/* Description */}
+                  {o?.description && (
+                    <VisitSection icon={Building2} title="Description du bien">
+                      <VisitNote>{o.description}</VisitNote>
+                    </VisitSection>
+                  )}
 
-              {/* Visit notes */}
-              {selectedVisiteGroup[0].notes && (
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">Notes</Label>
-                  <p className="text-sm text-muted-foreground">{selectedVisiteGroup[0].notes}</p>
-                </div>
-              )}
+                  {/* Notes */}
+                  {v0.notes && (
+                    <VisitSection icon={Pencil} title="Notes">
+                      <VisitNote tone="warning">{v0.notes}</VisitNote>
+                    </VisitSection>
+                  )}
 
-              {/* Vidéo(s) de la visite — lecteur inline */}
-              <VisitVideoPlayer medias={selectedVisiteGroup[0].medias} />
+                  {/* Lien de l'annonce */}
+                  {o?.lien_annonce && (
+                    <VisitSection icon={ExternalLink} title="Lien de l'annonce">
+                      <div className="min-w-0 overflow-hidden">
+                        <LinkPreviewCard url={o.lien_annonce} showInline />
+                      </div>
+                    </VisitSection>
+                  )}
 
-              {/* Compte-rendu de la visite (formulaire partagé admin/agent/coursier) */}
-              <CompteRenduVisiteForm
-                role="admin"
-                visiteId={selectedVisiteGroup[0].id}
-                embedded
-              />
+                  {/* Vidéo(s) de la visite — lecteur inline */}
+                  <VisitVideoPlayer medias={v0.medias} />
 
-            </div>
-          )}
+                  {/* Compte rendu (formulaire partagé admin/agent/coursier) — une seule entrée « Ajouter photo / vidéo » */}
+                  <CompteRenduVisiteForm
+                    role="admin"
+                    visiteId={v0.id}
+                    embedded
+                    videoShare={{ visite: v0, visitesGroup: selectedVisiteGroup, onUploaded: () => loadData(true) }}
+                  />
+                </VisitBody>
 
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            {selectedVisiteGroup && (
-              <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Modifier la visite
-              </Button>
-            )}
-            {selectedVisiteGroup && (
-              <VisitVideoShareButton
-                visite={selectedVisiteGroup[0]}
-                visitesGroup={selectedVisiteGroup}
-                variant="outline"
-              />
-            )}
-            {selectedVisiteGroup && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive">
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Supprimer la visite
+                <VisitActionBar
+                  primary={
+                    <Button variant="default" onClick={() => handleDelegateToCoursier(selectedVisiteGroup || [])}>
+                      <User className="h-4 w-4" /> Déléguer au coursier
+                    </Button>
+                  }
+                >
+                  <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
+                    <Pencil className="h-4 w-4" /> Modifier
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Cette visite sera supprimée pour tous les clients concernés. 
-                      Ils ne la verront plus dans leur calendrier.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                      onClick={() => handleDeleteVisiteGroup(selectedVisiteGroup)}
-                    >
-                      Supprimer
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-            {selectedVisiteGroup && (
-              <AddToCalendarButton
-                event={{
-                  uid: buildStableVisiteUID(selectedVisiteGroup[0].adresse || '', selectedVisiteGroup[0].date_visite),
-                  title: `Visite - ${selectedVisiteGroup[0].offres?.titre || selectedVisiteGroup[0].adresse || 'Visite'}`,
-                  description: buildVisiteICSDescription({
-                    clients: getUniqueVisitesByClient(selectedVisiteGroup)
-                      .map((v: any) => getClientName(v.client_id) || 'Inconnu')
-                      .join(', '),
-                    agent: getAgentName(selectedVisiteGroup[0].agent_id) || undefined,
-                    adresse: selectedVisiteGroup[0].adresse,
-                    prix: selectedVisiteGroup[0].offres?.prix ? `${selectedVisiteGroup[0].offres.prix} CHF/mois` : undefined,
-                    pieces: selectedVisiteGroup[0].offres?.pieces,
-                    surface: selectedVisiteGroup[0].offres?.surface,
-                    etage: selectedVisiteGroup[0].offres?.etage,
-                    notes: selectedVisiteGroup[0].notes,
-                    lien_annonce: selectedVisiteGroup[0].offres?.lien_annonce,
-                    description: selectedVisiteGroup[0].offres?.description,
-                  }),
-                  location: selectedVisiteGroup[0].adresse || '',
-                  startDate: new Date(selectedVisiteGroup[0].date_visite),
-                }}
-                variant="outline"
-                size="sm"
-              />
-            )}
-            {selectedVisiteGroup?.[0].offres?.lien_annonce && (
-              <Button 
-                variant="outline" 
-                onClick={() => window.open(selectedVisiteGroup[0].offres.lien_annonce, '_blank')}
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Ouvrir l'annonce
-              </Button>
-            )}
-            <Button variant="default" onClick={() => handleDelegateToCoursier(selectedVisiteGroup || [])} className='bg-blue-600 hover:bg-blue-700 text-white'>Deleguer au coursier</Button><Button variant='default' onClick={() => setVisiteDetailDialogOpen(false)}>
-              Fermer
-            </Button>
-          </DialogFooter>
+                  <AddToCalendarButton
+                    event={{
+                      uid: buildStableVisiteUID(v0.adresse || '', v0.date_visite),
+                      title: `Visite - ${o?.titre || v0.adresse || 'Visite'}`,
+                      description: buildVisiteICSDescription({
+                        clients: uniqueClients
+                          .map((v: any) => getClientName(v.client_id) || 'Inconnu')
+                          .join(', '),
+                        agent: getAgentName(v0.agent_id) || undefined,
+                        adresse: v0.adresse,
+                        prix: o?.prix ? `${o.prix} CHF/mois` : undefined,
+                        pieces: o?.pieces,
+                        surface: o?.surface,
+                        etage: o?.etage,
+                        notes: v0.notes,
+                        lien_annonce: o?.lien_annonce,
+                        description: o?.description,
+                      }),
+                      location: v0.adresse || '',
+                      startDate: new Date(v0.date_visite),
+                    }}
+                    variant="outline"
+                    size="sm"
+                  />
+                  {o?.lien_annonce && (
+                    <Button variant="outline" onClick={() => window.open(o.lien_annonce, '_blank')}>
+                      <ExternalLink className="h-4 w-4" /> Annonce
+                    </Button>
+                  )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" className="text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4" /> Supprimer
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Cette visite sera supprimée pour tous les clients concernés.
+                          Ils ne la verront plus dans leur calendrier.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          onClick={() => handleDeleteVisiteGroup(selectedVisiteGroup)}
+                        >
+                          Supprimer
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </VisitActionBar>
+              </>
+            );
+          })() : (
+            <DialogTitle className="sr-only">Détails de la visite</DialogTitle>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1076,6 +1003,6 @@ export default function AdminCalendrier() {
           loadData(true);
         }}
       /></Suspense>}
-    </div>
+    </DashPage>
   );
 }

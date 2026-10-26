@@ -1,9 +1,10 @@
 import { differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
 import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
+import { formatZurichTime } from '@/lib/dateZurich';
 import { 
   Calendar, Clock, Home, Maximize, User, Phone, KeyRound, 
-  Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus, Sparkles, Eye,
-  Building, ExternalLink, ArrowRight
+  Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus, Eye,
+  Building, ExternalLink, ArrowRight, Lightbulb, MessageSquareText, Hourglass
 } from 'lucide-react';
 import { AddressLink } from '@/components/AddressLink';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ import { CalendarEvent, eventTypeLabels, eventTypeColors } from './types';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
 import { AddToCalendarButton } from './AddToCalendarButton';
 import { buildVisiteICSDescription } from '@/utils/generateICS';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 
 interface PremiumClientDayEventsProps {
   date: Date | null;
@@ -25,40 +27,23 @@ interface PremiumClientDayEventsProps {
   onVoirOffre: () => void;
   /** Opens the full detail dialog for a visite or an event */
   onOpenDetail?: (data: any, type: 'event' | 'visite') => void;
+  /** Parcours achat : prix de vente (pas de loyer) et « faire une offre » au lieu de « candidater ». */
+  isAchat?: boolean;
 }
 
 export function PremiumClientDayEvents({ 
   date, events, visites, 
-  onMarquerEffectuee, onAccepterOffre, onRefuserOffre, onVoirOffre, onOpenDetail
+  onMarquerEffectuee, onAccepterOffre, onRefuserOffre, onVoirOffre, onOpenDetail, isAchat = false
 }: PremiumClientDayEventsProps) {
   if (!date) {
     return (
-      <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/30 border border-border/50 overflow-hidden">
-        {/* Particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 rounded-full bg-primary/20 animate-float"
-              style={{
-                left: `${20 + i * 15}%`,
-                top: `${30 + (i % 3) * 20}%`,
-                animationDelay: `${i * 0.5}s`,
-                animationDuration: `${3 + i * 0.5}s`,
-              }}
-            />
-          ))}
-        </div>
-        
+      <div className={cn(DASH_CARD, 'h-full overflow-hidden')}>
         <div className="flex items-center justify-center h-full p-6">
           <div className="text-center">
-            <div className="relative inline-block mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <Calendar className="w-8 h-8 text-primary/60" />
-              </div>
-              <div className="absolute inset-0 bg-primary/10 rounded-2xl blur-xl animate-pulse" />
-            </div>
-            <p className="text-muted-foreground font-medium">
+            <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <Calendar className="w-7 h-7 text-primary" />
+            </span>
+            <p className="text-sm text-muted-foreground">
               Sélectionnez un jour pour voir les événements
             </p>
           </div>
@@ -87,28 +72,28 @@ export function PremiumClientDayEvents({
 
   const getTimeRemaining = (eventDate: Date) => {
     const now = new Date();
-    const swissDate = toSwissTime(eventDate);
+    const swissDate = eventDate;
     
     if (swissDate < now) {
-      return { text: 'Passé', color: 'text-muted-foreground' };
+      return { text: 'Passé', color: 'bg-muted text-muted-foreground' };
     }
     
     if (isToday(swissDate)) {
       const hours = differenceInHours(swissDate, now);
-      if (hours <= 0) return { text: 'Maintenant', color: 'text-green-500' };
-      return { text: `Dans ${hours}h`, color: 'text-orange-500' };
+      if (hours <= 0) return { text: 'Maintenant', color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' };
+      return { text: `Dans ${hours}h`, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' };
     }
     
     if (isTomorrow(swissDate)) {
-      return { text: 'Demain', color: 'text-blue-500' };
+      return { text: 'Demain', color: 'bg-primary/10 text-primary' };
     }
     
     const days = differenceInDays(swissDate, now);
     if (days <= 7) {
-      return { text: `Dans ${days} jour${days > 1 ? 's' : ''}`, color: 'text-primary' };
+      return { text: `Dans ${days} jour${days > 1 ? 's' : ''}`, color: 'bg-primary/10 text-primary' };
     }
     
-    return { text: `Dans ${days} jours`, color: 'text-muted-foreground' };
+    return { text: `Dans ${days} jours`, color: 'bg-muted text-muted-foreground' };
   };
 
   const getRecommandationBadge = (recommandation: string | null) => {
@@ -118,17 +103,17 @@ export function PremiumClientDayEvents({
       recommande: { 
         icon: ThumbsUp, 
         label: 'Recommandé', 
-        className: 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-600 dark:text-green-400 border-green-500/30' 
+        className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-transparent' 
       },
       neutre: { 
         icon: Minus, 
         label: 'Neutre', 
-        className: 'bg-muted/50 text-muted-foreground border-border/50' 
+        className: 'bg-muted text-muted-foreground border-transparent' 
       },
       deconseille: { 
         icon: ThumbsDown, 
         label: 'Déconseillé', 
-        className: 'bg-gradient-to-r from-red-500/20 to-orange-500/20 text-red-600 dark:text-red-400 border-red-500/30' 
+        className: 'bg-destructive/10 text-destructive border-transparent' 
       }
     }[recommandation];
 
@@ -136,7 +121,7 @@ export function PremiumClientDayEvents({
 
     const Icon = config.icon;
     return (
-      <Badge variant="outline" className={cn("gap-1 text-xs border", config.className)}>
+      <Badge variant="outline" className={cn("gap-1 rounded-full text-xs font-semibold", config.className)}>
         <Icon className="h-3 w-3" />
         {config.label}
       </Badge>
@@ -150,64 +135,40 @@ export function PremiumClientDayEvents({
       return {
         label: 'Visite effectuée',
         icon: Check,
-        className: 'bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-600 dark:text-green-400 border-green-500/30'
+        className: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-transparent'
       };
     }
     
     return {
       label: 'Visite planifiée',
       icon: Calendar,
-      className: 'bg-gradient-to-r from-primary/20 to-primary/10 text-primary border-primary/30'
+      className: 'bg-primary/10 text-primary border-transparent'
     };
   };
 
   return (
-    <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/20 border border-border/50 overflow-hidden flex flex-col">
-      {/* Animated gradient border */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/20 via-transparent to-primary/20 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 rounded-full bg-primary/15 animate-float"
-            style={{
-              left: `${10 + i * 15}%`,
-              top: `${20 + (i % 4) * 20}%`,
-              animationDelay: `${i * 0.4}s`,
-              animationDuration: `${4 + i * 0.3}s`,
-            }}
-          />
-        ))}
-      </div>
-
-      {/* Premium Header */}
-      <div className="relative p-5 border-b border-border/50">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Calendar className="w-6 h-6 text-primary" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary animate-pulse" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg capitalize">
+    <div className={cn(DASH_CARD, 'h-full overflow-hidden flex flex-col')}>
+      {/* Header */}
+      <div className="p-4 md:p-5 border-b border-border/70">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Calendar className="w-5 h-5" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold capitalize text-foreground truncate">
                 {formatSwissDate(date, 'EEEE d MMMM')}
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {formatSwissDate(date, 'yyyy')}
               </p>
             </div>
           </div>
           
           {allItems.length > 0 && (
-            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg shadow-primary/20">
-              <Sparkles className="w-3 h-3 mr-1" />
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground">
               {allItems.length}
-            </Badge>
+            </span>
           )}
         </div>
       </div>
@@ -217,21 +178,19 @@ export function PremiumClientDayEvents({
         <div className="p-4">
           {allItems.length === 0 ? (
             <div className="text-center py-12">
-              <div className="relative inline-block mb-4">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                  <Calendar className="w-7 h-7 text-muted-foreground/50" />
-                </div>
-              </div>
-              <p className="text-muted-foreground font-medium">
+              <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                <Calendar className="w-6 h-6 text-muted-foreground" />
+              </span>
+              <p className="text-sm text-muted-foreground">
                 Aucun événement ce jour
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {allItems.map((item, idx) => {
                 const isEvent = item.type === 'event';
                 const data = item.data;
-                const eventDate = toSwissTime(isEvent ? data.event_date : data.date_visite);
+                const eventDate = new Date(isEvent ? data.event_date : data.date_visite);
                 const timeRemaining = getTimeRemaining(eventDate);
 
                 if (!isEvent) {
@@ -244,33 +203,31 @@ export function PremiumClientDayEvents({
                     isVisiteDatePassed &&
                     data.offres?.statut !== 'interesse' && 
                     data.offres?.statut !== 'refusee' && 
-                    data.offres?.statut !== 'candidature_deposee';
+                    data.offres?.statut !== 'candidature_deposee' &&
+                    data.offres?.statut !== 'offre_envisagee' &&
+                    data.offres?.statut !== 'acceptee';
 
                   return (
                     <div
                       key={`visite-${data.id}-${idx}`}
-                      className="group relative rounded-xl bg-gradient-to-br from-card to-card/80 border border-border/50 overflow-hidden animate-fade-in hover:border-primary/30 transition-all duration-300"
-                      style={{ animationDelay: `${idx * 50}ms` }}
+                      className="rounded-xl border border-border/70 bg-card overflow-hidden transition-colors hover:border-foreground/30"
                     >
-                      {/* Shine effect */}
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                      
-                      <div className="relative p-4 space-y-4">
+                      <div className="p-4 space-y-4">
                         {/* Header with address and price */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
                             <AddressLink 
                               address={data.adresse}
-                              className="font-bold text-base leading-tight truncate group-hover:text-primary transition-colors"
+                              className="text-base font-semibold leading-tight truncate text-foreground"
                               showIcon={false}
                             />
                             <div className="flex flex-wrap gap-2 mt-2">
-                              <Badge variant="outline" className={cn("gap-1 text-xs border", statusConfig.className)}>
+                              <Badge variant="outline" className={cn("gap-1 rounded-full text-xs font-semibold", statusConfig.className)}>
                                 <StatusIcon className="h-3 w-3" />
                                 {statusConfig.label}
                               </Badge>
                               {data.est_deleguee && (
-                                <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30">
+                                <Badge variant="outline" className="rounded-full text-xs font-semibold bg-muted text-muted-foreground border-transparent">
                                   Déléguée
                                 </Badge>
                               )}
@@ -279,35 +236,34 @@ export function PremiumClientDayEvents({
                           </div>
                           {data.offres && (
                             <div className="text-right flex-shrink-0">
-                              <p className="text-2xl font-black bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                              <p className="text-[15px] font-semibold text-foreground">
                                 {data.offres.prix?.toLocaleString('fr-CH')}
                               </p>
-                              <p className="text-xs text-muted-foreground font-medium">CHF/mois</p>
+                              <p className="text-xs text-muted-foreground">{isAchat ? 'CHF · prix de vente' : 'CHF/mois'}</p>
                             </div>
                           )}
                         </div>
 
                         {/* Date & Time Card */}
-                        <div className="relative p-3 rounded-lg bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 overflow-hidden group/date">
-                          <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent opacity-0 group-hover/date:opacity-100 transition-opacity" />
-                          <div className="relative flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                                <Calendar className="w-5 h-5 text-primary" />
-                              </div>
-                              <div>
-                                <p className="font-semibold text-sm">
+                        <div className="p-3 rounded-xl bg-muted/60">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <Calendar className="w-[18px] h-[18px]" />
+                              </span>
+                              <div className="min-w-0">
+                                <p className="font-semibold text-sm text-foreground">
                                   {formatSwissDate(eventDate, "EEEE d MMMM")}
                                 </p>
-                                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <p className="text-xs text-muted-foreground flex items-center gap-1">
                                   <Clock className="w-3 h-3" />
                                   {formatSwissTime(eventDate)}
                                 </p>
                               </div>
                             </div>
-                            <div className={cn("px-3 py-1 rounded-full text-xs font-bold", timeRemaining.color, "bg-current/10")}>
-                              <span className={timeRemaining.color}>{timeRemaining.text}</span>
-                            </div>
+                            <span className={cn("shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold", timeRemaining.color)}>
+                              {timeRemaining.text}
+                            </span>
                           </div>
                         </div>
 
@@ -315,24 +271,24 @@ export function PremiumClientDayEvents({
                         {data.offres && (
                           <div className="grid grid-cols-3 gap-2">
                             {data.offres.pieces && (
-                              <div className="p-2.5 rounded-lg bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 text-center group/item hover:border-primary/30 transition-colors">
+                              <div className="p-2.5 rounded-xl border border-border/70 text-center">
                                 <Home className="w-4 h-4 mx-auto text-primary mb-1" />
                                 <p className="text-xs text-muted-foreground">Pièces</p>
-                                <p className="font-bold text-sm">{data.offres.pieces}</p>
+                                <p className="font-semibold text-sm text-foreground">{data.offres.pieces}</p>
                               </div>
                             )}
                             {data.offres.surface && (
-                              <div className="p-2.5 rounded-lg bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 text-center group/item hover:border-primary/30 transition-colors">
+                              <div className="p-2.5 rounded-xl border border-border/70 text-center">
                                 <Maximize className="w-4 h-4 mx-auto text-primary mb-1" />
                                 <p className="text-xs text-muted-foreground">Surface</p>
-                                <p className="font-bold text-sm">{data.offres.surface} m²</p>
+                                <p className="font-semibold text-sm text-foreground">{data.offres.surface} m²</p>
                               </div>
                             )}
                             {data.offres.etage && (
-                              <div className="p-2.5 rounded-lg bg-gradient-to-br from-muted/80 to-muted/40 border border-border/50 text-center group/item hover:border-primary/30 transition-colors">
+                              <div className="p-2.5 rounded-xl border border-border/70 text-center">
                                 <Building className="w-4 h-4 mx-auto text-primary mb-1" />
                                 <p className="text-xs text-muted-foreground">Étage</p>
-                                <p className="font-bold text-sm">{data.offres.etage}</p>
+                                <p className="font-semibold text-sm text-foreground">{data.offres.etage}</p>
                               </div>
                             )}
                           </div>
@@ -347,19 +303,19 @@ export function PremiumClientDayEvents({
                             </p>
                             <div className="grid gap-2">
                               {data.offres.code_immeuble && (
-                                <div className="flex items-center gap-3 p-2.5 rounded-lg bg-gradient-to-r from-muted/60 to-muted/30 border border-border/40">
-                                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <div className="flex items-center gap-3 p-2.5 rounded-xl border border-border/70">
+                                  <div className="w-8 h-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
                                     <KeyRound className="w-4 h-4 text-primary" />
                                   </div>
                                   <div>
                                     <p className="text-xs text-muted-foreground">Code immeuble</p>
-                                    <p className="font-mono font-bold text-sm">{data.offres.code_immeuble}</p>
+                                    <p className="font-mono font-semibold text-sm text-foreground">{data.offres.code_immeuble}</p>
                                   </div>
                                 </div>
                               )}
                               {data.offres.concierge_nom && (
-                                <div className="flex items-center gap-3 p-2.5 rounded-lg bg-gradient-to-r from-muted/60 to-muted/30 border border-border/40">
-                                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                                <div className="flex items-center gap-3 p-2.5 rounded-xl border border-border/70">
+                                  <div className="w-8 h-8 shrink-0 rounded-full bg-primary/10 flex items-center justify-center">
                                     <User className="w-4 h-4 text-primary" />
                                   </div>
                                   <div className="flex-1">
@@ -380,9 +336,10 @@ export function PremiumClientDayEvents({
 
                         {/* Agent feedback */}
                         {data.feedback_agent && (
-                          <div className="p-3 rounded-lg bg-gradient-to-r from-blue-500/10 to-blue-500/5 border border-blue-500/20">
-                            <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                              📝 Feedback de l'agent
+                          <div className="p-3 rounded-xl bg-muted/60">
+                            <p className="text-xs font-semibold text-foreground mb-1 flex items-center gap-1">
+                              <MessageSquareText className="w-3 h-3" />
+                              Feedback de l'agent
                             </p>
                             <p className="text-sm">{data.feedback_agent}</p>
                           </div>
@@ -390,13 +347,16 @@ export function PremiumClientDayEvents({
 
                         {/* Notes */}
                         {data.notes && (
-                          <div className="p-3 rounded-lg bg-gradient-to-r from-amber-500/10 to-yellow-500/5 border border-amber-500/20">
-                            <p className="text-sm">💡 {data.notes}</p>
+                          <div className="p-3 rounded-xl bg-amber-500/10">
+                            <p className="text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                              <Lightbulb className="w-4 h-4 mt-0.5 shrink-0" />
+                              <span>{data.notes}</span>
+                            </p>
                           </div>
                         )}
 
                         {/* Actions */}
-                        <div className="space-y-3 pt-3 border-t border-border/50">
+                        <div className="space-y-3 pt-3 border-t border-border/70">
                           {/* Add to calendar button */}
                           <AddToCalendarButton
                             event={{
@@ -404,7 +364,7 @@ export function PremiumClientDayEvents({
                               title: `Visite - ${data.adresse}`,
                               description: buildVisiteICSDescription({
                                 adresse: data.adresse,
-                                prix: data.offres?.prix ? `${data.offres.prix} CHF/mois` : undefined,
+                                prix: data.offres?.prix ? (isAchat ? `CHF ${Number(data.offres.prix).toLocaleString('fr-CH')} (prix de vente)` : `${data.offres.prix} CHF/mois`) : undefined,
                                 pieces: data.offres?.pieces,
                                 surface: data.offres?.surface,
                                 etage: data.offres?.etage,
@@ -417,55 +377,55 @@ export function PremiumClientDayEvents({
                             }}
                             size="sm"
                             variant="outline"
-                            className="w-full"
+                            className="w-full rounded-full"
                           />
                           {data.statut === 'planifiee' && data.offres?.statut !== 'visite_effectuee' && isVisiteDatePassed && (
                             <Button 
                               onClick={() => onMarquerEffectuee(data)}
-                              className="w-full relative overflow-hidden group/btn bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0 shadow-lg shadow-green-500/20"
+                              className="w-full rounded-full"
                               size="sm"
                             >
-                              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-500" />
                               <Check className="mr-2 h-4 w-4" />
                               Marquer comme effectuée
                             </Button>
                           )}
                           {data.statut === 'planifiee' && !isVisiteDatePassed && (
-                            <div className="p-2 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-                              <p className="text-xs text-amber-700 dark:text-amber-300 text-center">
-                                ⏳ Actions disponibles après la visite
+                            <div className="p-2 bg-amber-500/10 rounded-xl">
+                              <p className="text-xs text-amber-700 dark:text-amber-400 text-center flex items-center justify-center gap-1">
+                                <Hourglass className="w-3 h-3" />
+                                Actions disponibles après la visite
                               </p>
                             </div>
                           )}
 
                           {showPostVisitActions && (
-                            <div className="p-3 rounded-lg bg-gradient-to-r from-muted/80 to-muted/40 border border-border/50 space-y-3">
+                            <div className="p-3 rounded-xl border border-border/70 space-y-3">
                               <p className="text-xs font-semibold text-center text-muted-foreground">
-                                Suite à cette visite, souhaitez-vous donner suite ?
+                                {isAchat ? "Suite à cette visite, souhaitez-vous faire une offre d'achat ?" : 'Suite à cette visite, souhaitez-vous donner suite ?'}
                               </p>
                               <div className="grid grid-cols-3 gap-2">
                                 <Button 
                                   size="sm"
                                   onClick={() => onAccepterOffre(data)}
-                                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white border-0"
+                                  className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
                                 >
                                   <Check className="mr-1 h-3 w-3" />
-                                  Oui
+                                  {isAchat ? 'Offre' : 'Oui'}
                                 </Button>
                                 <Button 
                                   variant="outline"
                                   size="sm"
                                   onClick={onVoirOffre}
-                                  className="border-primary/30 hover:bg-primary/10"
+                                  className="rounded-full"
                                 >
                                   <FileCheck className="mr-1 h-3 w-3" />
-                                  Candidater
+                                  {isAchat ? 'Voir le bien' : 'Candidater'}
                                 </Button>
                                 <Button 
                                   variant="outline"
                                   size="sm"
                                   onClick={() => onRefuserOffre(data)}
-                                  className="border-red-500/30 hover:bg-red-500/10 text-red-600 dark:text-red-400"
+                                  className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
                                 >
                                   <X className="mr-1 h-3 w-3" />
                                   Non
@@ -480,7 +440,7 @@ export function PremiumClientDayEvents({
                                 variant="secondary"
                                 size="sm"
                                 onClick={() => onOpenDetail(data, 'visite')}
-                                className="flex-1 min-w-0"
+                                className="flex-1 min-w-0 rounded-full"
                               >
                                 <Eye className="mr-2 h-4 w-4" />
                                 Voir le détail
@@ -490,11 +450,11 @@ export function PremiumClientDayEvents({
                               variant="outline"
                               size="sm"
                               onClick={onVoirOffre}
-                              className="flex-1 min-w-0 group/btn border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                              className="flex-1 min-w-0 rounded-full"
                             >
-                              <Eye className="mr-2 h-4 w-4 group-hover/btn:text-primary transition-colors" />
-                              Voir l'offre
-                              <ArrowRight className="ml-auto h-4 w-4 opacity-0 -translate-x-2 group-hover/btn:opacity-100 group-hover/btn:translate-x-0 transition-all" />
+                              <Eye className="mr-2 h-4 w-4" />
+                              {isAchat ? 'Voir le bien' : "Voir l'offre"}
+                              <ArrowRight className="ml-auto h-4 w-4" />
                             </Button>
                             {data.offres?.lien_annonce && (
                               <LinkPreviewCard url={data.offres.lien_annonce} />
@@ -524,22 +484,21 @@ export function PremiumClientDayEvents({
                         : undefined
                     }
                     className={cn(
-                      'p-4 rounded-xl border bg-gradient-to-br animate-fade-in',
-                      onOpenDetail && 'cursor-pointer hover:border-primary/40 transition-colors',
+                      'p-4 rounded-xl border',
+                      onOpenDetail && 'cursor-pointer hover:border-foreground/30 transition-colors',
                       eventTypeColors[item.eventType]
                     )}
-                    style={{ animationDelay: `${idx * 50}ms` }}
                   >
                     <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className="text-xs bg-background/50">
+                      <Badge variant="outline" className="rounded-full text-xs bg-background/70">
                         {eventTypeLabels[item.eventType] || 'Événement'}
                       </Badge>
                     </div>
-                    <h4 className="font-semibold mt-2">{data.title}</h4>
-                    {!data.all_day && (
+                    <h4 className="text-base font-semibold mt-2">{data.title}</h4>
+                    {!data.all_day && formatZurichTime(data.event_date) && (
                       <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        {formatSwissTime(eventDate)}
+                        {formatZurichTime(data.event_date)}
                       </p>
                     )}
                     {data.description && (

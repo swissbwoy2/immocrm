@@ -2,17 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { canDecideOnOffre } from '@/lib/visitDecision';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, X, Loader2, MapPin, Calendar, ExternalLink, Home, Ruler, Building2, CalendarDays, Camera, ClipboardList, CheckCircle2, Eye } from 'lucide-react';
+import { Check, X, Loader2, MapPin, Calendar, ExternalLink, Home, Ruler, Building2, CalendarDays, Camera, ClipboardList, CheckCircle2, Eye, Download, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatSwissDateTime } from '@/lib/dateUtils';
+import { formatZurichDateTime } from '@/lib/dateZurich';
+import { CompteRenduView } from '@/components/visites/VisitDetailParts';
 import { submitVisitVideoDecision } from '@/components/client/VisitVideoDecisionCard';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
-import { PremiumEmptyState } from '@/components/premium/PremiumEmptyState';
 import { PremiumOffreDetailsDialog } from '@/components/premium/PremiumOffreDetailsDialog';
+import { DASH_CARD, DashPage, DashPageHeader, DashEmptyState, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 
 interface VideoMessage {
   id: string;
@@ -82,90 +80,15 @@ interface Item {
 
 function InfoPill({ icon: Icon, label }: { icon: any; label: string }) {
   return (
-    <div className="inline-flex items-center gap-1.5 text-sm text-muted-foreground bg-muted/60 rounded-full px-3 py-1">
+    <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs text-foreground">
       <Icon className="w-3.5 h-3.5" />
       <span>{label}</span>
     </div>
   );
 }
 
-const L_APPRECIATION: Record<string, string> = { tres_positif: 'Très positif', positif: 'Positif', mitige: 'Mitigé', negatif: 'Négatif' };
-const L_ETAT: Record<string, string> = { excellent: 'Excellent', bon: 'Bon', moyen: 'Moyen', a_renover: 'À rénover' };
-const L_INTERET: Record<string, string> = { tres_interesse: 'Très intéressé', interesse: 'Intéressé', hesitant: 'Hésitant', non_interesse: 'Non intéressé' };
-const L_CUISINE: Record<string, string> = { agencee: 'Agencée', equipee: 'Équipée', simple: 'Simple', a_renover: 'À rénover' };
-
 function CompteRenduBlock({ cr }: { cr: CompteRenduRow }) {
-  const medias: any[] = Array.isArray(cr.medias) ? cr.medias : [];
-  const rows: { label: string; value: string }[] = [];
-  if (cr.appreciation_globale) rows.push({ label: '⭐ Appréciation', value: L_APPRECIATION[cr.appreciation_globale] || cr.appreciation_globale });
-  if (cr.etat_general) rows.push({ label: '🏠 État du bien', value: L_ETAT[cr.etat_general] || cr.etat_general });
-  if (cr.interet_client) rows.push({ label: '💡 Intérêt', value: L_INTERET[cr.interet_client] || cr.interet_client });
-  if (cr.cuisine_type) rows.push({ label: '🍳 Cuisine', value: L_CUISINE[cr.cuisine_type] || cr.cuisine_type });
-  if (cr.ascenseur !== null && cr.ascenseur !== undefined) rows.push({ label: '🛗 Ascenseur', value: cr.ascenseur ? 'Oui' : 'Non' });
-  if (cr.balcon !== null && cr.balcon !== undefined) rows.push({ label: '🌿 Balcon / terrasse', value: cr.balcon ? 'Oui' : 'Non' });
-  if (cr.parking !== null && cr.parking !== undefined) rows.push({ label: '🚗 Parking', value: cr.parking ? 'Oui' : 'Non' });
-
-  return (
-    <div className="border border-primary/20 rounded-lg p-4 bg-muted/30 space-y-3">
-      <div className="flex items-center gap-2">
-        <ClipboardList className="w-4 h-4 text-primary" />
-        <h4 className="font-semibold text-sm">Compte-rendu de la visite</h4>
-      </div>
-
-      {rows.length > 0 && (
-        <dl className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-          {rows.map((r) => (
-            <div key={r.label}>
-              <dt className="inline font-medium">{r.label} : </dt>
-              <dd className="inline">{r.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {cr.cuisine_description && (
-        <div className="text-sm"><span className="font-medium">🍽 Cuisine : </span><span className="whitespace-pre-wrap">{cr.cuisine_description}</span></div>
-      )}
-      {cr.points_forts?.length ? (
-        <div className="text-sm"><span className="font-medium">👍 Points forts : </span>{cr.points_forts.join(', ')}</div>
-      ) : null}
-      {cr.points_faibles?.length ? (
-        <div className="text-sm"><span className="font-medium">👎 Points faibles : </span>{cr.points_faibles.join(', ')}</div>
-      ) : null}
-      {cr.commentaire_libre && (
-        <div className="text-sm whitespace-pre-wrap">{cr.commentaire_libre}</div>
-      )}
-      {cr.prochaines_etapes && (
-        <div className="text-sm"><span className="font-medium">➡️ Prochaines étapes : </span><span className="whitespace-pre-wrap">{cr.prochaines_etapes}</span></div>
-      )}
-
-      {medias.length > 0 && (
-        <div className="space-y-2">
-          <div className="text-sm font-medium">📎 Photos, vidéos & fichiers</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {medias.map((m: any, i: number) => (
-              <a
-                key={i}
-                href={m.url}
-                target="_blank"
-                rel="noreferrer"
-                className="block border rounded-lg overflow-hidden bg-background hover:border-primary transition-colors"
-              >
-                {m.type === 'image' ? (
-                  <img src={m.url} alt={m.name} className="w-full h-24 object-cover" />
-                ) : m.type === 'video' ? (
-                  <video src={m.url} controls playsInline className="w-full h-24 object-cover bg-black" />
-                ) : (
-                  <div className="h-24 flex items-center justify-center text-xs text-muted-foreground">📄 Fichier</div>
-                )}
-                <div className="px-2 py-1 text-[11px] truncate">{m.name}</div>
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  return <CompteRenduView cr={cr} title="Compte rendu de la visite" />;
 }
 
 
@@ -200,7 +123,7 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
       });
       toast.success(
         choice === 'souhaite_postuler'
-          ? 'Merci, votre agent a été notifié de votre intérêt.'
+          ? 'Demande enregistrée et transmise à l’équipe.'
           : 'Merci, votre choix a été enregistré.'
       );
       onDecisionSaved();
@@ -213,8 +136,8 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
   };
 
   return (
-    <Card className="overflow-hidden border-primary/20">
-      <CardContent className="p-0">
+    <article className={`${DASH_CARD} overflow-hidden`}>
+      <div>
         {/* Video */}
         {message?.attachment_url && (
         <div className="bg-black">
@@ -236,9 +159,10 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
               download={message.attachment_name || 'visite.mp4'}
               target="_blank"
               rel="noreferrer"
-              className="underline hover:text-white"
+              className="inline-flex shrink-0 items-center gap-1 underline-offset-2 hover:text-white hover:underline"
             >
-              📥 Télécharger
+              <Download className="h-3.5 w-3.5" />
+              Télécharger
             </a>
           </div>
         </div>
@@ -246,16 +170,24 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
 
 
         {/* Offer details */}
-        <div className="p-5 space-y-4">
-          <div className="flex items-start gap-2">
-            <MapPin className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-            <h3 className="text-lg font-semibold leading-snug">{address}</h3>
+        <div className="space-y-4 p-4 md:p-5">
+          <div className="space-y-1">
+            <div className="flex items-start gap-2">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <h3 className="text-base font-semibold leading-snug text-foreground">{address}</h3>
+            </div>
+            {visite?.date_visite && (
+              <p className="flex items-center gap-2 pl-6 text-sm text-muted-foreground">
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                Visite du {formatZurichDateTime(visite.date_visite)}
+              </p>
+            )}
           </div>
 
           {offre?.prix != null && (
-            <div className="text-2xl font-bold text-primary">
+            <div className="text-lg font-semibold text-foreground">
               {Number(offre.prix).toLocaleString('fr-CH')} CHF
-              <span className="text-sm text-muted-foreground font-normal ml-2">/mois charges comprises</span>
+              <span className="ml-2 text-sm font-normal text-muted-foreground">/mois charges comprises</span>
             </div>
           )}
 
@@ -268,19 +200,19 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
           )}
 
           {offre?.description && (
-            <div className="whitespace-pre-wrap text-sm text-foreground/90 leading-relaxed bg-muted/30 rounded-lg p-3">
+            <div className="whitespace-pre-wrap rounded-xl bg-muted/50 p-3 text-sm leading-relaxed text-foreground/90">
               {offre.description}
             </div>
           )}
 
           <div className="flex flex-wrap gap-2">
             {offre && (
-              <Button size="sm" onClick={() => onViewOffer(offre)}>
+              <Button size="sm" className="rounded-full" onClick={() => onViewOffer(offre)}>
                 <Eye className="w-4 h-4 mr-2" /> Voir l'offre
               </Button>
             )}
             {offre?.lien_annonce && (
-              <Button asChild variant="outline" size="sm">
+              <Button asChild variant="outline" size="sm" className="rounded-full">
                 <a href={offre.lien_annonce} target="_blank" rel="noreferrer">
                   <ExternalLink className="w-4 h-4 mr-2" />
                   Voir l'annonce
@@ -289,8 +221,8 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
             )}
           </div>
 
-          <div className="text-xs text-muted-foreground">
-            Reçu le {formatSwissDateTime(message?.created_at || item.cr?.envoye_au_client_at || item.visite?.date_visite || new Date().toISOString())}
+          <div className="text-sm text-muted-foreground">
+            Reçu le {formatZurichDateTime(message?.created_at || item.cr?.envoye_au_client_at || item.visite?.date_visite || new Date().toISOString())}
           </div>
 
           {/* Compte-rendu structuré (visite_comptes_rendus) */}
@@ -298,91 +230,63 @@ function VideoOfferCard({ item, onDecisionSaved, onViewOffer }: { item: Item; on
 
           {/* Ancien compte-rendu libre (legacy visites.compte_rendu) */}
           {!item.cr && visite?.compte_rendu && typeof visite.compte_rendu === 'object' && (
-            <div className="border border-primary/20 rounded-lg p-4 bg-muted/30 space-y-2">
-              <div className="flex items-center gap-2 mb-1">
-                <ClipboardList className="w-4 h-4 text-primary" />
-                <h4 className="font-semibold text-sm">Compte-rendu de la visite</h4>
-              </div>
-              <dl className="text-sm grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
-                {visite.compte_rendu.ascenseur && (
-                  <div><dt className="inline font-medium">🛗 Ascenseur : </dt><dd className="inline">{visite.compte_rendu.ascenseur === 'oui' ? 'Oui' : 'Non'}</dd></div>
-                )}
-                {visite.compte_rendu.type_sol && (
-                  <div><dt className="inline font-medium">🧱 Sol : </dt><dd className="inline">{visite.compte_rendu.type_sol}</dd></div>
-                )}
-                {visite.compte_rendu.etat_general && (
-                  <div className="sm:col-span-2"><dt className="inline font-medium">🏠 État : </dt><dd className="inline">{visite.compte_rendu.etat_general}</dd></div>
-                )}
-                {visite.compte_rendu.contact_regie && (
-                  <div className="sm:col-span-2"><dt className="inline font-medium">🏢 Régie : </dt><dd className="inline">{visite.compte_rendu.contact_regie}</dd></div>
-                )}
-              </dl>
-              {visite.compte_rendu.avantages && (
-                <div className="text-sm"><span className="font-medium">👍 Avantages : </span><span className="whitespace-pre-wrap">{visite.compte_rendu.avantages}</span></div>
-              )}
-              {visite.compte_rendu.inconvenients && (
-                <div className="text-sm"><span className="font-medium">👎 Inconvénients : </span><span className="whitespace-pre-wrap">{visite.compte_rendu.inconvenients}</span></div>
-              )}
-              {visite.compte_rendu.autres_infos && (
-                <div className="text-sm"><span className="font-medium">📝 </span><span className="whitespace-pre-wrap">{visite.compte_rendu.autres_infos}</span></div>
-              )}
-            </div>
+            <CompteRenduView legacy={visite.compte_rendu} title="Compte rendu de la visite" showRegie />
           )}
 
         </div>
 
         {/* Decision */}
-        <div className="p-5 pt-0">
+        <div className="border-t border-border/70 p-4 md:p-5">
           {!canDecide ? (
-            <div className="text-xs text-muted-foreground italic text-center py-2">
+            <div className="py-2 text-center text-xs text-muted-foreground">
               Disponible après la visite
             </div>
           ) : decision ? (
             <div className="flex justify-center">
               {decision === 'souhaite_postuler' ? (
-                <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 py-1.5 px-3">
-                  <Check className="w-3.5 h-3.5 mr-1" /> Vous avez confirmé votre intérêt
-                </Badge>
+                <DashBadge tone="success">
+                  <Check className="mr-1 h-3.5 w-3.5" /> Vous avez confirmé votre intérêt
+                </DashBadge>
               ) : (
-                <Badge className="bg-red-500/15 text-red-700 dark:text-red-300 border border-red-500/30 py-1.5 px-3">
-                  <X className="w-3.5 h-3.5 mr-1" /> Non retenu
-                </Badge>
+                <DashBadge tone="danger">
+                  <X className="mr-1 h-3.5 w-3.5" /> Non retenu
+                </DashBadge>
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <Button
                 size="lg"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="h-auto min-h-12 whitespace-normal py-2.5"
                 disabled={!!saving}
                 onClick={() => handleDecision('souhaite_postuler')}
               >
                 {saving === 'souhaite_postuler' ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 shrink-0 animate-spin" />
                 ) : (
-                  <Check className="w-4 h-4 mr-2" />
+                  <Check className="w-4 h-4 mr-2 shrink-0" />
                 )}
-                ✅ Je souhaite déposer ma candidature
+                Je souhaite déposer ma candidature
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                className="border-red-500/40 text-red-700 hover:bg-red-500/10 dark:text-red-300"
+                className="h-auto min-h-12 whitespace-normal py-2.5 text-destructive hover:text-destructive"
                 disabled={!!saving}
                 onClick={() => handleDecision('refuse')}
               >
                 {saving === 'refuse' ? (
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 mr-2 shrink-0 animate-spin" />
                 ) : (
-                  <X className="w-4 h-4 mr-2" />
+                  <X className="w-4 h-4 mr-2 shrink-0" />
                 )}
-                ❌ Je ne souhaite pas postuler
+                Je ne souhaite pas postuler
               </Button>
             </div>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </article>
   );
 }
 
@@ -536,36 +440,33 @@ export default function VideosRecues() {
   const count = items.length;
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-6 space-y-6">
-      <PremiumPageHeader
-        title="Visite effectuée par votre agent 📷"
+    <DashPage>
+      <DashPageHeader
+        title="Visite effectuée par votre agent"
         subtitle={count > 0 ? `${count} bien${count > 1 ? 's' : ''} visité${count > 1 ? 's' : ''} pour vous` : 'Retrouvez ici les biens visités par votre agent, avec la vidéo et le compte-rendu'}
-        icon={CheckCircle2}
       />
 
       {loading ? (
-        <div className="space-y-4">
+        <div className="grid items-start gap-3 md:grid-cols-2">
           {[0, 1].map((i) => (
-            <Card key={i}>
-              <CardContent className="p-0">
-                <Skeleton className="w-full aspect-video" />
-                <div className="p-5 space-y-3">
-                  <Skeleton className="h-6 w-2/3" />
-                  <Skeleton className="h-8 w-1/3" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-              </CardContent>
-            </Card>
+            <div key={i} className={`${DASH_CARD} overflow-hidden`}>
+              <Skeleton className="w-full aspect-video rounded-none" />
+              <div className="space-y-3 p-4 md:p-5">
+                <Skeleton className="h-6 w-2/3" />
+                <Skeleton className="h-8 w-1/3" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            </div>
           ))}
         </div>
       ) : items.length === 0 ? (
-        <PremiumEmptyState
+        <DashEmptyState
           icon={CheckCircle2}
           title="Aucune visite effectuée pour le moment."
           description="Dès qu'un agent effectuera une visite pour vous (vidéo ou compte-rendu), elle apparaîtra ici."
         />
       ) : (
-        <div className="space-y-6">
+        <div className="grid items-start gap-3 md:grid-cols-2">
           {items.map((item) => (
             <VideoOfferCard key={item.key} item={item} onDecisionSaved={load} onViewOffer={setDialogOffre} />
           ))}
@@ -585,6 +486,6 @@ export default function VideosRecues() {
         onPostulerDirect={() => {}}
         formatStatutOffre={(statut: string) => ({ label: statut || '—', variant: 'default' as any })}
       />
-    </div>
+    </DashPage>
   );
 }

@@ -111,7 +111,43 @@ const calculateCounts = (notifs: Notification[]): NotificationCounts => {
   };
 };
 
-export const useNotifications = () => {
+export interface UseNotificationsOptions {
+  /** Nombre maximum de notifications chargées (50 par défaut) ; `null` = sans limite. */
+  limit?: number | null;
+  /**
+   * Réception en direct (temps réel + relecture de secours). À n'activer que sur UNE instance
+   * par écran (la cloche), pour ne pas multiplier les abonnements.
+   */
+  live?: boolean;
+  /** Appelé une fois par nouvelle notification reçue en direct. */
+  onNew?: (n: Notification) => void;
+}
+
+/** Préférence locale (cet appareil) : bannières des nouvelles notifications. */
+export const NOTIF_BANNERS_KEY = 'imr_notif_banners';
+export const notifBannersEnabled = (): boolean => {
+  try {
+    return localStorage.getItem(NOTIF_BANNERS_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+};
+export const setNotifBannersEnabled = (on: boolean) => {
+  try {
+    localStorage.setItem(NOTIF_BANNERS_KEY, on ? 'on' : 'off');
+  } catch {
+    /* stockage indisponible */
+  }
+};
+
+/** Notifications déjà signalées (évite les doublons si deux cloches sont montées). */
+const announced = new Set<string>();
+
+export const useNotifications = (options: UseNotificationsOptions = {}) => {
+  const limit = options.limit === undefined ? 50 : options.limit;
+  const live = options.live === true;
+  const onNewRef = useRef(options.onNew);
+  onNewRef.current = options.onNew;
   const { user } = useAuth();
   const { toast } = useToast();
   const toastRef = useRef(toast);
@@ -126,12 +162,13 @@ export const useNotifications = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
+      if (limit !== null) query = query.limit(limit);
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -146,7 +183,7 @@ export const useNotifications = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, limit]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!user) return;
@@ -237,9 +274,59 @@ export const useNotifications = () => {
     loadNotifications();
   }, [loadNotifications]);
 
-  // Realtime temporarily disabled to guarantee dashboard stability.
-  // Notifications still load via the initial query + manual refresh.
-  // Re-enable once a single centralized realtime source is in place.
+  // Réception en direct : un seul abonnement (nom de canal unique par instance) + relecture
+  // de secours toutes les 60 s et au retour sur l'app, pour ne rien manquer si le temps réel coupe.
+  useEffect(() => {
+    if (!live || !user) return;
+    let stopped = false;
+    const startedAt = Date.now();
+
+    const accept = (raw: any) => {
+      if (!raw?.id || raw.user_id !== user.id) return;
+      const n = { ...raw, metadata: (raw.metadata ?? null) as Record<string, any> | null } as Notification;
+      setNotifications((prev) => (prev.some((p) => p.id === n.id) ? prev : [n, ...prev]));
+      const fresh = new Date(n.created_at).getTime() >= startedAt - 5000;
+      if (!n.read && fresh && !announced.has(n.id)) {
+        announced.add(n.id);
+        onNewRef.current?.(n);
+      }
+    };
+
+    const channel = supabase
+      .channel(`notifications-live-${user.id}-${Math.random().toString(36).slice(2, 10)}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => accept(payload.new),
+      )
+      .subscribe();
+
+    const catchUp = async () => {
+      if (stopped || document.hidden) return;
+      const { data } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('created_at', new Date(Date.now() - 10 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: true })
+        .limit(20);
+      (data || []).forEach(accept);
+    };
+    const timer = window.setInterval(() => void catchUp(), 60_000);
+    const onVisible = () => {
+      if (!document.hidden) void loadNotifications();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+      supabase.removeChannel(channel);
+    };
+  }, [live, user, loadNotifications]);
 
   return {
     notifications,

@@ -7,12 +7,10 @@ interface DateSeparatorProps {
 
 const DateSeparator: React.FC<DateSeparatorProps> = ({ date }) => {
   return (
-    <div className="flex items-center gap-3 my-4 px-4">
-      <div className="flex-1 h-px bg-border/40" />
-      <span className="text-xs text-muted-foreground font-medium px-3 py-1.5 bg-muted/60 rounded-full capitalize backdrop-blur-sm">
+    <div className="flex justify-center my-3 px-4" role="separator" aria-label={formatSwissRelativeDate(date)}>
+      <span className="text-[11px] font-medium text-muted-foreground px-2.5 py-1 rounded-full bg-muted capitalize">
         {formatSwissRelativeDate(date)}
       </span>
-      <div className="flex-1 h-px bg-border/40" />
     </div>
   );
 };

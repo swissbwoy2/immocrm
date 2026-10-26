@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { Phone, Mail, Calendar, User, ExternalLink, XCircle, Clock, MapPin, Building2, CheckCircle2, UserCog } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
+import { DETAIL_DIALOG, DetailHeader, DetailBody, DetailSection, DetailRow, DetailActions, dateCH } from '@/components/details/DetailPrimitives';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -151,121 +150,53 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
     }
   };
 
+  const heure = (d: Date) => d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' });
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <div className={`p-2 rounded-lg ${isBureau ? 'bg-emerald-500/10' : 'bg-indigo-500/10'}`}>
-              {isBureau ? (
-                <Building2 className="h-5 w-5 text-emerald-600" />
-              ) : (
-                <Phone className="h-5 w-5 text-indigo-500" />
-              )}
-            </div>
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span>{isBureau ? 'RDV au bureau' : 'RDV téléphonique'}</span>
-                <Badge
-                  variant="outline"
-                  className={isBureau
-                    ? 'bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-[10px]'
-                    : 'bg-indigo-500/10 text-indigo-700 border-indigo-500/30 text-[10px]'}
-                >
-                  {isBureau ? '🏢 Bureau' : '📞 Téléphone'}
-                </Badge>
-              </div>
-              <div className="text-sm font-normal text-muted-foreground mt-0.5">
-                {prospectName}
-              </div>
-            </div>
-            <Badge
-              variant={isConfirmed ? 'default' : 'secondary'}
-              className={isConfirmed ? 'bg-green-500/15 text-green-600 border-green-500/30' : ''}
-            >
-              {isConfirmed ? 'Confirmé' : 'En attente'}
-            </Badge>
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className={DETAIL_DIALOG}>
+        <DetailHeader
+          titleAs={DialogTitle}
+          descriptionAs={DialogDescription}
+          eyebrow={
+            <span className="inline-flex items-center gap-2">
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full ${isBureau ? 'bg-emerald-500/10' : 'bg-indigo-500/10'}`}>
+                {isBureau ? <Building2 className="h-4 w-4 text-emerald-600" /> : <Phone className="h-4 w-4 text-indigo-500" />}
+              </span>
+              {isBureau ? 'RDV au bureau' : 'RDV téléphonique'}
+            </span>
+          }
+          title={prospectName}
+          subtitle={<span className="inline-block first-letter:uppercase">{dateCH(start, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</span>}
+          badge={
+            <>
+              <DashBadge tone={isConfirmed ? 'success' : 'warning'}>{isConfirmed ? 'Confirmé' : 'En attente'}</DashBadge>
+              <DashBadge tone="muted">{isBureau ? 'Bureau' : 'Téléphone'}</DashBadge>
+            </>
+          }
+        />
 
-        <div className="space-y-4">
-          {/* Date & Time */}
-          <div className="p-4 rounded-lg bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent border border-indigo-500/20">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-indigo-500" />
-              </div>
-              <div>
-                <p className="font-semibold capitalize">
-                  {format(start, "EEEE d MMMM yyyy", { locale: fr })}
-                </p>
-                <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5" />
-                  {format(start, 'HH:mm')} – {format(end, 'HH:mm')}
-                </p>
-          </div>
+        <DetailBody>
+          <DetailSection title="Rendez-vous" icon={Calendar}>
+            <DetailRow
+              icon={Clock}
+              label="Horaire"
+              value={`${heure(start)} – ${heure(end)}`}
+            />
+            {isBureau && <DetailRow icon={MapPin} label="Lieu du rendez-vous" value={OFFICE_ADDRESS} />}
+          </DetailSection>
 
-          {isBureau && (
-            <div className="p-3 rounded-lg border border-emerald-500/30 bg-emerald-500/5 flex items-start gap-3">
-              <MapPin className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-              <div className="text-sm">
-                <div className="font-medium">Lieu du rendez-vous</div>
-                <div className="text-muted-foreground">{OFFICE_ADDRESS}</div>
-              </div>
-            </div>
+          {(phone || email) && (
+            <DetailSection title="Contact prospect">
+              <DetailRow icon={Phone} label="Téléphone" value={phone || null} href={phone ? `tel:${phone}` : undefined} />
+              <DetailRow icon={Mail} label="Email" value={email || null} href={email ? `mailto:${email}` : undefined} />
+            </DetailSection>
           )}
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-              Contact prospect
-            </Label>
-            <div className="space-y-2">
-              {phone && (
-                <a
-                  href={`tel:${phone}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors group"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Phone className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground">Téléphone</p>
-                    <p className="font-medium group-hover:text-primary transition-colors truncate">
-                      {phone}
-                    </p>
-                  </div>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </a>
-              )}
-              {email && (
-                <a
-                  href={`mailto:${email}`}
-                  className="flex items-center gap-3 p-3 rounded-lg border border-border/50 bg-card hover:bg-muted/50 transition-colors group"
-                >
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Mail className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="font-medium group-hover:text-primary transition-colors truncate">
-                      {email}
-                    </p>
-                  </div>
-                  <ExternalLink className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </a>
-              )}
-            </div>
-          </div>
 
           {/* Assignation agent (admin) */}
           {assignableAgents && (
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
-                <UserCog className="h-3.5 w-3.5" /> Agent assigné
-              </Label>
+            <DetailSection title="Agent assigné" icon={UserCog}>
+              <Label htmlFor="phone-appt-agent" className="sr-only">Agent assigné</Label>
               <Select
                 value={appt.assigned_agent_id ?? 'none'}
                 disabled={assigning}
@@ -287,7 +218,7 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
                   }
                 }}
               >
-                <SelectTrigger>
+                <SelectTrigger id="phone-appt-agent" className="h-11">
                   <SelectValue placeholder="Non assigné" />
                 </SelectTrigger>
                 <SelectContent>
@@ -299,19 +230,16 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-2 text-sm text-muted-foreground">
                 Le RDV apparaîtra dans le calendrier de l'agent sélectionné.
               </p>
-            </div>
+            </DetailSection>
           )}
 
-
-
-          {/* Lead link */}
           {appt.lead_id && (
             <Button
               variant="outline"
-              className="w-full gap-2"
+              className="min-h-11 w-full gap-2"
               onClick={() => {
                 onClose();
                 navigate(`/admin/leads?id=${appt.lead_id}`);
@@ -319,26 +247,15 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
             >
               <User className="h-4 w-4" />
               Voir la fiche lead
-              <ExternalLink className="h-3.5 w-3.5 ml-auto" />
+              <ExternalLink className="ml-auto h-3.5 w-3.5" />
             </Button>
           )}
-        </div>
+        </DetailBody>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          {isPending && (
-            <Button
-              size="sm"
-              onClick={handleConfirm}
-              disabled={confirming}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              {confirming ? 'Envoi…' : 'Confirmer et envoyer l\'invitation'}
-            </Button>
-          )}
+        <DetailActions>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={cancelling}>
+              <Button variant="ghost" disabled={cancelling} className="text-destructive hover:text-destructive">
                 <XCircle className="h-4 w-4 mr-2" />
                 Annuler le RDV
               </Button>
@@ -381,10 +298,17 @@ export function PhoneAppointmentDetailDialog({ appt, open, onClose, onCancelled,
               startDate: start,
               endDate: end,
             }}
-            variant="default"
-            size="sm"
+            variant={isPending ? 'outline' : 'default'}
+            size="default"
           />
-        </DialogFooter>
+
+          {isPending && (
+            <Button onClick={handleConfirm} disabled={confirming}>
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              {confirming ? 'Envoi…' : 'Confirmer et envoyer l\'invitation'}
+            </Button>
+          )}
+        </DetailActions>
       </DialogContent>
     </Dialog>
   );

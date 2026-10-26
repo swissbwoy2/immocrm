@@ -219,7 +219,7 @@ export function PremiumCandidatureDetails({
         {/* Client Info Card */}
         <div className="group relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-card/95 to-card/80 border border-border/50 hover:border-primary/30 transition-all duration-300">
           {/* Shine effect */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
           </div>
           
@@ -253,7 +253,7 @@ export function PremiumCandidatureDetails({
         {/* Dates Card */}
         <div className="group relative overflow-hidden p-5 rounded-2xl bg-gradient-to-br from-card/95 to-card/80 border border-border/50 hover:border-primary/30 transition-all duration-300">
           {/* Shine effect */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
           </div>
           

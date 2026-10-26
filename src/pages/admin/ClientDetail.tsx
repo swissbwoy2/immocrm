@@ -1,30 +1,18 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone, MapPin, DollarSign, Calendar, FileText, User, Home, Building2, Briefcase, AlertCircle, Edit, Trash2, MailPlus, Upload, Download, Eye, File, Image as ImageIcon, Pencil, FilePlus, Users, MessageSquare, Sparkles, Clock, Shield, TrendingUp, CheckCircle2, XCircle, Send, RefreshCw, FileCheck, FileDown, Receipt, Loader2, Pause, StopCircle, RotateCcw, Wallet, Ban, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, User, Clock, CheckCircle2, AlertCircle, CalendarDays, FileCheck, FileText, Send, Shield, Users, Search, LayoutGrid, FolderOpen, Wallet, Activity, Mail, UserX, Ban, Inbox } from 'lucide-react';
 import { StaffCancellationDialog } from '@/components/mandat/StaffCancellationDialog';
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
 import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
 import { AdminCreditsCard } from '@/components/credits/AdminCreditsCard';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
-import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
-import { calculateDaysElapsed } from '@/utils/calculations';
+import { mandatElapsedFor } from '@/utils/mandatDates';
 import { SendEmailDialog } from '@/components/SendEmailDialog';
 import { MergeDocumentsDialog } from '@/components/MergeDocumentsDialog';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
@@ -32,104 +20,9 @@ import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { useClientCandidates } from '@/hooks/useClientCandidates';
 import { useSolvabilityCheck, hasStableStatus } from '@/hooks/useSolvabilityCheck';
-import { GooglePlacesAutocomplete } from '@/components/GooglePlacesAutocomplete';
 import { ApporteurInfoCard } from '@/components/ApporteurInfoCard';
-import { AnimatedCounter } from '@/components/AnimatedCounter';
 import { SwissRomandeMapGoogle } from '@/components/SwissRomandeMapGoogle';
-import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
 import { useAbaNinjaInvoice } from '@/hooks/useAbaNinjaInvoice';
-
-interface Client {
-  id: string;
-  user_id: string;
-  agent_id?: string;
-  type_contrat?: string;
-  pieces?: number;
-  budget_max?: number;
-  revenus_mensuels?: number;
-  charges_mensuelles?: number;
-  autres_credits?: boolean;
-  apport_personnel?: number;
-  commission_split?: number;
-  secteur_activite?: string;
-  etat_avancement?: string;
-  priorite?: string;
-  note_agent?: string;
-  statut?: string;
-  nationalite?: string;
-  type_permis?: string;
-  residence?: string;
-  garanties?: string;
-  region_recherche?: string;
-  situation_familiale?: string;
-  situation_financiere?: string;
-  profession?: string;
-  type_bien?: string;
-  source_revenus?: string;
-  anciennete_mois?: number;
-  created_at?: string;
-  date_ajout?: string;
-  date_naissance?: string;
-  adresse?: string;
-  etat_civil?: string;
-  gerance_actuelle?: string;
-  contact_gerance?: string;
-  loyer_actuel?: number;
-  depuis_le?: string;
-  pieces_actuel?: number;
-  motif_changement?: string;
-  employeur?: string;
-  date_engagement?: string;
-  charges_extraordinaires?: boolean;
-  montant_charges_extra?: number;
-  poursuites?: boolean;
-  curatelle?: boolean;
-  souhaits_particuliers?: string;
-  nombre_occupants?: number;
-  utilisation_logement?: string;
-  animaux?: boolean;
-  instrument_musique?: boolean;
-  vehicules?: boolean;
-  numero_plaques?: string;
-  decouverte_agence?: string;
-  type_recherche?: string;
-  // Contract fields
-  mandat_pdf_url?: string | null;
-  mandat_signature_data?: string | null;
-  mandat_date_signature?: string | null;
-  demande_mandat_id?: string | null;
-  // AbaNinja fields
-  abaninja_client_uuid?: string | null;
-  abaninja_invoice_id?: string | null;
-  abaninja_invoice_ref?: string | null;
-  journey_type?: string | null;
-  refund_status?: string | null;
-  mandate_pause_days?: number | null;
-  mandate_paused_at?: string | null;
-  cancellation_requested_at?: string | null;
-  relance_count?: number | null;
-  derniere_relance_at?: string | null;
-}
-
-
-interface Profile {
-  nom: string;
-  prenom: string;
-  email: string;
-  telephone?: string;
-  actif?: boolean;
-  last_seen_at?: string | null;
-  is_online?: boolean | null;
-}
-
-interface Agent {
-  id: string;
-  profile: Profile;
-}
-
-import { FloatingParticles } from '@/components/messaging/FloatingParticles';
-
-import { PremiumCard } from '@/components/premium/PremiumCard';
 import {
   ReletterStatusBanner,
   ReletterFinancialCard,
@@ -142,121 +35,34 @@ import {
   ReletterAddressBadge,
 } from '@/components/admin/ReletterDetailSections';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
-import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDetailSections';
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 import { PurchaseClientDetailPremium } from '@/components/admin/purchase/PurchaseClientDetailPremium';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
-import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
+import { toSwissTime, formatSwissDate } from '@/lib/dateUtils';
+import { formatZurichDateTime } from '@/lib/dateZurich';
+import { DashBadge, DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
+import { cn } from '@/lib/utils';
+import { FICHE_TABS, chf, dossierPrincipalStatus, getCandidatureStatutLabel, type Agent, type Client, type FicheTab, type Profile, type Tone } from '@/components/admin/client-detail/model';
+import { FicheCard, Notice } from '@/components/admin/client-detail/parts';
+import { ClientDetailHeader, type ConfirmKind } from '@/components/admin/client-detail/ClientDetailHeader';
+import { ClientSummaryTiles, ClientTabsRail, ClientTodoList, TabPanel, type SummaryTile, type TabDef, type TodoItem } from '@/components/admin/client-detail/ClientSummary';
+import { MandatProgressCard } from '@/components/admin/client-detail/MandatProgressCard';
+import { FollowUpCard, PersonalInfoCard } from '@/components/admin/client-detail/ClientIdentityCards';
+import { CurrentSituationCard, FinancialSituationCard, OtherInfoCard, ProfessionalSituationCard, SearchCriteriaCard } from '@/components/admin/client-detail/ClientProfileCards';
+import { UpcomingVisitsCard, VisitDetailDialog } from '@/components/admin/client-detail/ClientVisitsSection';
+import { OfferDetailDialog, SentOffersCard, TodayOffersCard } from '@/components/admin/client-detail/ClientOffersSection';
+import { CandidaturesCard } from '@/components/admin/client-detail/ClientCandidaturesSection';
+import { DocumentsCard, PreviewDocumentDialog, RenameDocumentDialog, UploadDocumentDialog } from '@/components/admin/client-detail/ClientDocumentsSection';
+import { InvoiceCard, MandatContractCard } from '@/components/admin/client-detail/ClientMandatSection';
+import { ClientEditDialog } from '@/components/admin/client-detail/ClientEditDialog';
+import { ClientConfirmDialogs } from '@/components/admin/client-detail/ClientConfirmDialogs';
 
-// Configuration des statuts de visite à venir (badges colorés)
-const VISITE_A_VENIR_STATUT_CONFIG: Record<string, { label: string; className: string }> = {
-  proposee: { label: 'Proposée', className: 'bg-muted text-muted-foreground border-border' },
-  planifiee: { label: 'Planifiée', className: 'bg-blue-500/10 text-blue-600 border-blue-500/30' },
-  confirmee: { label: 'Confirmée', className: 'bg-green-500/10 text-green-600 border-green-500/30' },
-  deleguee: { label: 'Déléguée', className: 'bg-purple-500/10 text-purple-600 border-purple-500/30' },
-  a_deleguer: { label: 'À déléguer', className: 'bg-orange-500/10 text-orange-600 border-orange-500/30' },
-};
-
-// Mini stat pour le dialog de détail visite
-const VisitDetailMiniStat = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-lg bg-card border border-border px-3 py-2">
-    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-    <div className="text-sm font-semibold text-foreground mt-0.5 truncate">{value}</div>
-  </div>
-);
-
-// Rendu d'une valeur de contact : e-mails (mailto:) et téléphones (tel:) cliquables
-const renderContactLine = (raw: string) => {
-  const tokens = String(raw)
-    .split(/[\n,;]+/)
-    .map((t) => t.trim())
-    .filter(Boolean);
-  if (tokens.length === 0) return null;
-  return (
-    <span className="text-sm">
-      {tokens.map((token, i) => {
-        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(token);
-        const isPhone = /^[+0-9][0-9\s()./\-]+$/.test(token) && token.replace(/\D/g, '').length >= 8;
-        if (isEmail) {
-          return (
-            <span key={i}>
-              {i > 0 && ' · '}
-              <a href={`mailto:${token}`} className="text-primary hover:underline break-all">{token}</a>
-            </span>
-          );
-        }
-        if (isPhone) {
-          const digits = token.replace(/[^+0-9]/g, '');
-          return (
-            <span key={i}>
-              {i > 0 && ' · '}
-              <a href={`tel:${digits}`} className="text-primary hover:underline">{token}</a>
-            </span>
-          );
-        }
-        return (
-          <span key={i}>
-            {i > 0 && ' · '}
-            {token}
-          </span>
-        );
-      })}
-    </span>
-  );
-};
-
-// Premium stat mini-card
-const PremiumStatCard = ({
-  label, 
-  value, 
-  prefix = "", 
-  animated = false,
-  variant = "default",
-  icon: Icon
-}: { 
-  label: string; 
-  value: number | string; 
-  prefix?: string;
-  animated?: boolean;
-  variant?: "default" | "primary" | "success" | "warning" | "danger";
-  icon?: React.ElementType;
-}) => {
-  const variantStyles = {
-    default: "bg-muted/50 border-border/30",
-    primary: "bg-primary/10 border-primary/30",
-    success: "bg-green-500/10 border-green-500/30",
-    warning: "bg-orange-500/10 border-orange-500/30",
-    danger: "bg-red-500/10 border-red-500/30"
-  };
-  
-  const textStyles = {
-    default: "text-foreground",
-    primary: "text-primary",
-    success: "text-green-600 dark:text-green-400",
-    warning: "text-orange-600 dark:text-orange-400",
-    danger: "text-red-600 dark:text-red-400"
-  };
-
-  return (
-    <div className={`group p-4 rounded-xl border backdrop-blur-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-lg ${variantStyles[variant]}`}>
-      <div className="flex items-center gap-2 mb-2">
-        {Icon && <Icon className={`w-4 h-4 ${textStyles[variant]} opacity-70`} />}
-        <p className="text-sm text-muted-foreground">{label}</p>
-      </div>
-      <p className={`text-2xl font-bold ${textStyles[variant]}`}>
-        {animated && typeof value === 'number' ? (
-          <>
-            {prefix}<AnimatedCounter value={value} duration={1200} decimals={0} />
-          </>
-        ) : (
-          `${prefix}${typeof value === 'number' ? value.toLocaleString() : value}`
-        )}
-      </p>
-    </div>
-  );
-};
-
+/**
+ * Fiche client admin (/admin/clients/:id).
+ * L'état, les chargements et les actions vivent ici ; l'affichage est découpé en sections
+ * dans src/components/admin/client-detail/ (en-tête, résumé, à faire, onglets).
+ */
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -385,8 +191,8 @@ export default function ClientDetail() {
       if (candidaturesError) throw candidaturesError;
       setCandidatures(candidaturesData || []);
 
-      // Load reloueur data if applicable
-      if (clientData.journey_type === 'property_reletting') {
+      // Load reloueur data if applicable (reloueur pur OU parcours mixte chercheur + reloueur)
+      if (clientData.journey_type === 'property_reletting' || clientData.journey_type === 'mixed') {
         const { data: reqData } = await supabase
           .from('relouer_requests')
           .select('*')
@@ -766,36 +572,6 @@ export default function ClientDetail() {
     }
   };
 
-  const getDocTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      'fiche_salaire': '💰 Fiche salaire',
-      'extrait_poursuites': '📋 Extrait poursuites',
-      'piece_identite': '🪪 Pièce ID',
-      'attestation_domicile': '🏠 Attestation domicile',
-      'rc_menage': '🛡️ RC Ménage',
-      'contrat_travail': '📝 Contrat travail',
-      'attestation_employeur': '👔 Attestation employeur',
-      'copie_bail': '📋 Copie bail',
-      'attestation_garantie_loyer': '🔐 Garantie loyer',
-      'dossier_complet': '📎 Dossier complet',
-      'autre': '📄 Autre'
-    };
-    return labels[type] || '📄 Autre';
-  };
-
-  const getFileIcon = (type: string) => {
-    if (type?.includes('pdf')) return FileText;
-    if (type?.includes('image')) return ImageIcon;
-    return File;
-  };
-
-  const formatFileSize = (bytes: number | null | undefined) => {
-    if (bytes === null || bytes === undefined) return '';
-    if (bytes === 0) return '0 B';
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-  };
 
   const handleEditClick = () => {
     setEditFormData({
@@ -917,13 +693,14 @@ export default function ClientDetail() {
         return;
       }
       
-      // Vérifier si une conversation existe déjà
+      // Une seule conversation par client : on ouvre la sienne si elle existe
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
         .eq('client_id', client.id)
-        .eq('agent_id', agentIdToUse)
         .eq('conversation_type', 'client-agent')
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
       
       if (existingConv) {
@@ -1081,42 +858,57 @@ export default function ClientDetail() {
 
 
 
+
+  // ===== Organisation de la fiche (affichage uniquement, aucun appel) =====
+  // Onglet actif en lien profond (?tab=…), sans changer la route.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab') as FicheTab | null;
+  const activeTab: FicheTab = tabParam && FICHE_TABS.includes(tabParam) ? tabParam : 'apercu';
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const openTab = (tab: FicheTab, scroll = false) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      if (tab === 'apercu') next.delete('tab'); else next.set('tab', tab);
+      return next;
+    }, { replace: true });
+    if (scroll) tabsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  // Les panneaux montés en permanence (carte Google) se redimensionnent quand ils redeviennent visibles.
+  useEffect(() => {
+    const t = window.setTimeout(() => window.dispatchEvent(new Event('resize')), 0);
+    return () => window.clearTimeout(t);
+  }, [activeTab]);
+  // Confirmation ouverte depuis le menu « Plus » (suspendre, stopper, réactiver, supprimer).
+  const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null);
+  // Complétude du dossier principal : recalculée seulement quand la liste des documents change.
+  const dossierStatus = useMemo(() => dossierPrincipalStatus(documents), [documents]);
+
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="flex flex-col items-center gap-6">
-          <div className="relative">
-            <div className="w-20 h-20 border-4 border-primary/20 rounded-full animate-spin border-t-primary" />
-            <div className="absolute inset-0 w-20 h-20 border-4 border-transparent rounded-full animate-spin border-b-primary/40" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-            <div className="absolute inset-2 w-16 h-16 border-4 border-transparent rounded-full animate-spin border-r-primary/30" style={{ animationDuration: '2s' }} />
-            <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-primary animate-pulse" />
-          </div>
-          <p className="text-muted-foreground animate-pulse text-lg font-medium">Chargement du client...</p>
+      <div className="flex min-h-[60vh] flex-1 items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4" role="status">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+          <p className="text-[15px] text-muted-foreground">Chargement du client…</p>
         </div>
       </div>
     );
   }
 
-  // Premium not found state
+  // Not found state
   if (!client || !profile) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="text-center space-y-6 animate-fade-in">
-          <div className="relative mx-auto w-24 h-24">
-            <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 rounded-full" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <User className="w-12 h-12 text-muted-foreground" />
-            </div>
-          </div>
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Client non trouvé
-          </h2>
-          <p className="text-muted-foreground max-w-md">Ce client n'existe pas ou a été supprimé</p>
-          <Button 
-            onClick={() => navigate('/admin/clients')} 
-            className="mt-4 group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+      <div className="flex min-h-[60vh] flex-1 items-center justify-center bg-background px-4">
+        <div className={cn(DASH_CARD, 'w-full max-w-md px-6 py-10 text-center')}>
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+            <User className="h-7 w-7 text-muted-foreground" />
+          </span>
+          <h2 className="mt-4 text-xl font-semibold text-foreground">Client non trouvé</h2>
+          <p className="mt-1 text-[15px] text-muted-foreground">Ce client n'existe pas ou a été supprimé</p>
+          <Button
+            onClick={() => navigate('/admin/clients')}
+            className="mt-5"
           >
-            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+            <ArrowLeft className="h-4 w-4" />
             Retour aux clients
           </Button>
         </div>
@@ -1138,20 +930,11 @@ export default function ClientDetail() {
        reloggedCandidatureForCalc?.signature_effectuee_at || 
        reloggedCandidatureForCalc?.date_etat_lieux || null);
   
-  const daysElapsed = isActivated ? calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate) : 0;
+  const daysElapsed = isActivated ? mandatElapsedFor(client as any, mandatEndDate) : 0;
   const daysRemaining = isActivated ? 90 - daysElapsed : 90;
   const progressPercentage = isActivated ? (daysElapsed / 90) * 100 : 0;
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
-  const calculateAnciennete = (dateEngagement?: string) => {
-    if (!dateEngagement) return null;
-    const now = new Date();
-    const engagement = new Date(dateEngagement);
-    const months = (now.getFullYear() - engagement.getFullYear()) * 12 + (now.getMonth() - engagement.getMonth());
-    const years = Math.floor(months / 12);
-    const remainingMonths = months % 12;
-    return years > 0 ? `${years} an${years > 1 ? 's' : ''} ${remainingMonths} mois` : `${remainingMonths} mois`;
-  };
 
   // Check if client has stable status
   const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
@@ -1159,55 +942,6 @@ export default function ClientDetail() {
   const isReletter = !isPurchaseEligible && client.journey_type === 'property_reletting';
   // purchaseHook est déjà appelé en haut du composant (avant les early returns).
 
-  const progressColor = daysElapsed < 60 ? 'from-green-500 to-emerald-400' : daysElapsed < 90 ? 'from-orange-500 to-amber-400' : 'from-red-500 to-rose-400';
-
-  // Helper functions for offers and candidatures
-  const getStatutLabel = (statut: string) => {
-    const labels: Record<string, string> = {
-      'envoyee': 'Envoyée',
-      'vue': 'Vue',
-      'interessé': 'Intéressé',
-      'interesse': 'Intéressé',
-      'souhaite_postuler': 'Souhaite postuler',
-      'visite_prevue': 'Visite prévue',
-      'visite_effectuee': 'Visite effectuée',
-      'candidature_deposee': 'Candidature déposée',
-      'acceptee': 'Acceptée',
-      'refusee': 'Refusée',
-      'annulee': 'Annulée',
-    };
-    return labels[statut] || statut;
-  };
-
-  const getStatutBadgeVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
-    if (['acceptee', 'visite_effectuee'].includes(statut)) return 'default';
-    if (statut === 'refusee' || statut === 'annulee') return 'destructive';
-    if (['interessé', 'visite_prevue', 'candidature_deposee'].includes(statut)) return 'secondary';
-    return 'outline';
-  };
-
-  const getCandidatureStatutLabel = (statut: string) => {
-    const labels: Record<string, string> = {
-      'en_attente': 'En attente',
-      'candidature_deposee': 'Dossier envoyé',
-      'acceptee': 'Acceptée',
-      'refusee': 'Refusée',
-      'bail_conclu': 'Client confirme',
-      'attente_bail': 'Validation régie',
-      'bail_recu': 'Bail reçu',
-      'signature_planifiee': 'Date choisie',
-      'signature_effectuee': 'Bail signé',
-      'etat_lieux_fixe': 'EDL fixé',
-      'cles_remises': 'Clés remises',
-    };
-    return labels[statut] || statut;
-  };
-
-  const getCandidatureStatutVariant = (statut: string): "default" | "secondary" | "destructive" | "outline" => {
-    if (['acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(statut)) return 'default';
-    if (statut === 'refusee') return 'destructive';
-    return 'secondary';
-  };
 
   const handleCandidatureStatutChange = async (candidatureId: string, newStatut: string, offreId?: string) => {
     try {
@@ -1318,2508 +1052,531 @@ export default function ClientDetail() {
     );
   }
 
+  // ===== Actions déplacées telles quelles depuis l'ancien rendu (mêmes appels, mêmes messages) =====
+  const handleSuspend = async () => {
+    const { error } = await supabase.from('clients').update({ statut: 'suspendu', date_changement_statut: new Date().toISOString() }).eq('id', client.id);
+    if (!error) { toast({ title: 'Recherche suspendue' }); loadClientData(); }
+  };
+
+  const handleStop = async () => {
+    const { error } = await supabase.from('clients').update({ statut: 'stoppe', date_changement_statut: new Date().toISOString() }).eq('id', client.id);
+    if (!error) { toast({ title: 'Recherche stoppée' }); loadClientData(); }
+  };
+
+  const handleReactivate = async () => {
+    const { error } = await supabase.from('clients').update({ statut: 'actif', date_changement_statut: null }).eq('id', client.id);
+    if (!error) {
+      // 📱 WhatsApp welcome on reactivation (fire-and-forget)
+      supabase.functions.invoke('wa-send-welcome', { body: { client_id: client.id } })
+        .catch((e) => console.error('wa-send-welcome failed:', e));
+      toast({ title: 'Recherche réactivée' });
+      loadClientData();
+    }
+  };
+
+  // Download full mandate PDF (always regenerated to ensure FULL legal text)
+  const handleDownloadFullMandat = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+        body: { client_id: client.id },
+      });
+      if (error) throw error;
+      if (!data?.pdf_base64) throw new Error('Aucun PDF retourné');
+      const bytes = Uint8Array.from(atob(data.pdf_base64), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = data.filename || `Mandat_Complet_${profile?.nom || 'client'}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading full mandate:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de générer le mandat complet',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRegenerateMandat = async () => {
+    setRegeneratingContract(true);
+    try {
+      // Toujours générer le mandat COMPLET (toutes les dispositions juridiques)
+      const { error: funcError } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+        body: { client_id: client.id },
+      });
+
+      if (funcError) throw funcError;
+
+      toast({
+        title: 'Mandat complet régénéré',
+        description: 'Le PDF complet a été régénéré avec succès',
+      });
+
+      loadClientData();
+    } catch (error) {
+      console.error('Error regenerating contract:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de régénérer le mandat complet',
+        variant: 'destructive',
+      });
+    } finally {
+      setRegeneratingContract(false);
+    }
+  };
+
+  const handleGenerateMandat = async () => {
+    setRegeneratingContract(true);
+    try {
+      const { error: funcError } = await supabase.functions.invoke('generate-full-mandat-pdf', {
+        body: { client_id: client.id },
+      });
+
+      if (funcError) throw funcError;
+
+      toast({
+        title: 'Mandat complet généré',
+        description: 'Le PDF complet a été généré avec succès',
+      });
+
+      loadClientData();
+    } catch (error) {
+      console.error('Error generating contract:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de générer le mandat complet',
+        variant: 'destructive',
+      });
+    } finally {
+      setRegeneratingContract(false);
+    }
+  };
+
+  const handleTestCancellationEmail = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('mandate-renewal-action', {
+        body: { action: 'test_staff_email', client_id: client.id },
+      });
+      if (error) throw error;
+      if (!data?.ok) throw new Error(data?.error || 'Envoi échoué');
+      const recipients = (data.recipients || []).join(', ');
+      toast({
+        title: '✅ Email de test envoyé',
+        description: `Destinataires : ${recipients}`,
+      });
+    } catch (e: any) {
+      toast({ title: 'Erreur', description: e.message || 'Envoi du test échoué', variant: 'destructive' });
+    }
+  };
+
+  // Navigations (une seule définition chacune, réutilisée par l'en-tête, « À faire » et les sections)
+  const goPrefillMandat = () => navigate(`/admin/clients/${client.id}/mandat-prefill`);
+  const goAssignAgent = () => navigate('/admin/assignations');
+  const goSendOffer = () => navigate(`/admin/envoyer-offre?clientId=${client.id}`);
+
+  // ===== Données d'affichage (calculs purs) =====
+  const clientName = `${profile.prenom} ${profile.nom}`;
+  const isFullyActivated = !!client.mandat_signature_data && !!client.demande_mandat_id && client.statut === 'actif';
+  const isRelogged = clientStatut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut));
+  const mandatRunning = isActivated && !isFrozenStatus && !isRelogged;
+  const pendingCandidatures = candidatures.filter((c) => c.statut === 'en_attente').length;
+  const visitesADeleguer = upcomingVisites.filter((v) => v.statut === 'a_deleguer').length;
+  const nextVisite = upcomingVisites[0];
+
+  const status: { label: string; tone: Tone } = (() => {
+    if (clientStatut === 'reloge') return { label: 'Relogé', tone: 'success' };
+    if (clientStatut === 'stoppe') return { label: 'Stoppé', tone: 'danger' };
+    if (clientStatut === 'suspendu') return { label: 'Suspendu', tone: 'warning' };
+    if (!isReletter && !isFullyActivated) return { label: "Période d'essai", tone: 'warning' };
+    if (clientStatut === 'actif') return { label: 'Actif', tone: 'success' };
+    if (clientStatut === 'inactif') return { label: 'Inactif', tone: 'muted' };
+    return { label: 'En attente', tone: 'muted' };
+  })();
+  const journeyLabel = isReletter ? 'Relocation (reloueur)' : client.journey_type === 'mixed' ? 'Location + relocation' : 'Location';
+  const mandatShort = !isActivated
+    ? 'Mandat non démarré'
+    : isFrozenStatus && clientStatut !== 'reloge'
+      ? `Figé à J+${Math.floor(daysElapsed)}`
+      : isRelogged
+        ? 'Mandat terminé'
+        : `${Math.max(0, Math.floor(daysRemaining))} j restants`;
+
+  const tiles: SummaryTile[] = [
+    ...(isReletter
+      ? [{ key: 'candidats', icon: Users, label: 'Candidats', value: relouerCandidates.length, phrase: 'Dossiers reçus', tab: 'candidatures' as FicheTab }]
+      : [
+          { key: 'offres', icon: Send, label: 'Offres envoyées', value: offres.length, phrase: `${todayOffres.length} aujourd'hui`, tab: 'offres' as FicheTab },
+        ]),
+    {
+      key: 'visites', icon: CalendarDays, label: 'Visites à venir', value: upcomingVisites.length,
+      phrase: nextVisite ? `Proch. ${formatZurichDateTime(nextVisite.date_visite, { short: true })}` : 'Aucune prévue', tab: 'offres',
+    },
+    ...(!isReletter
+      ? [{ key: 'candidatures', icon: FileCheck, label: 'Candidatures', value: candidatures.length, phrase: pendingCandidatures ? `${pendingCandidatures} en attente` : 'Aucune en attente', tab: 'candidatures' as FicheTab }]
+      : []),
+    {
+      key: 'documents', icon: FileText, label: 'Dossier principal', value: `${dossierStatus.pct} %`,
+      phrase: `${dossierStatus.complete}/${dossierStatus.total} pièces · ${documents.length} doc.`, tab: 'documents',
+    },
+    ...(!isReletter
+      ? [{ key: 'solvabilite', icon: Shield, label: 'Solvabilité', value: solvabilityResult.isSolvable ? 'Solvable' : 'Non solvable', phrase: `Recommandé ${chf(budgetRecommande)}`, tab: 'dossier' as FicheTab }]
+      : []),
+    {
+      key: 'mandat', icon: Clock, label: isReletter ? 'Relocation' : 'Mandat', value: isActivated ? `J+${Math.floor(daysElapsed)}` : '—',
+      phrase: mandatShort, tab: 'mandat',
+    },
+  ];
+
+  const todos: TodoItem[] = [];
+  if (!profile.actif) {
+    todos.push({ key: 'invite', icon: Mail, tone: 'warning', title: 'Compte non activé', detail: "Le client n'a pas encore activé son accès", actionLabel: inviting ? 'Envoi…' : 'Inviter', onAction: handleInvite, disabled: inviting });
+  }
+  if (!isReletter && !isFullyActivated && !isFrozenStatus) {
+    todos.push({ key: 'essai', icon: Clock, tone: 'warning', title: "Période d'essai : mandat à compléter", detail: 'Mandat, signature et documents requis pour activer le compte', actionLabel: 'Pré-remplir', onAction: goPrefillMandat });
+  }
+  if (!agent) {
+    todos.push({ key: 'agent', icon: UserX, tone: 'warning', title: 'Aucun agent assigné', detail: 'Nécessaire pour la messagerie', actionLabel: 'Assigner', onAction: goAssignAgent });
+  }
+  if (mandatRunning && daysRemaining <= 10) {
+    todos.push({ key: 'expire', icon: Clock, tone: 'danger', title: `Mandat : ${Math.max(0, Math.floor(daysRemaining))} j restants`, detail: 'Le mandat de 90 jours arrive à échéance', actionLabel: 'Mandat', onAction: () => openTab('mandat', true) });
+  }
+  if (!isReletter && client.statut === 'actif' && client.mandat_date_signature && daysElapsed >= 80 && daysElapsed <= 90) {
+    todos.push({ key: 'rembours', icon: Wallet, tone: 'warning', title: 'Fenêtre de remboursement ouverte', detail: `J${Math.floor(daysElapsed)} (jours 80–90)`, actionLabel: 'Mandat', onAction: () => openTab('mandat', true) });
+  }
+  if (client.refund_status === 'pending') {
+    todos.push({ key: 'refund', icon: Wallet, tone: 'primary', title: 'Remboursement en cours', detail: 'Relance impossible tant qu’il n’est pas terminé', actionLabel: 'Mandat', onAction: () => openTab('mandat', true) });
+  }
+  if (client.cancellation_requested_at && client.statut === 'actif') {
+    todos.push({ key: 'annulation', icon: Ban, tone: 'warning', title: "Demande d'annulation reçue", detail: formatZurichDateTime(client.cancellation_requested_at, { short: true }), actionLabel: 'Mandat', onAction: () => openTab('mandat', true) });
+  }
+  if (!isReletter && pendingCandidatures > 0) {
+    todos.push({ key: 'cand', icon: FileCheck, tone: 'warning', title: `${pendingCandidatures} candidature${pendingCandidatures > 1 ? 's' : ''} à traiter`, detail: 'Accepter ou refuser', actionLabel: 'Ouvrir', onAction: () => openTab('candidatures', true) });
+  }
+  if (visitesADeleguer > 0) {
+    todos.push({ key: 'deleguer', icon: CalendarDays, tone: 'warning', title: `${visitesADeleguer} visite${visitesADeleguer > 1 ? 's' : ''} à déléguer`, actionLabel: 'Voir', onAction: () => openTab('offres', true) });
+  }
+  if (!isReletter && dossierStatus.manquantes.length > 0) {
+    todos.push({ key: 'pieces', icon: FileText, tone: 'primary', title: `${dossierStatus.manquantes.length} pièce${dossierStatus.manquantes.length > 1 ? 's' : ''} manquante${dossierStatus.manquantes.length > 1 ? 's' : ''}`, detail: dossierStatus.manquantes.join(', '), actionLabel: 'Documents', onAction: () => openTab('documents', true) });
+  }
+  if (!isReletter && !solvabilityResult.isSolvable) {
+    todos.push({ key: 'solva', icon: AlertCircle, tone: 'danger', title: 'Dossier non solvable', detail: 'Voir l’analyse de solvabilité', actionLabel: 'Dossier', onAction: () => openTab('dossier', true) });
+  }
+  if (!client.abaninja_invoice_ref) {
+    todos.push({ key: 'facture', icon: Inbox, tone: 'primary', title: 'Facture AbaNinja non créée', actionLabel: 'Facturer', onAction: () => openTab('mandat', true) });
+  }
+
+  const tabs: TabDef[] = [
+    { key: 'apercu', label: "Vue d'ensemble", icon: LayoutGrid },
+    { key: 'recherche', label: isReletter ? 'Logement' : 'Recherche', icon: Search },
+    { key: 'dossier', label: 'Dossier', icon: Shield },
+    { key: 'documents', label: 'Documents', icon: FolderOpen, count: documents.length },
+    { key: 'offres', label: isReletter ? 'Visites' : 'Offres & visites', icon: Send, count: isReletter ? upcomingVisites.length : offres.length },
+    { key: 'candidatures', label: 'Candidatures', icon: FileCheck, count: isReletter ? relouerCandidates.length : candidatures.length },
+    { key: 'mandat', label: isReletter ? 'Finances' : 'Mandat & finances', icon: Wallet },
+    { key: 'activite', label: 'Activité', icon: Activity },
+  ];
+
   return (
-    <div className="flex-1 overflow-auto bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="p-4 md:p-8 space-y-6">
-        {isPurchaseEligible && !purchaseHook.project && (
-          <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
-        )}
-        {/* Status banner — reloueur or chercheur */}
-        {isReletter ? (
-          <ReletterStatusBanner request={relouerRequest} />
-        ) : (() => {
-          const hasSignature = !!client.mandat_signature_data;
-          const hasMandat = !!client.demande_mandat_id;
-          const isFullyActivated = hasSignature && hasMandat && client.statut === 'actif';
-          
-          if (isFullyActivated) {
-            return (
-              <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-4 flex items-center gap-3 animate-fade-in">
-                <div className="p-2 rounded-full bg-green-500/20">
-                  <CheckCircle2 className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-semibold text-green-600 dark:text-green-400">✅ Compte officiellement activé</p>
-                  <p className="text-sm text-muted-foreground">Mandat signé, documents fournis.</p>
-                </div>
-              </div>
-            );
-          }
-          
-          return (
-            <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 flex items-start gap-3 animate-fade-in">
-              <div className="p-2 rounded-full bg-orange-500/20 shrink-0">
-                <Clock className="w-5 h-5 text-orange-600" />
-              </div>
-              <div>
-                <p className="font-semibold text-orange-600 dark:text-orange-400">⏳ Période d'essai</p>
-                <p className="text-sm text-muted-foreground">
-                  Ce client est en période d'essai. Pour activer son compte, il doit remplir le mandat, signer et fournir ses documents.
-                </p>
-              </div>
-            </div>
-          );
-        })()}
-        <div className="relative rounded-3xl bg-gradient-to-br from-card via-card to-primary/5 border border-border/50 p-6 overflow-hidden animate-fade-in">
-          <FloatingParticles count={20} />
-          
-          <div className="relative z-10 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-            <div className="relative flex-1 min-w-0">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-              {/* Client Avatar & Name */}
-              <div className="flex items-center gap-4 mb-4">
-                <div className="relative">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-2xl font-bold text-primary-foreground shadow-[0_0_25px_rgba(var(--primary),0.3)]">
-                    {profile.prenom[0]}{profile.nom[0]}
-                  </div>
-                  {!isReletter && !isPurchaseEligible && solvabilityResult.isSolvable && (
-                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-card">
-                      <CheckCircle2 className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
-                    {profile.prenom} {profile.nom}
-                  </h1>
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    {/* Badge Relogé */}
-                    {clientStatut === 'reloge' && (
-                      <Badge className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 backdrop-blur-sm">
-                        <Home className="w-3 h-3 mr-1" />
-                        ✅ Relogé
-                      </Badge>
-                    )}
-                    {clientStatut === 'stoppe' && (
-                      <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
-                        <StopCircle className="w-3 h-3 mr-1" />
-                        ⛔ Stoppé
-                      </Badge>
-                    )}
-                    {clientStatut === 'suspendu' && (
-                      <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30 backdrop-blur-sm">
-                        <Pause className="w-3 h-3 mr-1" />
-                        ⏸️ Suspendu
-                      </Badge>
-                    )}
-                    {!profile.actif && (
-                      <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 backdrop-blur-sm animate-pulse-soft">
-                        <Mail className="w-3 h-3 mr-1" />
-                        Non activé
-                      </Badge>
-                    )}
-                    {isReletter ? (
-                      <>
-                        <Badge className="bg-primary/15 text-primary border-primary/30 backdrop-blur-sm">
-                          <Home className="w-3 h-3 mr-1" />
-                          Client reloueur
-                        </Badge>
-                        <ReletterAddressBadge request={relouerRequest} />
-                      </>
-                    ) : isPurchaseEligible ? (
-                      <>
-                        <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
-                          {client.nationalite || 'N/A'}
-                        </Badge>
-                        <Badge className="bg-sky-500/20 text-sky-600 dark:text-sky-400 border-sky-500/30 backdrop-blur-sm">
-                          <Home className="w-3 h-3 mr-1" />
-                          {purchaseHook.project?.statut === 'actif' ? 'Mandat actif' : 'Projet achat'}
-                        </Badge>
-                        <Badge variant="outline" className="bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30 backdrop-blur-sm">
-                          Banque : {(() => {
-                            const s = purchaseHook.financing?.statut_bancaire;
-                            const map: Record<string, string> = { a_evaluer: 'à évaluer', en_cours: 'en analyse', validation_orale: 'prévalidé', valide: 'validé', refuse: 'refusé', bloque: 'bloqué' };
-                            return map[s as string] || 'à évaluer';
-                          })()}
-                        </Badge>
-                      </>
-                    ) : (
-                      <>
-                        <Badge variant="outline" className="bg-card/50 backdrop-blur-sm border-border/50">
-                          {client.nationalite || 'N/A'}
-                        </Badge>
-                        <Badge
-                          variant={clientHasStableStatus ? "secondary" : "destructive"}
-                          className={`${clientHasStableStatus ? "bg-secondary/50" : "animate-pulse"} backdrop-blur-sm`}
-                        >
-                          <Shield className="w-3 h-3 mr-1" />
-                          Permis {client.type_permis || 'N/A'}
-                          {!clientHasStableStatus && " ⚠️"}
-                        </Badge>
-                        {solvabilityResult.isSolvable ? (
-                          <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 backdrop-blur-sm">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Solvable
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 backdrop-blur-sm">
-                            <XCircle className="w-3 h-3 mr-1" />
-                            Non solvable
-                          </Badge>
-                        )}
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Premium Progress bar - Show frozen state for relogged/stopped/suspended */}
-              {(() => {
-                // Not activated yet — show waiting state
-                if (!isActivated) {
-                  return (
-                    <div className="mt-6 max-w-2xl">
-                      <div className="p-4 rounded-xl bg-muted/30 border border-border/50">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-muted">
-                            <Clock className="w-5 h-5 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-muted-foreground">⏳ En attente d'activation</p>
-                            <p className="text-sm text-muted-foreground">
-                              Le mandat démarrera lorsque le client sera activé par l'admin
-                            </p>
-                          </div>
-                        </div>
-                        <div className="mt-3 relative h-3 bg-muted/50 rounded-full overflow-hidden">
-                          <div className="absolute inset-y-0 left-0 rounded-full bg-muted" style={{ width: '0%' }} />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                
-                const isRelogged = clientStatut === 'reloge' || candidatures.some(c => ['signature_effectuee', 'etat_lieux_fixe', 'cles_remises'].includes(c.statut));
-                const reloggedCandidature = candidatures.find(c => ['cles_remises', 'etat_lieux_fixe', 'signature_effectuee'].includes(c.statut));
-                
-                // Show frozen state for stoppe/suspendu
-                if (clientStatut === 'stoppe' || clientStatut === 'suspendu') {
-                  const frozenConfig = clientStatut === 'stoppe' 
-                    ? { icon: StopCircle, label: '⛔ Recherche stoppée', color: 'red', bgClass: 'bg-red-500/10 border-red-500/30', textClass: 'text-red-600 dark:text-red-400', iconBg: 'bg-red-500/20', iconColor: 'text-red-500' }
-                    : { icon: Pause, label: '⏸️ Recherche suspendue', color: 'amber', bgClass: 'bg-amber-500/10 border-amber-500/30', textClass: 'text-amber-600 dark:text-amber-400', iconBg: 'bg-amber-500/20', iconColor: 'text-amber-500' };
-                  const FrozenIcon = frozenConfig.icon;
-                  
-                  return (
-                    <div className="mt-6 max-w-2xl">
-                      <div className={`p-4 rounded-xl border ${frozenConfig.bgClass}`}>
-                        <div className="flex items-center gap-3">
-                          <div className={`p-2 rounded-full ${frozenConfig.iconBg}`}>
-                            <FrozenIcon className={`w-5 h-5 ${frozenConfig.iconColor}`} />
-                          </div>
-                          <div className="flex-1">
-                            <p className={`font-semibold ${frozenConfig.textClass}`}>{frozenConfig.label}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Figé à J+{Math.floor(daysElapsed)} sur 90 jours
-                            </p>
-                          </div>
-                        </div>
-                        {/* Frozen progress bar */}
-                        <div className="mt-3 relative h-3 bg-muted/50 rounded-full overflow-hidden">
-                          <div 
-                            className={`absolute inset-y-0 left-0 rounded-full bg-gradient-to-r ${
-                              clientStatut === 'stoppe' ? 'from-red-500 to-red-400' : 'from-amber-500 to-amber-400'
-                            }`}
-                            style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                
-                if (isRelogged && reloggedCandidature) {
-                  const statusLabel = reloggedCandidature.statut === 'cles_remises' ? '🏠 Relogé' : 
-                                     reloggedCandidature.statut === 'signature_effectuee' ? '✅ Bail signé' : 
-                                     '🔑 EDL fixé';
-                  return (
-                    <div className="mt-6 max-w-2xl">
-                      <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-full bg-emerald-500/20">
-                            <Home className="w-5 h-5 text-emerald-500" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-emerald-600 dark:text-emerald-400">{statusLabel}</p>
-                            <p className="text-sm text-muted-foreground">
-                              Mandat terminé avec succès — Figé à J+{Math.floor(daysElapsed)}
-                              {reloggedCandidature.signature_effectuee_at && (
-                                <> le {new Date(reloggedCandidature.signature_effectuee_at).toLocaleDateString('fr-CH')}</>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <div className="mt-6 max-w-2xl">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground font-medium">{isReletter ? 'Progression de la relocation' : 'Progression du mandat'}</p>
-                      </div>
-                      <div className={`px-4 py-1.5 rounded-full text-sm font-bold flex items-center gap-2 ${
-                        daysElapsed < 60 
-                          ? 'bg-green-500/20 text-green-600 dark:text-green-400 shadow-[0_0_15px_rgba(34,197,94,0.2)]' 
-                          : daysElapsed < 90 
-                          ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.2)]' 
-                          : 'bg-red-500/20 text-red-600 dark:text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.2)] animate-pulse'
-                      }`}>
-                        <TrendingUp className="w-4 h-4" />
-                        {Math.floor(daysRemaining)}j {Math.floor((daysRemaining - Math.floor(daysRemaining)) * 24)}h
-                      </div>
-                    </div>
-                    <p className="text-xs text-muted-foreground text-right mb-2">
-                      <AnimatedCounter value={Math.floor(daysElapsed)} duration={800} decimals={0} /> / 90 jours
-                    </p>
-                    <div className="relative h-4 bg-muted/50 rounded-full overflow-hidden backdrop-blur-sm">
-                      <div 
-                        className={`absolute inset-y-0 left-0 bg-gradient-to-r ${progressColor} rounded-full transition-all duration-1000 ease-out`}
-                        style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                      >
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent animate-pulse" />
-                      </div>
-                      <div 
-                        className={`absolute inset-y-0 left-0 bg-gradient-to-r ${progressColor} blur-md opacity-50 rounded-full`}
-                        style={{ width: `${Math.min(progressPercentage, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Premium Action Buttons */}
-            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap lg:flex-nowrap w-full sm:w-auto">
-              <DownloadClientPDFButton
-                clientId={client.id}
-                clientData={client}
-                profileData={profile}
-                variant="outline"
-                className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)] transition-all duration-300"
-              />
-              <Button 
-                variant="outline" 
-                className={`w-full sm:w-auto group backdrop-blur-sm border-border/50 transition-all duration-300 ${
-                  !profile.actif 
-                    ? "bg-blue-500/10 border-blue-500/30 text-blue-600 hover:bg-blue-500/20 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] animate-pulse-soft" 
-                    : "bg-card/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)]"
-                }`}
-                onClick={handleInvite}
-                disabled={inviting}
-              >
-                {inviting ? (
-                  <div className="h-4 w-4 sm:mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Send className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                )}
-                <span className="hidden sm:inline">{!profile.actif ? 'Envoyer invitation' : 'Renvoyer invitation'}</span>
-                <span className="sm:hidden">Inviter</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)] transition-all duration-300" 
-                onClick={() => setSendEmailDialogOpen(true)}
-              >
-                <MailPlus className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:inline">Envoyer dossier</span>
-                <span className="sm:hidden">Dossier</span>
-              </Button>
-              {!isReletter && (
-                <Button
-                  variant="outline"
-                  className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 transition-all duration-300"
-                  onClick={() => navigate(`/admin/clients/${client.id}/mandat-prefill`)}
-                >
-                  <FileCheck className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                  <span className="hidden sm:inline">Pré-remplir le mandat</span>
-                  <span className="sm:hidden">Mandat</span>
-                </Button>
-              )}
-              <Button 
-                variant="outline" 
-                className="w-full sm:w-auto group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.15)] transition-all duration-300" 
-                onClick={handleSendMessage}
-              >
-                <MessageSquare className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                <span className="hidden sm:inline">Message</span>
-                <span className="sm:hidden">Msg</span>
-              </Button>
-              {/* AbaNinja Invoice Button */}
-              {client.abaninja_invoice_ref ? (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span className="text-sm font-medium">
-                    <span className="hidden sm:inline">Facture: </span>
-                    {client.abaninja_invoice_ref}
-                  </span>
-                </div>
-              ) : (
-                <Button 
-                  variant="outline" 
-                  className="w-full sm:w-auto group bg-amber-500/10 backdrop-blur-sm border-amber-500/30 text-amber-600 hover:bg-amber-500/20 hover:border-amber-500/50 hover:shadow-[0_0_15px_rgba(245,158,11,0.2)] transition-all duration-300" 
-                  onClick={handleCreateAbaNinjaInvoice}
-                  disabled={abaNinjaLoading}
-                >
-                  {abaNinjaLoading ? (
-                    <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
-                  ) : (
-                    <Receipt className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                  )}
-                  <span className="hidden sm:inline">Créer facture</span>
-                  <span className="sm:hidden">Facture</span>
-                </Button>
-              )}
-              {/* Status Action Buttons */}
-              {(!clientStatut || clientStatut === 'actif' || clientStatut === 'en_attente') && (
-                <>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        className="w-full sm:w-auto group bg-amber-500/10 backdrop-blur-sm border-amber-500/30 text-amber-600 hover:bg-amber-500/20 transition-all duration-300"
-                      >
-                        <Pause className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                        <span className="hidden sm:inline">Suspendre</span>
-                        <span className="sm:hidden">⏸️</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Suspendre la recherche ?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          La barre de progression sera figée et le compteur J+ arrêté. Vous pourrez réactiver la recherche plus tard.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction 
-                          className="bg-amber-500 text-white hover:bg-amber-600"
-                          onClick={async () => {
-                            const { error } = await supabase.from('clients').update({ statut: 'suspendu', date_changement_statut: new Date().toISOString() }).eq('id', client.id);
-                            if (!error) { toast({ title: 'Recherche suspendue' }); loadClientData(); }
-                          }}
-                        >
-                          Suspendre
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="outline" 
-                        className="w-full sm:w-auto group bg-red-500/10 backdrop-blur-sm border-red-500/30 text-red-600 hover:bg-red-500/20 transition-all duration-300"
-                      >
-                        <StopCircle className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                        <span className="hidden sm:inline">Stopper</span>
-                        <span className="sm:hidden">⛔</span>
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Stopper la recherche ?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Le client arrête sa recherche. La barre de progression sera figée définitivement. Le client restera dans la base de données.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction 
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={async () => {
-                            const { error } = await supabase.from('clients').update({ statut: 'stoppe', date_changement_statut: new Date().toISOString() }).eq('id', client.id);
-                            if (!error) { toast({ title: 'Recherche stoppée' }); loadClientData(); }
-                          }}
-                        >
-                          Stopper
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
-              )}
-              {(clientStatut === 'stoppe' || clientStatut === 'suspendu') && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-full sm:w-auto group bg-green-500/10 backdrop-blur-sm border-green-500/30 text-green-600 hover:bg-green-500/20 transition-all duration-300"
-                    >
-                      <RotateCcw className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                      <span className="hidden sm:inline">Réactiver</span>
-                      <span className="sm:hidden">🔄</span>
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Réactiver la recherche ?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Le compteur J+ reprendra là où il s'était arrêté. La barre de progression recommencera à avancer.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Annuler</AlertDialogCancel>
-                      <AlertDialogAction 
-                        className="bg-green-500 text-white hover:bg-green-600"
-                        onClick={async () => {
-                          const { error } = await supabase.from('clients').update({ statut: 'actif', date_changement_statut: null }).eq('id', client.id);
-                          if (!error) {
-                            // 📱 WhatsApp welcome on reactivation (fire-and-forget)
-                            supabase.functions.invoke('wa-send-welcome', { body: { client_id: client.id } })
-                              .catch((e) => console.error('wa-send-welcome failed:', e));
-                            toast({ title: 'Recherche réactivée' });
-                            loadClientData();
-                          }
-                        }}
-                      >
-                        Réactiver
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    variant="destructive" 
-                    className="w-full sm:w-auto group hover:shadow-[0_0_15px_rgba(239,68,68,0.3)] transition-all duration-300" 
-                    disabled={deleting}
-                  >
-                    <Trash2 className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                    <span className="hidden sm:inline">Supprimer</span>
-                    <span className="sm:hidden">Suppr.</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
-                  <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2">
-                      <div className="p-2 rounded-xl bg-red-500/20">
-                        <Trash2 className="w-5 h-5 text-red-500" />
-                      </div>
-                      Confirmer la suppression
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible et supprimera toutes les données associées (documents, candidatures, visites, etc.).
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel className="bg-card/50 backdrop-blur-sm">Annuler</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]">
-                      Supprimer définitivement
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button 
-                    className="w-full sm:w-auto group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all duration-300" 
-                    onClick={handleEditClick}
-                  >
-                    <Edit className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
-                    <span>Modifier</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-card/95 backdrop-blur-xl border-border/50">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-3">
-                      <div className="p-2 rounded-xl bg-primary/10">
-                        <Edit className="w-5 h-5 text-primary" />
-                      </div>
-                      Modifier les informations du client
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-6 py-4">
-                    {/* Informations personnelles */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <User className="w-5 h-5 text-primary" />
-                        Informations personnelles
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Prénom *</Label>
-                          <Input
-                            value={editFormData.prenom || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, prenom: e.target.value })}
-                            placeholder="Prénom"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Nom *</Label>
-                          <Input
-                            value={editFormData.nom || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, nom: e.target.value })}
-                            placeholder="Nom"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Email *</Label>
-                          <Input
-                            type="email"
-                            value={editFormData.email || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                            placeholder="email@exemple.com"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Téléphone</Label>
-                          <Input
-                            value={editFormData.telephone || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, telephone: e.target.value })}
-                            placeholder="+41 XX XXX XX XX"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Nationalité</Label>
-                          <Input
-                            value={editFormData.nationalite || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, nationalite: e.target.value })}
-                            placeholder="Suisse"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Type de permis</Label>
-                          <Select 
-                            value={editFormData.type_permis || ''} 
-                            onValueChange={(value) => setEditFormData({ ...editFormData, type_permis: value })}
-                          >
-                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
-                              <SelectValue placeholder="Sélectionner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="B">Permis B</SelectItem>
-                              <SelectItem value="C">Permis C</SelectItem>
-                              <SelectItem value="L">Permis L</SelectItem>
-                              <SelectItem value="G">Permis G</SelectItem>
-                              <SelectItem value="Suisse">Suisse</SelectItem>
-                              <SelectItem value="Autre">Autre</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Date de naissance</Label>
-                          <Input
-                            type="date"
-                            value={editFormData.date_naissance || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, date_naissance: e.target.value })}
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Situation familiale</Label>
-                          <Select 
-                            value={editFormData.situation_familiale || ''} 
-                            onValueChange={(value) => setEditFormData({ ...editFormData, situation_familiale: value })}
-                          >
-                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
-                              <SelectValue placeholder="Sélectionner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Célibataire">Célibataire</SelectItem>
-                              <SelectItem value="Marié(e)">Marié(e)</SelectItem>
-                              <SelectItem value="Divorcé(e)">Divorcé(e)</SelectItem>
-                              <SelectItem value="Veuf(ve)">Veuf(ve)</SelectItem>
-                              <SelectItem value="En couple">En couple</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Nombre d'occupants</Label>
-                          <Input
-                            type="number"
-                            value={editFormData.nombre_occupants || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, nombre_occupants: parseInt(e.target.value) })}
-                            placeholder="1"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Adresse actuelle</Label>
-                        <Input
-                          value={editFormData.adresse || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, adresse: e.target.value })}
-                          placeholder="Rue, n°, NPA, ville"
-                          className="bg-card/50 backdrop-blur-sm border-border/50"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-                    {/* Situation professionnelle */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <Briefcase className="w-5 h-5 text-primary" />
-                        Situation professionnelle
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Profession</Label>
-                          <Input
-                            value={editFormData.profession || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, profession: e.target.value })}
-                            placeholder="Ingénieur"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Employeur</Label>
-                          <Input
-                            value={editFormData.employeur || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, employeur: e.target.value })}
-                            placeholder="Nom de l'entreprise"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Type de contrat</Label>
-                          <Select 
-                            value={editFormData.type_contrat || ''} 
-                            onValueChange={(value) => setEditFormData({ ...editFormData, type_contrat: value })}
-                          >
-                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
-                              <SelectValue placeholder="Sélectionner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="CDI">CDI</SelectItem>
-                              <SelectItem value="CDD">CDD</SelectItem>
-                              <SelectItem value="Indépendant">Indépendant</SelectItem>
-                              <SelectItem value="Intérim">Intérim</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Date d'engagement</Label>
-                          <Input
-                            type="date"
-                            value={editFormData.date_engagement || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, date_engagement: e.target.value })}
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Secteur d'activité</Label>
-                          <Input
-                            value={editFormData.secteur_activite || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, secteur_activite: e.target.value })}
-                            placeholder="Technologie"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-                    {/* Situation financière */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <DollarSign className="w-5 h-5 text-primary" />
-                        Situation financière
-                      </h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Revenus mensuels (CHF)</Label>
-                          <Input
-                            type="number"
-                            value={editFormData.revenus_mensuels || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, revenus_mensuels: parseFloat(e.target.value) })}
-                            placeholder="5000"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Charges mensuelles (CHF)</Label>
-                          <Input
-                            type="number"
-                            value={editFormData.charges_mensuelles || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, charges_mensuelles: parseFloat(e.target.value) })}
-                            placeholder="1000"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Apport personnel (CHF)</Label>
-                          <Input
-                            type="number"
-                            value={editFormData.apport_personnel || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, apport_personnel: parseFloat(e.target.value) })}
-                            placeholder="10000"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Source de revenus</Label>
-                          <Input
-                            value={editFormData.source_revenus || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, source_revenus: e.target.value })}
-                            placeholder="Salaire"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Garanties</Label>
-                          <Input
-                            value={editFormData.garanties || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, garanties: e.target.value })}
-                            placeholder="Cautionnement"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="autres_credits"
-                            checked={editFormData.autres_credits || false}
-                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, autres_credits: checked })}
-                          />
-                          <Label htmlFor="autres_credits">Autres crédits</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="poursuites"
-                            checked={editFormData.poursuites || false}
-                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, poursuites: checked })}
-                          />
-                          <Label htmlFor="poursuites">Poursuites</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="curatelle"
-                            checked={editFormData.curatelle || false}
-                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, curatelle: checked })}
-                          />
-                          <Label htmlFor="curatelle">Curatelle</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-                    {/* Critères de recherche */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <Home className="w-5 h-5 text-primary" />
-                        Critères de recherche
-                      </h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Budget maximum (CHF)</Label>
-                          <Input
-                            type="number"
-                            value={editFormData.budget_max || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, budget_max: parseFloat(e.target.value) })}
-                            placeholder="2000"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Pièces souhaitées</Label>
-                          <Input
-                            type="number"
-                            step="0.5"
-                            value={editFormData.pieces || ''}
-                            onChange={(e) => setEditFormData({ ...editFormData, pieces: parseFloat(e.target.value) })}
-                            placeholder="3.5"
-                            className="bg-card/50 backdrop-blur-sm border-border/50"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Type de bien</Label>
-                          <Select 
-                            value={editFormData.type_bien || ''} 
-                            onValueChange={(value) => setEditFormData({ ...editFormData, type_bien: value })}
-                          >
-                            <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
-                              <SelectValue placeholder="Sélectionner" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Appartement">Appartement</SelectItem>
-                              <SelectItem value="Maison">Maison</SelectItem>
-                              <SelectItem value="Studio">Studio</SelectItem>
-                              <SelectItem value="Loft">Loft</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Région(s) de recherche</Label>
-                        <GooglePlacesAutocomplete
-                          value={editFormData.region_recherche || ''}
-                          onChange={(value) => setEditFormData({ ...editFormData, region_recherche: value })}
-                          placeholder="Tapez une région, commune..."
-                          multiSelect
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Souhaits particuliers</Label>
-                        <Textarea
-                          value={editFormData.souhaits_particuliers || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, souhaits_particuliers: e.target.value })}
-                          rows={2}
-                          placeholder="Balcon, parking, ascenseur..."
-                          className="bg-card/50 backdrop-blur-sm border-border/50"
-                        />
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="animaux"
-                            checked={editFormData.animaux || false}
-                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, animaux: checked })}
-                          />
-                          <Label htmlFor="animaux">Animaux</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="vehicules"
-                            checked={editFormData.vehicules || false}
-                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, vehicules: checked })}
-                          />
-                          <Label htmlFor="vehicules">Véhicules</Label>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id="instrument_musique"
-                            checked={editFormData.instrument_musique || false}
-                            onCheckedChange={(checked) => setEditFormData({ ...editFormData, instrument_musique: checked })}
-                          />
-                          <Label htmlFor="instrument_musique">Instrument de musique</Label>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-                    {/* Notes agent */}
-                    <div className="space-y-4">
-                      <h3 className="font-semibold text-lg flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-primary" />
-                        Notes de l'agent
-                      </h3>
-                      <div className="space-y-2">
-                        <Textarea
-                          value={editFormData.note_agent || ''}
-                          onChange={(e) => setEditFormData({ ...editFormData, note_agent: e.target.value })}
-                          rows={4}
-                          placeholder="Notes internes..."
-                          className="bg-card/50 backdrop-blur-sm border-border/50"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex justify-end gap-3 pt-4 border-t border-border/50">
-                      <Button variant="outline" onClick={() => setEditDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
-                        Annuler
-                      </Button>
-                      <Button onClick={handleEditSave} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
-                        Enregistrer les modifications
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Button 
-                variant="outline" 
-                className="w-full sm:w-auto col-span-2 sm:col-span-1 group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-muted/50 transition-all duration-300" 
-                onClick={() => navigate('/admin/clients')}
-              >
-                <ArrowLeft className="w-4 h-4 sm:mr-2 group-hover:-translate-x-1 transition-transform" />
-                <span>Retour</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {(client as any)?.candidat_garant && <CandidatGarantCard garant={(client as any).candidat_garant} />}
-
-        <AdminCreditsCard userId={(client as any)?.user_id} />
-
-        {/* Visites à venir de ce client */}
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Calendar className="w-5 h-5 text-primary" />
-              Visites à venir
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {upcomingVisites.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune visite à venir</p>
-            ) : (
-              upcomingVisites.map((v) => {
-                const statutCfg = VISITE_A_VENIR_STATUT_CONFIG[v.statut] || {
-                  label: v.statut,
-                  className: 'bg-muted text-muted-foreground border-border',
-                };
-                const isDeleguee = v.est_deleguee || !!v.coursier_id;
-                return (
-                  <div
-                    key={v.id}
-                    onClick={() => setSelectedVisite(v)}
-                    className="p-3 rounded-xl bg-muted/30 border border-border/30 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 transition-all duration-300 hover:bg-muted/50 hover:border-primary/30 cursor-pointer"
-                  >
-                    <div className="flex items-center gap-2 text-sm font-medium shrink-0">
-                      <Clock className="w-4 h-4 text-primary" />
-                      <span>
-                        {formatSwissDate(toSwissTime(v.date_visite), 'dd.MM.yyyy')} à{' '}
-                        {formatSwissTime(v.date_visite).replace(':', 'h')}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm truncate">
-                        {v.adresse || v.offres?.adresse || 'Adresse non renseignée'}
-                      </p>
-                      {v.offre_id && v.offres?.adresse && v.adresse && (
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Offre liée : {v.offres.adresse}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                      {isDeleguee && (
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          Déléguée au coursier
-                          {coursiersMap[v.coursier_id as string] ? ` — ${coursiersMap[v.coursier_id as string]}` : ''}
-                          {v.statut_coursier ? ` · ${v.statut_coursier}` : ''}
-                        </span>
-                      )}
-                      <Badge className={`text-xs ${statutCfg.className}`}>{statutCfg.label}</Badge>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Dialog détail visite + offre liée */}
-        <Dialog open={!!selectedVisite} onOpenChange={(o) => !o && setSelectedVisite(null)}>
-          <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-start gap-2 text-base sm:text-lg">
-                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <span className="min-w-0 break-words">
-                  {selectedVisite?.adresse || selectedVisite?.offres?.adresse || 'Visite'}
-                </span>
-              </DialogTitle>
-            </DialogHeader>
-
-            {selectedVisite && (
-              <div className="space-y-4">
-                {/* Bloc VISITE */}
-                <div className="rounded-xl bg-muted/30 border border-border/30 p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-2 text-sm font-semibold">
-                      <Clock className="w-4 h-4 text-primary" />
-                      {formatSwissDate(toSwissTime(selectedVisite.date_visite), 'dd.MM.yyyy')} à{' '}
-                      {formatSwissTime(selectedVisite.date_visite).replace(':', 'h')}
-                    </div>
-                    <Badge className={`text-xs ${(VISITE_A_VENIR_STATUT_CONFIG[selectedVisite.statut] || { className: 'bg-muted text-muted-foreground border-border' }).className}`}>
-                      {(VISITE_A_VENIR_STATUT_CONFIG[selectedVisite.statut] || { label: selectedVisite.statut }).label}
-                    </Badge>
-                  </div>
-                  {(selectedVisite.est_deleguee || selectedVisite.coursier_id) && (
-                    <p className="text-xs text-muted-foreground">
-                      Déléguée au coursier
-                      {coursiersMap[selectedVisite.coursier_id as string] ? ` — ${coursiersMap[selectedVisite.coursier_id as string]}` : ''}
-                      {selectedVisite.statut_coursier ? ` · ${selectedVisite.statut_coursier}` : ''}
-                    </p>
-                  )}
-                </div>
-
-                {/* Bloc OFFRE */}
-                {selectedVisite.offres && (
-                  <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wider text-primary font-semibold">Prix de vente</div>
-                        <div className="text-2xl font-bold text-primary">
-                          {Number(selectedVisite.offres.prix) || 0} CHF CC
-                        </div>
-                      </div>
-                      <DollarSign className="w-6 h-6 text-primary/60" />
-                    </div>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {selectedVisite.offres.pieces ? (
-                        <VisitDetailMiniStat label="Pièces" value={String(selectedVisite.offres.pieces)} />
-                      ) : null}
-                      {selectedVisite.offres.surface ? (
-                        <VisitDetailMiniStat label="Surface" value={`${selectedVisite.offres.surface} m²`} />
-                      ) : null}
-                      {selectedVisite.offres.etage != null && selectedVisite.offres.etage !== '' ? (
-                        <VisitDetailMiniStat label="Étage" value={String(selectedVisite.offres.etage)} />
-                      ) : null}
-                      {selectedVisite.offres.disponibilite ? (
-                        <VisitDetailMiniStat label="Disponibilité" value={String(selectedVisite.offres.disponibilite)} />
-                      ) : null}
-                      {selectedVisite.offres.type_bien ? (
-                        <VisitDetailMiniStat label="Type de bien" value={String(selectedVisite.offres.type_bien)} />
-                      ) : null}
-                      {selectedVisite.offres.statut ? (
-                        <VisitDetailMiniStat label="Statut offre" value={String(selectedVisite.offres.statut)} />
-                      ) : null}
-                    </div>
-                    {selectedVisite.offres.description && (
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                        {selectedVisite.offres.description}
-                      </p>
-                    )}
-                    {selectedVisite.offres.lien_annonce && (
-                      <a
-                        href={selectedVisite.offres.lien_annonce}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                      >
-                        Voir l'annonce <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                  </div>
-                )}
-
-                {/* Bloc CONTACTS */}
-                {(() => {
-                  const offre = selectedVisite.offres;
-                  if (!offre) return null;
-                  const contacts: { label: string; value: string }[] = [];
-                  if (offre.contact_gerance) contacts.push({ label: 'Gérance', value: offre.contact_gerance });
-                  if (offre.contact_annonceur) contacts.push({ label: 'Annonceur', value: offre.contact_annonceur });
-                  if (offre.contact_visite) contacts.push({ label: 'Contact visite', value: offre.contact_visite });
-                  if (offre.concierge_nom || offre.concierge_tel) {
-                    contacts.push({ label: 'Concierge', value: [offre.concierge_nom, offre.concierge_tel].filter(Boolean).join(', ') });
-                  }
-                  if (contacts.length === 0) return null;
-                  return (
-                    <div className="rounded-xl bg-muted/30 border border-border/30 p-4 space-y-2">
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contacts</div>
-                      {contacts.map((c, idx) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <span className="text-xs text-muted-foreground w-28 shrink-0 pt-0.5">{c.label}</span>
-                          <span className="min-w-0 break-words">{renderContactLine(c.value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                <div className="flex justify-end">
-                  <Button variant="outline" onClick={() => setSelectedVisite(null)}>
-                    Fermer
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Offres reçues aujourd'hui */}
-        <Card className="bg-card/80 backdrop-blur-sm border-border/50 animate-fade-in">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Mail className="w-5 h-5 text-primary" />
-              Offres reçues aujourd'hui
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {todayOffres.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Aucune offre reçue aujourd'hui</p>
-            ) : (
-              todayOffres.map((o) => (
-                <div
-                  key={o.id}
-                  onClick={() => setSelectedTodayOffre(o)}
-                  className="p-3 rounded-xl bg-muted/30 border border-border/30 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 transition-all duration-300 hover:bg-muted/50 hover:border-primary/30 cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 text-sm font-medium shrink-0">
-                    <Clock className="w-4 h-4 text-primary" />
-                    <span>{formatSwissTime(o.date_envoi).replace(':', 'h')}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{o.adresse || o.titre || 'Offre'}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
-                    <span className="text-sm font-semibold text-primary">{Number(o.prix) || 0} CHF CC</span>
-                    <Badge className="text-xs bg-muted text-muted-foreground border-border">{o.statut}</Badge>
-                  </div>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Dialog détail offre reçue aujourd'hui */}
-        <Dialog open={!!selectedTodayOffre} onOpenChange={(o) => !o && setSelectedTodayOffre(null)}>
-          <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-start gap-2 text-base sm:text-lg">
-                <MapPin className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                <span className="min-w-0 break-words">
-                  {selectedTodayOffre?.adresse || selectedTodayOffre?.titre || 'Offre'}
-                </span>
-              </DialogTitle>
-            </DialogHeader>
-
-            {selectedTodayOffre && (
-              <div className="space-y-4">
-                {/* Bloc OFFRE */}
-                <div className="rounded-xl bg-primary/5 border border-primary/20 p-4 space-y-3">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-primary font-semibold">Prix</div>
-                      <div className="text-2xl font-bold text-primary">
-                        {Number(selectedTodayOffre.prix) || 0} CHF CC
-                      </div>
-                    </div>
-                    <DollarSign className="w-6 h-6 text-primary/60" />
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    <VisitDetailMiniStat label="Envoyée à" value={formatSwissTime(selectedTodayOffre.date_envoi).replace(':', 'h')} />
-                    {selectedTodayOffre.pieces ? (
-                      <VisitDetailMiniStat label="Pièces" value={String(selectedTodayOffre.pieces)} />
-                    ) : null}
-                    {selectedTodayOffre.surface ? (
-                      <VisitDetailMiniStat label="Surface" value={`${selectedTodayOffre.surface} m²`} />
-                    ) : null}
-                    {selectedTodayOffre.etage != null && selectedTodayOffre.etage !== '' ? (
-                      <VisitDetailMiniStat label="Étage" value={String(selectedTodayOffre.etage)} />
-                    ) : null}
-                    {selectedTodayOffre.disponibilite ? (
-                      <VisitDetailMiniStat label="Disponibilité" value={String(selectedTodayOffre.disponibilite)} />
-                    ) : null}
-                    {selectedTodayOffre.type_bien ? (
-                      <VisitDetailMiniStat label="Type de bien" value={String(selectedTodayOffre.type_bien)} />
-                    ) : null}
-                    {selectedTodayOffre.statut ? (
-                      <VisitDetailMiniStat label="Statut" value={String(selectedTodayOffre.statut)} />
-                    ) : null}
-                  </div>
-                  {selectedTodayOffre.description && (
-                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                      {selectedTodayOffre.description}
-                    </p>
-                  )}
-                  {selectedTodayOffre.lien_annonce && (
-                    <a
-                      href={selectedTodayOffre.lien_annonce}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
-                    >
-                      Voir l'annonce <ExternalLink className="w-3 h-3" />
-                    </a>
-                  )}
-                </div>
-
-                {/* Bloc CONTACTS */}
-                {(() => {
-                  const offre = selectedTodayOffre;
-                  const contacts: { label: string; value: string }[] = [];
-                  if (offre.contact_gerance) contacts.push({ label: 'Gérance', value: offre.contact_gerance });
-                  if (offre.contact_annonceur) contacts.push({ label: 'Annonceur', value: offre.contact_annonceur });
-                  if (offre.contact_visite) contacts.push({ label: 'Contact visite', value: offre.contact_visite });
-                  if (offre.concierge_nom || offre.concierge_tel) {
-                    contacts.push({ label: 'Concierge', value: [offre.concierge_nom, offre.concierge_tel].filter(Boolean).join(', ') });
-                  }
-                  if (contacts.length === 0) return null;
-                  return (
-                    <div className="rounded-xl bg-muted/30 border border-border/30 p-4 space-y-2">
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contacts</div>
-                      {contacts.map((c, idx) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <span className="text-xs text-muted-foreground w-28 shrink-0 pt-0.5">{c.label}</span>
-                          <span className="min-w-0 break-words">{renderContactLine(c.value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-
-                {/* Bloc CLIENTS AYANT REÇU CETTE OFFRE */}
-                <div className="rounded-xl bg-muted/30 border border-border/30 p-4 space-y-2">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Clients ayant reçu cette offre
-                  </div>
-                  {offreRecipientsLoading ? (
-                    <p className="text-xs text-muted-foreground">Chargement…</p>
-                  ) : (
-                    <>
-                      <p className="text-sm font-medium">
-                        {offreRecipients.length} client(s) ont reçu cette offre
-                      </p>
-                      <div className="space-y-1.5">
-                        {offreRecipients.map((r, idx) => (
-                          <div key={idx} className="flex items-center justify-between gap-2">
-                            <span className="text-sm truncate">{r.name}</span>
-                            <Badge className="text-xs bg-muted text-muted-foreground border-border shrink-0">{r.statut}</Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex justify-end">
-                  <Button variant="outline" onClick={() => setSelectedTodayOffre(null)}>
-                    Fermer
-                  </Button>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Solvability Alert - chercheur only */}
-        {!isReletter && (
-          <div 
-            className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-1 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
-            style={{ animationDelay: '100ms' }}
-          >
-            <div className={`absolute inset-0 opacity-20 transition-opacity duration-500 ${solvabilityResult.isSolvable ? 'bg-gradient-to-br from-green-500/20 to-transparent' : 'bg-gradient-to-br from-red-500/20 to-transparent'}`} />
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-              <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-            </div>
-            <SolvabilityAlert 
-              result={solvabilityResult} 
-              className="relative z-10"
-            />
-          </div>
-        )}
-
-        {/* Client Activity Stats - with premium wrapper */}
-        <div 
-          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
-          style={{ animationDelay: '150ms' }}
-        >
-          {/* Shine effect */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-          </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
-              <TrendingUp className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
-            </div>
-            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">Statistiques d'activité</h3>
-          </div>
-          <ClientActivityStats 
-            clientId={client.id} 
-            clientUserId={client.user_id}
-          />
-        </div>
-
-        {/* Candidates Manager - with premium wrapper */}
-        <div 
-          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
-          style={{ animationDelay: '200ms' }}
-        >
-          {/* Shine effect */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-          </div>
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
-              <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
-            </div>
-            <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">{isReletter ? 'Candidats intéressés' : 'Co-candidats du dossier'}</h3>
-          </div>
-          <ClientCandidatesManager
-            clientId={client.id}
-            clientRevenus={client.revenus_mensuels ?? 0}
-            budgetDemande={client.budget_max ?? 0}
-            onCandidatesChange={refreshCandidates}
-          />
-        </div>
-
-        {/* Candidate Documents - chercheur only */}
-        {!isReletter && (
-          <div 
-            className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
-            style={{ animationDelay: '250ms' }}
-          >
-            <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-              <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-            </div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors duration-300">
-                <FileText className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
-              </div>
-              <h3 className="font-semibold text-lg group-hover:text-primary transition-colors duration-300">Documents des co-candidats</h3>
-            </div>
-            <CandidateDocumentsSection 
+    <div className="flex-1 overflow-y-auto overflow-x-hidden bg-background">
+      <div className="mx-auto w-full min-w-0 max-w-6xl px-4 pb-10 md:px-8">
+        <ClientDetailHeader
+          profile={profile}
+          solvable={!isReletter && !isPurchaseEligible && solvabilityResult.isSolvable}
+          status={status}
+          extraBadges={(
+            <>
+              {!profile.actif && <DashBadge tone="primary">Non activé</DashBadge>}
+              <DashBadge tone="neutral">{journeyLabel}</DashBadge>
+            </>
+          )}
+          meta={<>Agent : {agent ? `${agent.profile.prenom} ${agent.profile.nom}` : 'non assigné'} · {mandatShort}</>}
+          onBack={() => navigate('/admin/clients')}
+          onMessage={handleSendMessage}
+          onEmail={() => setSendEmailDialogOpen(true)}
+          onEdit={handleEditClick}
+          inviting={inviting}
+          onInvite={handleInvite}
+          onPrefill={!isReletter ? goPrefillMandat : undefined}
+          pdfButton={(
+            <DownloadClientPDFButton
               clientId={client.id}
-              clientUserId={client.user_id}
-              clientName={`${profile.prenom} ${profile.nom}`}
-              candidates={candidates}
-              agentUserId={user?.id}
-              agentId={client.agent_id || undefined}
-              onDocumentsChange={loadDocuments}
-              key={documentsRefreshKey}
+              clientData={client}
+              profileData={profile}
+              variant="ghost"
             />
+          )}
+          canSuspendStop={!clientStatut || clientStatut === 'actif' || clientStatut === 'en_attente'}
+          canReactivate={clientStatut === 'stoppe' || clientStatut === 'suspendu'}
+          deleting={deleting}
+          onConfirm={setConfirmKind}
+        />
+
+        <div className="mt-4 space-y-4">
+          <ClientSummaryTiles tiles={tiles} onOpen={(t) => openTab(t, true)} />
+          <ClientTodoList items={todos} />
+
+          <div ref={tabsRef} className="scroll-mt-44">
+            <ClientTabsRail tabs={tabs} value={activeTab} onChange={(t) => openTab(t)} />
           </div>
-        )}
 
-        {/* Apporteur Info Card - with premium wrapper */}
-        <div 
-          className="group relative bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl p-4 overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_rgba(var(--primary),0.1)] hover:border-primary/20 animate-fade-in" 
-          style={{ animationDelay: '300ms' }}
-        >
-          {/* Shine effect */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
-            <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-          </div>
-          <ApporteurInfoCard clientId={client.id} isAdmin={true} />
-        </div>
-
-        {/* Premium Information Cards Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Situation financière — chercheur / logement reloueur */}
-          {isReletter ? (
-            <ReletterFinancialCard request={relouerRequest} />
-          ) : (
-          <PremiumCard icon={DollarSign} title="Situation financière" delay={350}>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-3 gap-4">
-                <PremiumStatCard 
-                  label="Revenus mensuels" 
-                  value={client.revenus_mensuels || 0} 
-                  prefix="CHF "
-                  animated
-                />
-                <PremiumStatCard 
-                  label="Budget maximum" 
-                  value={client.budget_max || 0} 
-                  prefix="CHF "
-                  variant="primary"
-                  animated
-                />
-                <PremiumStatCard 
-                  label="Budget recommandé" 
-                  value={budgetRecommande} 
-                  prefix="CHF "
-                  variant="success"
-                  animated
-                />
-              </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-              <div className="space-y-2">
-                {client.charges_extraordinaires && (
-                  <div className="flex items-center justify-between p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl backdrop-blur-sm">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 text-orange-500 animate-pulse" />
-                      <span className="text-sm font-medium text-orange-600 dark:text-orange-400">Charges extraordinaires</span>
-                    </div>
-                    <span className="text-sm font-bold text-orange-600 dark:text-orange-400">
-                      {client.montant_charges_extra ? `CHF ${client.montant_charges_extra.toLocaleString()}` : 'Oui'}
-                    </span>
-                  </div>
-                )}
-                {(client.poursuites || client.curatelle) && (
-                  <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl backdrop-blur-sm">
-                    <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
-                    <div className="flex-1 text-sm font-medium text-red-600 dark:text-red-400">
-                      {client.poursuites && 'Poursuites en cours'}
-                      {client.poursuites && client.curatelle && ' • '}
-                      {client.curatelle && 'Sous curatelle'}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </PremiumCard>
-          )}
-
-          {/* Informations personnelles */}
-          <PremiumCard icon={User} title="Informations personnelles" delay={400}>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                {/* Online Status */}
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/20">
-                  <OnlineStatusBadge 
-                    lastSeenAt={profile.last_seen_at} 
-                    isOnline={profile.is_online}
-                    size="md"
-                  />
-                </div>
-                <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Mail className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-sm">{profile.email}</span>
-                </div>
-                <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
-                  <div className="p-2 rounded-lg bg-primary/10">
-                    <Phone className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-sm">{profile.telephone || 'Non renseigné'}</span>
-                </div>
-                {client.date_naissance && (
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Calendar className="w-4 h-4 text-primary" />
-                    </div>
-                    <span className="text-sm">{new Date(client.date_naissance).toLocaleDateString('fr-CH')}</span>
-                  </div>
-                )}
-                {client.adresse && (
-                  <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/30 transition-colors">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <MapPin className="w-4 h-4 text-primary" />
-                    </div>
-                    <span className="text-sm">{client.adresse}</span>
-                  </div>
-                )}
-              </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">État civil</p>
-                  <p className="font-medium text-sm group-hover:text-primary/90 transition-colors">{client.etat_civil || 'Non renseigné'}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Nationalité</p>
-                  <p className="font-medium text-sm group-hover:text-primary/90 transition-colors">{client.nationalite || 'Non renseigné'}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default col-span-2">
-                  <p className="text-xs text-muted-foreground mb-1">Type de permis</p>
-                  <p className="font-medium text-sm group-hover:text-primary/90 transition-colors">{client.type_permis || 'Non renseigné'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </PremiumCard>
-
-          {/* Situation actuelle — chercheur / Contact régie — reloueur */}
-          {isReletter ? (
-            <ReletterCurrentSituationCard request={relouerRequest} />
-          ) : (
-          <PremiumCard icon={Building2} title="Situation actuelle" delay={450}>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Gérance actuelle</p>
-                  <p className="font-medium text-sm">{client.gerance_actuelle || 'Non renseigné'}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Contact gérance</p>
-                  <p className="font-medium text-sm">{client.contact_gerance || 'Non renseigné'}</p>
-                </div>
-              </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="grid grid-cols-2 gap-4">
-                <PremiumStatCard 
-                  label="Loyer brut actuel"
-                  value={client.loyer_actuel || 0}
-                  prefix="CHF "
-                  animated
-                />
-                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-sm text-muted-foreground mb-2">Depuis le</p>
-                  <p className="font-medium">
-                    {client.depuis_le ? new Date(client.depuis_le).toLocaleDateString('fr-CH') : 'Non renseigné'}
-                  </p>
-                </div>
-              </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Pièces actuel</p>
-                  <p className="font-medium text-sm">{client.pieces_actuel || 'Non renseigné'}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Motif du changement</p>
-                  <p className="font-medium text-xs line-clamp-2">{client.motif_changement || 'Non renseigné'}</p>
-                </div>
-              </div>
-            </CardContent>
-          </PremiumCard>
-          )}
-
-          {/* Situation professionnelle — chercheur / Gestion du dossier — reloueur */}
-          {isReletter ? (
-            <ReletterFileMgmtCard request={relouerRequest} agentName={agent ? `${agent.profile.prenom} ${agent.profile.nom}` : null} />
-          ) : (
-          <PremiumCard icon={Briefcase} title="Situation professionnelle" delay={500}>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Profession</p>
-                  <p className="font-medium text-sm">{client.profession || 'Non renseigné'}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Employeur</p>
-                  <p className="font-medium text-sm">{client.employeur || 'Non renseigné'}</p>
-                </div>
-              </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="grid grid-cols-2 gap-4">
-                <PremiumStatCard 
-                  label="Revenus mensuels nets"
-                  value={client.revenus_mensuels || 0}
-                  prefix="CHF "
-                  variant="success"
-                  animated
-                />
-                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-sm text-muted-foreground mb-2">Date d'engagement</p>
-                  <p className="font-medium">
-                    {client.date_engagement ? new Date(client.date_engagement).toLocaleDateString('fr-CH') : 'Non renseigné'}
-                  </p>
-                </div>
-              </div>
-              {calculateAnciennete(client.date_engagement) && (
-                <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm hover:bg-primary/15 hover:shadow-[0_0_15px_rgba(var(--primary),0.2)] transition-all duration-300">
-                  <p className="text-xs text-muted-foreground mb-1">Ancienneté</p>
-                  <p className="font-medium text-primary">{calculateAnciennete(client.date_engagement)}</p>
-                </div>
-              )}
-            </CardContent>
-          </PremiumCard>
-          )}
-
-          {/* Critères — chercheur: recherche / reloueur: futur locataire */}
-          {isReletter ? (
-            <ReletterCriteriaCard request={relouerRequest} />
-          ) : (
-          <PremiumCard icon={Home} title="Critères de recherche" delay={550}>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Type de bien</p>
-                  <p className="font-medium text-sm">{client.type_bien || 'Non renseigné'}</p>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Nombre de pièces</p>
-                  <p className="font-medium text-sm">{client.pieces || 'Non renseigné'}</p>
-                </div>
-              </div>
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm hover:bg-primary/15 hover:shadow-[0_0_15px_rgba(var(--primary),0.2)] transition-all duration-300">
-                <p className="text-xs text-muted-foreground mb-2">Région de recherche</p>
-                <p className="font-medium text-sm text-primary">{client.region_recherche || 'Non renseigné'}</p>
-              </div>
-              {client.nombre_occupants && (
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Nombre d'occupants</p>
-                  <p className="font-medium text-sm">{client.nombre_occupants}</p>
-                </div>
-              )}
-              {client.souhaits_particuliers && (
+          {/* ── Vue d'ensemble ── */}
+          <TabPanel tab="apercu" active={activeTab === 'apercu'} className="grid gap-4 space-y-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start">
+            <div className="min-w-0 space-y-4">
+              {/* Status banner — reloueur or chercheur */}
+              {isReletter ? (
                 <>
-                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 transition-all duration-300">
-                    <p className="text-xs text-muted-foreground mb-2">Souhaits particuliers</p>
-                    <p className="text-sm">{client.souhaits_particuliers}</p>
-                  </div>
+                  <ReletterStatusBanner request={relouerRequest} />
+                  {relouerRequest && <div className="flex flex-wrap gap-2"><ReletterAddressBadge request={relouerRequest} /></div>}
                 </>
-              )}
-            </CardContent>
-          </PremiumCard>
-          )}
-
-          {/* Carte de localisation — chercheur: zones de recherche; reloueur: logement */}
-          <SwissRomandeMapGoogle
-            client={isReletter && relouerRequest
-              ? { ...client, region_recherche: relouerRequest.property_city || relouerRequest.property_canton || client.region_recherche }
-              : client}
-          />
-
-          {/* Autres informations — chercheur vs logement reloueur */}
-          {isReletter ? (
-            <ReletterPropertyFeaturesCard request={relouerRequest} />
-          ) : (
-          <PremiumCard icon={FileText} title="Autres informations" delay={600}>
-            <CardContent className="space-y-4">
-              {client.utilisation_logement && (
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Utilisation du logement</p>
-                  <p className="font-medium text-sm">{client.utilisation_logement}</p>
-                </div>
-              )}
-              <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <div className={`w-3 h-3 rounded-full transition-all duration-300 ${client.animaux ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse' : 'bg-muted-foreground/30'}`} />
-                  <span className="text-sm">Animaux</span>
-                </div>
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <div className={`w-3 h-3 rounded-full transition-all duration-300 ${client.instrument_musique ? 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)] animate-pulse' : 'bg-muted-foreground/30'}`} />
-                  <span className="text-sm">Instrument de musique</span>
-                </div>
-              </div>
-              {client.vehicules && (
-                <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                  <p className="text-xs text-muted-foreground mb-1">Véhicules</p>
-                  <p className="font-medium text-sm">{client.numero_plaques || 'Oui'}</p>
-                </div>
-              )}
-              {client.decouverte_agence && (
-                <>
-                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="p-3 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 hover:scale-[1.02] transition-all duration-300 cursor-default">
-                    <p className="text-xs text-muted-foreground mb-1">Comment a découvert l'agence</p>
-                    <p className="font-medium text-sm">{client.decouverte_agence}</p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </PremiumCard>
-          )}
-
-          {/* Suivi */}
-          <PremiumCard icon={Users} title="Suivi" className="lg:col-span-2" delay={650}>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {agent ? (
-                  <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 backdrop-blur-sm">
-                    <p className="text-xs text-muted-foreground mb-2">Agent assigné</p>
-                    <p className="font-bold text-primary">
-                      {agent.profile.prenom} {agent.profile.nom}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">{agent.profile.email}</p>
-                  </div>
-                ) : (
-                  <div className="text-center p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
-                    <p className="text-muted-foreground mb-2">Aucun agent assigné</p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate('/admin/assignations')}
-                      className="group hover:bg-primary/10 hover:border-primary/30"
-                    >
-                      <Users className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                      Assigner un agent
-                    </Button>
-                  </div>
-                )}
-                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
-                  <p className="text-xs text-muted-foreground mb-2">Commission split</p>
-                  <p className="font-bold text-2xl">{client.commission_split || 50}%</p>
-                </div>
-                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
-                  <p className="text-xs text-muted-foreground mb-2">Date d'ajout</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Calendar className="w-4 h-4 text-primary" />
-                    <span className="font-medium">
-                      {new Date(client.date_ajout || client.created_at || '').toLocaleDateString('fr-CH')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              {client.note_agent && (
-                <>
-                  <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent opacity-50 group-hover:opacity-100 transition-opacity duration-300" />
-                  <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-transparent hover:border-primary/20 hover:bg-muted/50 transition-all duration-300">
-                    <p className="text-xs text-muted-foreground mb-2">Notes de l'agent</p>
-                    <p className="text-sm">{client.note_agent}</p>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </PremiumCard>
-
-          {/* Offres envoyées — chercheur only */}
-          {!isReletter && (
-          <PremiumCard icon={Send} title={`Offres envoyées (${offres.length})`} className="lg:col-span-2" delay={700}>
-            <CardContent className="space-y-4">
-              <div className="flex justify-end mb-2">
-                <Button 
-                  onClick={() => navigate(`/admin/envoyer-offre?clientId=${client.id}`)}
-                  className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                >
-                  <Send className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                  Envoyer une offre
-                </Button>
-              </div>
-              {offres.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {offres.map((offre, index) => (
-                    <div 
-                      key={offre.id}
-                      onClick={() => setSelectedTodayOffre(offre)}
-                      className="group p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30 hover:bg-muted/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all duration-300 animate-fade-in cursor-pointer"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <MapPin className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-sm group-hover:text-primary transition-colors">{offre.adresse}</h4>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
-                            </p>
-                          </div>
-                        </div>
-                        <Badge variant={getStatutBadgeVariant(offre.statut)} className="text-xs">
-                          {getStatutLabel(offre.statut)}
-                        </Badge>
-                      </div>
-                      <div className="grid grid-cols-3 gap-2 text-sm">
-                        <div className="p-2 rounded-lg bg-muted/50">
-                          <p className="text-xs text-muted-foreground">Prix</p>
-                          <p className="font-medium">{offre.prix?.toLocaleString()} CHF</p>
-                        </div>
-                        <div className="p-2 rounded-lg bg-muted/50">
-                          <p className="text-xs text-muted-foreground">Surface</p>
-                          <p className="font-medium">{offre.surface || 'N/A'} m²</p>
-                        </div>
-                        <div className="p-2 rounded-lg bg-muted/50">
-                          <p className="text-xs text-muted-foreground">Pièces</p>
-                          <p className="font-medium">{offre.pieces || 'N/A'}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              ) : isFullyActivated ? (
+                <Notice icon={CheckCircle2} tone="success" title="Compte officiellement activé">Mandat signé, documents fournis.</Notice>
               ) : (
-                <div className="text-center py-12 animate-fade-in">
-                  <div className="relative mx-auto w-20 h-20 mb-4">
-                    <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 rounded-full" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Send className="w-10 h-10 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground">Aucune offre envoyée</p>
-                </div>
+                <Notice icon={Clock} tone="warning" title="Période d'essai">
+                  Ce client est en période d'essai. Pour activer son compte, il doit remplir le mandat, signer et fournir ses documents.
+                </Notice>
               )}
-            </CardContent>
-          </PremiumCard>
-          )}
-          {isReletter && <ReletterProfilesProposedCard count={0} />}
+              {/* Parcours mixte : le dossier de relocation s'affiche en plus du suivi chercheur */}
+              {!isReletter && !isPurchaseEligible && client.journey_type === 'mixed' && relouerRequest && (
+                <FicheCard title="Dossier de relocation (parcours mixte)" bodyClassName="space-y-4">
+                  <ReletterStatusBanner request={relouerRequest} />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <ReletterFinancialCard request={relouerRequest} />
+                    <ReletterPropertyFeaturesCard request={relouerRequest} />
+                  </div>
+                  <ReletterDossiersTransmisCard candidates={relouerCandidates} />
+                </FicheCard>
+              )}
+              <PersonalInfoCard client={client} profile={profile} stablePermis={clientHasStableStatus} />
+              <FollowUpCard client={client} agent={agent} onAssign={goAssignAgent} />
+            </div>
+            <div className="min-w-0 space-y-4">
+              <MandatProgressCard
+                isActivated={isActivated}
+                clientStatut={clientStatut}
+                candidatures={candidatures}
+                daysElapsed={daysElapsed}
+                daysRemaining={daysRemaining}
+                progressPercentage={progressPercentage}
+                isReletter={isReletter}
+              />
+              <UpcomingVisitsCard visites={upcomingVisites} coursiersMap={coursiersMap} onSelect={setSelectedVisite} limit={3} onSeeAll={() => openTab('offres', true)} />
+              {!isReletter && <TodayOffersCard offres={todayOffres} onSelect={setSelectedTodayOffre} onSeeAll={() => openTab('offres', true)} />}
+            </div>
+          </TabPanel>
 
+          {/* ── Recherche (chercheur) / Logement (reloueur) — monté en permanence : la carte charge elle-même son jeton ── */}
+          <TabPanel tab="recherche" active={activeTab === 'recherche'} keepMounted className="grid gap-4 space-y-0 lg:grid-cols-2 lg:items-start">
+            {/* Critères — chercheur: recherche / reloueur: futur locataire */}
+            {isReletter ? <ReletterCriteriaCard request={relouerRequest} /> : <SearchCriteriaCard client={client} />}
+            {/* Carte de localisation — chercheur: zones de recherche; reloueur: logement */}
+            <SwissRomandeMapGoogle
+              client={isReletter && relouerRequest
+                ? { ...client, region_recherche: relouerRequest.property_city || relouerRequest.property_canton || client.region_recherche }
+                : client}
+            />
+            {/* Situation actuelle — chercheur / Contact régie — reloueur */}
+            {isReletter ? <ReletterCurrentSituationCard request={relouerRequest} /> : <CurrentSituationCard client={client} />}
+            {/* Autres informations — chercheur vs logement reloueur */}
+            {isReletter ? <ReletterPropertyFeaturesCard request={relouerRequest} /> : <OtherInfoCard client={client} />}
+          </TabPanel>
 
-
-          {/* Candidatures déposées — chercheur only */}
-          {!isReletter && (
-          <PremiumCard icon={FileCheck} title={`Candidatures déposées (${candidatures.length})`} className="lg:col-span-2" delay={750}>
-            <CardContent className="space-y-4">
-              {candidatures.length > 0 ? (
-                <div className="space-y-4">
-                  {candidatures.map((candidature, index) => (
-                    <div 
-                      key={candidature.id}
-                      className="group p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30 hover:bg-muted/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all duration-300 animate-fade-in"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                    >
-                      {/* Header */}
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 rounded-lg bg-primary/10">
-                            <MapPin className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-sm group-hover:text-primary transition-colors">
-                              {candidature.offres?.adresse || 'Offre inconnue'}
-                            </h4>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {candidature.offres && (
-                                <span>{candidature.offres.prix?.toLocaleString()} CHF • {candidature.offres.pieces || 'N/A'} pièces</span>
-                              )}
-                              {' • '}
-                              Déposée le {new Date(candidature.date_depot || candidature.created_at).toLocaleDateString('fr-CH')}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant={getCandidatureStatutVariant(candidature.statut)}>
-                            {getCandidatureStatutLabel(candidature.statut)}
-                          </Badge>
-                          <Badge variant={candidature.dossier_complet ? "outline" : "secondary"} className="text-xs bg-card/50">
-                            {candidature.dossier_complet ? "Complet" : "Incomplet"}
-                          </Badge>
-                        </div>
-                      </div>
-                      
-                      {/* Workflow Timeline */}
-                      <CandidatureWorkflowTimeline currentStatut={candidature.statut} />
-                      
-                      {/* Action buttons for pending candidatures */}
-                      {candidature.statut === 'en_attente' && (
-                        <div className="flex gap-2 mt-4 pt-4 border-t border-border/30">
-                          <Button
-                            size="sm"
-                            className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 hover:bg-green-500/30"
-                            variant="outline"
-                            onClick={() => handleCandidatureStatutChange(candidature.id, 'acceptee', candidature.offre_id)}
-                          >
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Accepter
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30 hover:bg-red-500/30"
-                            onClick={() => handleCandidatureStatutChange(candidature.id, 'refusee', candidature.offre_id)}
-                          >
-                            <XCircle className="h-4 w-4 mr-1" />
-                            Refuser
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+          {/* ── Dossier : finances, solvabilité, situation pro, garant, co-candidats (monté en permanence : co-candidats chargés par le composant) ── */}
+          <TabPanel tab="dossier" active={activeTab === 'dossier'} keepMounted>
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+              {/* Situation financière — chercheur / logement reloueur */}
+              {isReletter ? <ReletterFinancialCard request={relouerRequest} /> : <FinancialSituationCard client={client} budgetRecommande={budgetRecommande} />}
+              {/* Situation professionnelle — chercheur / Gestion du dossier — reloueur */}
+              {isReletter ? (
+                <ReletterFileMgmtCard request={relouerRequest} agentName={agent ? `${agent.profile.prenom} ${agent.profile.nom}` : null} />
               ) : (
-                <div className="text-center py-12 animate-fade-in">
-                  <div className="relative mx-auto w-20 h-20 mb-4">
-                    <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 rounded-full" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <FileCheck className="w-10 h-10 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground">Aucune candidature déposée</p>
-                </div>
+                <ProfessionalSituationCard client={client} />
               )}
-            </CardContent>
-          </PremiumCard>
-          )}
-          {isReletter && <ReletterDossiersTransmisCard candidates={relouerCandidates} />}
-
-
-          {/* Contrat de mandat — chercheur only */}
-          {!isReletter && (
-          <PremiumCard icon={FileText} title="Contrat de mandat" delay={680}>
-            <CardContent className="space-y-4">
-              {client.mandat_pdf_url || client.mandat_signature_data || client.demande_mandat_id ? (
-                <>
-                  {/* Status */}
-                  <div className="flex items-center gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/30">
-                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                    <div>
-                      <p className="font-medium text-green-600 dark:text-green-400">Contrat signé</p>
-                      {client.mandat_date_signature && (
-                        <p className="text-sm text-muted-foreground">
-                          Signé le {new Date(client.mandat_date_signature).toLocaleDateString('fr-CH')}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Signature preview */}
-                  {client.mandat_signature_data && (
-                    <div className="p-4 bg-white rounded-xl border-2 border-dashed border-border/50">
-                      <p className="text-xs text-muted-foreground mb-2">Signature électronique</p>
-                      <img 
-                        src={client.mandat_signature_data} 
-                        alt="Signature" 
-                        className="max-h-16 object-contain"
-                      />
-                    </div>
-                  )}
-
-                  {/* Download full mandate PDF (always regenerated to ensure FULL legal text) */}
-                  <Button 
-                    variant="outline"
-                    className="w-full group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
-                    onClick={async () => {
-                      try {
-                        const { data, error } = await supabase.functions.invoke('generate-full-mandat-pdf', {
-                          body: { client_id: client.id },
-                        });
-                        if (error) throw error;
-                        if (!data?.pdf_base64) throw new Error('Aucun PDF retourné');
-                        const bytes = Uint8Array.from(atob(data.pdf_base64), (c) => c.charCodeAt(0));
-                        const blob = new Blob([bytes], { type: 'application/pdf' });
-                        const url = URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        link.download = data.filename || `Mandat_Complet_${profile?.nom || 'client'}.pdf`;
-                        link.click();
-                        URL.revokeObjectURL(url);
-                      } catch (error) {
-                        console.error('Error downloading full mandate:', error);
-                        toast({
-                          title: 'Erreur',
-                          description: 'Impossible de générer le mandat complet',
-                          variant: 'destructive',
-                        });
-                      }
-                    }}
-                  >
-                    <Download className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                    Télécharger le mandat complet (PDF)
-                  </Button>
-
-
-                  {/* Regenerate button */}
-                  {client.demande_mandat_id && (
-                    <Button 
-                      variant="outline"
-                      className="w-full group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-orange-500/10 hover:border-orange-500/30"
-                      disabled={regeneratingContract}
-                      onClick={async () => {
-                        setRegeneratingContract(true);
-                        try {
-                          // Toujours générer le mandat COMPLET (toutes les dispositions juridiques)
-                          const { error: funcError } = await supabase.functions.invoke('generate-full-mandat-pdf', {
-                            body: { client_id: client.id },
-                          });
-
-                          if (funcError) throw funcError;
-
-                          toast({
-                            title: 'Mandat complet régénéré',
-                            description: 'Le PDF complet a été régénéré avec succès',
-                          });
-
-                          loadClientData();
-                        } catch (error) {
-                          console.error('Error regenerating contract:', error);
-                          toast({
-                            title: 'Erreur',
-                            description: 'Impossible de régénérer le mandat complet',
-                            variant: 'destructive',
-                          });
-                        } finally {
-                          setRegeneratingContract(false);
-                        }
-                      }}
-                    >
-                      <RefreshCw className={`w-4 h-4 mr-2 ${regeneratingContract ? 'animate-spin' : 'group-hover:scale-110'} transition-transform`} />
-                      {regeneratingContract ? 'Régénération...' : 'Régénérer le PDF'}
-                    </Button>
-                  )}
-
-                  {/* Annulation / Remboursement pour le compte du client */}
-                  {client.statut === 'actif' && client.mandat_date_signature && (
-                    <div className="pt-3 border-t border-border/40 space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Si le client a fait sa demande par téléphone ou email :
-                      </p>
-                      <Button
-                        variant="outline"
-                        className="w-full bg-card/50 hover:bg-green-500/10 hover:border-green-500/30"
-                        disabled={daysElapsed < 80 || daysElapsed > 90}
-                        onClick={() => setRefundDialogOpen(true)}
-                        title={
-                          daysElapsed < 80
-                            ? `Disponible à partir du 80ème jour (actuel : ${daysElapsed})`
-                            : daysElapsed > 90
-                              ? `Fenêtre close (jours 80–90). Mandat renouvelé automatiquement (actuel : J${daysElapsed}).`
-                              : undefined
-                        }
-                      >
-                        <Wallet className="w-4 h-4 mr-2" />
-                        Demander le remboursement pour le client
-                        {daysElapsed < 80 && (
-                          <span className="ml-2 text-xs text-muted-foreground">(J{daysElapsed}/80)</span>
-                        )}
-                        {daysElapsed > 90 && (
-                          <span className="ml-2 text-xs text-muted-foreground">(fenêtre close)</span>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className="w-full bg-card/50 hover:bg-destructive/10 hover:border-destructive/30 hover:text-destructive"
-                        onClick={() => setCancelDialogOpen(true)}
-                      >
-                        <Ban className="w-4 h-4 mr-2" />
-                        Annuler le mandat (sans remboursement)
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full bg-card/50 hover:bg-blue-500/10 hover:border-blue-500/30"
-                        onClick={async () => {
-                          try {
-                            const { data, error } = await supabase.functions.invoke('mandate-renewal-action', {
-                              body: { action: 'test_staff_email', client_id: client.id },
-                            });
-                            if (error) throw error;
-                            if (!data?.ok) throw new Error(data?.error || 'Envoi échoué');
-                            const recipients = (data.recipients || []).join(', ');
-                            toast({
-                              title: '✅ Email de test envoyé',
-                              description: `Destinataires : ${recipients}`,
-                            });
-                          } catch (e: any) {
-                            toast({ title: 'Erreur', description: e.message || 'Envoi du test échoué', variant: 'destructive' });
-                          }
-                        }}
-
-                      >
-                        <Mail className="w-4 h-4 mr-2" />
-                        Tester l'email d'annulation (m'envoyer)
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Relance de recherche — pour clients relogé / inactif / stoppé / suspendu */}
-                  {client.journey_type !== 'purchase_search' &&
-                    ['reloge', 'inactif', 'stoppe', 'suspendu'].includes(client.statut || '') && (
-                    <div className="pt-3 border-t border-border/40 space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Le client souhaite reprendre une nouvelle recherche :
-                      </p>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full bg-card/50 hover:bg-primary/10 hover:border-primary/40 hover:text-primary"
-                            disabled={relaunching || abaNinjaLoading || client.refund_status === 'pending'}
-                            title={
-                              client.refund_status === 'pending'
-                                ? 'Un remboursement est en cours — impossible de relancer.'
-                                : undefined
-                            }
-                          >
-                            <RotateCcw className={`w-4 h-4 mr-2 ${relaunching ? 'animate-spin' : ''}`} />
-                            {relaunching ? 'Relance en cours…' : 'Relancer une nouvelle recherche (90 jours)'}
-                            {(client.relance_count ?? 0) > 0 && (
-                              <span className="ml-2 text-xs text-muted-foreground">
-                                ({client.relance_count} déjà)
-                              </span>
-                            )}
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Relancer une nouvelle recherche ?</AlertDialogTitle>
-                            <AlertDialogDescription asChild>
-                              <div className="space-y-2 text-sm">
-                                <p>
-                                  Le compte du client sera <strong>réactivé</strong> et un
-                                  <strong> nouveau mandat de 90 jours</strong> démarrera aujourd'hui.
-                                </p>
-                                <p>
-                                  Une nouvelle <strong>facture d'acompte de CHF 300.-</strong> sera automatiquement
-                                  générée dans AbaNinja et envoyée par email au client.
-                                </p>
-                                <p className="text-muted-foreground">
-                                  Le compteur de jours de recherche repart à zéro.
-                                </p>
-                              </div>
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleRelaunchSearch}>
-                              Confirmer la relance
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      {client.derniere_relance_at && (
-                        <p className="text-[11px] text-muted-foreground">
-                          Dernière relance : {new Date(client.derniere_relance_at).toLocaleDateString('fr-CH')}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </>
-
-              ) : (
-                <div className="text-center py-8">
-                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                    <FileText className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground mb-2">Aucun contrat enregistré</p>
-                  <p className="text-xs text-muted-foreground">
-                    Le contrat sera généré lors de l'activation du mandat
-                  </p>
-                  
-                  {/* Button to generate if demande_mandat_id exists but no PDF */}
-                  {client.demande_mandat_id && (
-                    <Button 
-                      variant="outline"
-                      className="mt-4 group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
-                      disabled={regeneratingContract}
-                      onClick={async () => {
-                        setRegeneratingContract(true);
-                        try {
-                          const { error: funcError } = await supabase.functions.invoke('generate-full-mandat-pdf', {
-                            body: { client_id: client.id },
-                          });
-
-                          if (funcError) throw funcError;
-
-                          toast({
-                            title: 'Mandat complet généré',
-                            description: 'Le PDF complet a été généré avec succès',
-                          });
-
-                          loadClientData();
-                        } catch (error) {
-                          console.error('Error generating contract:', error);
-                          toast({
-                            title: 'Erreur',
-                            description: 'Impossible de générer le mandat complet',
-                            variant: 'destructive',
-                          });
-                        } finally {
-                          setRegeneratingContract(false);
-                        }
-                      }}
-                    >
-                      <FilePlus className={`w-4 h-4 mr-2 ${regeneratingContract ? 'animate-spin' : 'group-hover:scale-110'} transition-transform`} />
-                      {regeneratingContract ? 'Génération...' : 'Générer le PDF'}
-                    </Button>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </PremiumCard>
-          )}
-
-          {/* Documents */}
-          <PremiumCard icon={FileText} title={`Documents (${documents.length})`} className="lg:col-span-2" delay={700}>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <CardTitle className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10">
-                    <FileText className="w-5 h-5 text-primary" />
-                  </div>
-                  <span>Documents</span>
-                  <Badge className="ml-2 bg-primary/20 text-primary border-primary/30">
-                    <AnimatedCounter value={documents.length} duration={500} decimals={0} />
-                  </Badge>
-                </CardTitle>
-                <div className="flex gap-2">
-                  {documents.length >= 2 && (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setMergeDialogOpen(true)}
-                      className="group bg-card/50 backdrop-blur-sm border-border/50 hover:bg-primary/10 hover:border-primary/30"
-                    >
-                      <FilePlus className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                      Créer dossier complet
-                    </Button>
-                  )}
-                  <Button 
-                    onClick={() => setUploadDialogOpen(true)}
-                    className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
-                  >
-                    <Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                    Ajouter un document
-                  </Button>
-                </div>
+            </div>
+            {/* Solvability Alert - chercheur only */}
+            {!isReletter && (
+              <div className={cn(DASH_CARD, 'p-1')}>
+                <SolvabilityAlert result={solvabilityResult} className="relative z-10" />
               </div>
-            </CardHeader>
-            <CardContent>
-              {documents.length > 0 ? (
-                <div className="space-y-3">
-                  {documents.map((doc, index) => {
-                    const Icon = getFileIcon(doc.type);
-                    return (
-                      <div 
-                        key={doc.id} 
-                        className="group flex items-center justify-between p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30 hover:bg-muted/50 hover:border-primary/30 hover:shadow-[0_0_15px_rgba(var(--primary),0.1)] transition-all duration-300 animate-fade-in"
-                        style={{ animationDelay: `${index * 50}ms` }}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                            <Icon className="w-6 h-6 text-primary group-hover:scale-110 transition-transform" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-sm group-hover:text-primary transition-colors">{doc.nom}</p>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                              <Badge variant="outline" className="text-xs bg-card/50">
-                                {getDocTypeLabel(doc.type_document)}
-                              </Badge>
-                              {doc.taille ? <span>{formatFileSize(doc.taille)}</span> : null}
-                              <span>•</span>
-                              <span>{new Date(doc.date_upload).toLocaleDateString('fr-CH')}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          {(doc.type?.includes('image') || doc.type === 'application/pdf') && (
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => handlePreviewDocument(doc)}
-                              className="hover:bg-primary/10 hover:text-primary"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => {
-                              setDocumentToRename(doc);
-                              setNewDocumentName(doc.nom);
-                              setNewDocumentType(doc.type_document || 'autre');
-                              setRenameDialogOpen(true);
-                            }}
-                            className="hover:bg-primary/10 hover:text-primary"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleDownloadDocument(doc)}
-                            className="hover:bg-primary/10 hover:text-primary"
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleDeleteDocument(doc.id, doc.url)}
-                            className="hover:bg-red-500/10 hover:text-red-500"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-12 animate-fade-in">
-                  <div className="relative mx-auto w-20 h-20 mb-4">
-                    <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50 rounded-full" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <FileText className="w-10 h-10 text-muted-foreground" />
-                    </div>
-                  </div>
-                  <p className="text-muted-foreground">Aucun document</p>
-                  <Button 
-                    onClick={() => setUploadDialogOpen(true)}
-                    className="mt-4 group"
-                    variant="outline"
-                  >
-                    <Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                    Ajouter le premier document
-                  </Button>
-                </div>
+            )}
+            {(client as any)?.candidat_garant && <CandidatGarantCard garant={(client as any).candidat_garant} />}
+            <FicheCard icon={Users} title={isReletter ? 'Candidats intéressés' : 'Co-candidats du dossier'}>
+              <ClientCandidatesManager
+                clientId={client.id}
+                clientRevenus={client.revenus_mensuels ?? 0}
+                budgetDemande={client.budget_max ?? 0}
+                onCandidatesChange={refreshCandidates}
+              />
+            </FicheCard>
+          </TabPanel>
+
+          {/* ── Documents (monté en permanence : documents des co-candidats chargés par le composant) ── */}
+          <TabPanel tab="documents" active={activeTab === 'documents'} keepMounted>
+            <DocumentsCard
+              documents={documents}
+              onUpload={() => setUploadDialogOpen(true)}
+              onMerge={() => setMergeDialogOpen(true)}
+              onPreview={handlePreviewDocument}
+              onRename={(doc) => {
+                setDocumentToRename(doc);
+                setNewDocumentName(doc.nom);
+                setNewDocumentType(doc.type_document || 'autre');
+                setRenameDialogOpen(true);
+              }}
+              onDownload={handleDownloadDocument}
+              onDelete={(doc) => handleDeleteDocument(doc.id, doc.url)}
+            />
+            {/* Candidate Documents - chercheur only */}
+            {!isReletter && (
+              <FicheCard icon={FileText} title="Documents des co-candidats">
+                <CandidateDocumentsSection
+                  clientId={client.id}
+                  clientUserId={client.user_id}
+                  clientName={`${profile.prenom} ${profile.nom}`}
+                  candidates={candidates}
+                  agentUserId={user?.id}
+                  agentId={client.agent_id || undefined}
+                  onDocumentsChange={loadDocuments}
+                  key={documentsRefreshKey}
+                />
+              </FicheCard>
+            )}
+          </TabPanel>
+
+          {/* ── Offres & visites ── */}
+          <TabPanel tab="offres" active={activeTab === 'offres'}>
+            <UpcomingVisitsCard visites={upcomingVisites} coursiersMap={coursiersMap} onSelect={setSelectedVisite} />
+            {/* Offres envoyées — chercheur only */}
+            {!isReletter ? (
+              <SentOffersCard offres={offres} onSelect={setSelectedTodayOffre} onSendOffer={goSendOffer} />
+            ) : (
+              <ReletterProfilesProposedCard count={0} />
+            )}
+          </TabPanel>
+
+          {/* ── Candidatures (chercheur) / Dossiers transmis (reloueur) ── */}
+          <TabPanel tab="candidatures" active={activeTab === 'candidatures'}>
+            {!isReletter ? (
+              <CandidaturesCard candidatures={candidatures} onStatutChange={handleCandidatureStatutChange} />
+            ) : (
+              <ReletterDossiersTransmisCard candidates={relouerCandidates} />
+            )}
+          </TabPanel>
+
+          {/* ── Mandat & finances (monté en permanence : crédits et apporteur chargés par leurs composants) ── */}
+          <TabPanel tab="mandat" active={activeTab === 'mandat'} keepMounted>
+            <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+              {/* Contrat de mandat — chercheur only */}
+              {!isReletter && (
+                <MandatContractCard
+                  client={client}
+                  daysElapsed={daysElapsed}
+                  regeneratingContract={regeneratingContract}
+                  relaunching={relaunching}
+                  abaNinjaLoading={abaNinjaLoading}
+                  onDownloadFull={handleDownloadFullMandat}
+                  onRegenerate={handleRegenerateMandat}
+                  onGenerate={handleGenerateMandat}
+                  onRefund={() => setRefundDialogOpen(true)}
+                  onCancel={() => setCancelDialogOpen(true)}
+                  onTestEmail={handleTestCancellationEmail}
+                  onRelaunch={handleRelaunchSearch}
+                />
               )}
-            </CardContent>
-          </PremiumCard>
+              <div className="min-w-0 space-y-4">
+                {/* AbaNinja Invoice */}
+                <InvoiceCard invoiceRef={client.abaninja_invoice_ref} loading={abaNinjaLoading} onCreate={handleCreateAbaNinjaInvoice} />
+                <AdminCreditsCard userId={(client as any)?.user_id} />
+              </div>
+            </div>
+            {/* Apporteur Info Card */}
+            <div className={cn(DASH_CARD, 'p-4 empty:hidden')}>
+              <ApporteurInfoCard clientId={client.id} isAdmin={true} />
+            </div>
+          </TabPanel>
+
+          {/* ── Activité (montée en permanence : statistiques chargées par le composant) ── */}
+          <TabPanel tab="activite" active={activeTab === 'activite'} keepMounted>
+            <FicheCard icon={Activity} title="Statistiques d'activité">
+              <ClientActivityStats
+                clientId={client.id}
+                clientUserId={client.user_id}
+              />
+            </FicheCard>
+          </TabPanel>
         </div>
       </div>
+
+      {/* Dialog détail visite + offre liée */}
+      <VisitDetailDialog visite={selectedVisite} coursiersMap={coursiersMap} onClose={() => setSelectedVisite(null)} />
+
+      {/* Dialog détail offre (reçue aujourd'hui ou envoyée) */}
+      <OfferDetailDialog
+        offre={selectedTodayOffre}
+        recipients={offreRecipients}
+        recipientsLoading={offreRecipientsLoading}
+        onClose={() => setSelectedTodayOffre(null)}
+      />
+
+      {/* Modifier les informations du client */}
+      <ClientEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        editFormData={editFormData}
+        setEditFormData={setEditFormData}
+        onSave={handleEditSave}
+      />
+
+      {/* Suspendre / stopper / réactiver / supprimer */}
+      <ClientConfirmDialogs
+        kind={confirmKind}
+        onClose={() => setConfirmKind(null)}
+        onSuspend={handleSuspend}
+        onStop={handleStop}
+        onReactivate={handleReactivate}
+        onDelete={handleDelete}
+      />
 
       {/* Upload Document Dialog */}
-      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Upload className="w-5 h-5 text-primary" />
-              </div>
-              Ajouter un document
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Type de document</Label>
-              <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-                <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
-                  <SelectValue placeholder="Sélectionner le type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {isPurchaseEligible ? (
-                    // ── Documents achat ──
-                    <>
-                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                      <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
-                      <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
-                      <SelectItem value="fiche_salaire">💰 Fiche de salaire (1)</SelectItem>
-                      <SelectItem value="fiche_salaire_2">💰 Fiche de salaire (2)</SelectItem>
-                      <SelectItem value="fiche_salaire_3">💰 Fiche de salaire (3)</SelectItem>
-                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                      <SelectItem value="releve_bancaire_fonds_propres">🏦 Relevé bancaire fonds propres</SelectItem>
-                      <SelectItem value="attestation_3a">🏦 Attestation 3e pilier</SelectItem>
-                      <SelectItem value="attestation_lpp">🏦 Attestation LPP</SelectItem>
-                      <SelectItem value="attestation_epl">🏦 Attestation EPL</SelectItem>
-                      <SelectItem value="attestation_libre_passage">🏦 Attestation libre passage</SelectItem>
-                      <SelectItem value="justificatif_placements">📊 Justificatif placements</SelectItem>
-                      <SelectItem value="justificatif_donation">🎁 Justificatif donation / avance d'hoirie</SelectItem>
-                      <SelectItem value="justificatif_credit_prive">📋 Justificatif crédit privé</SelectItem>
-                      <SelectItem value="justificatif_leasing">🚗 Justificatif leasing</SelectItem>
-                      <SelectItem value="justificatif_carte_credit">💳 Justificatif carte de crédit</SelectItem>
-                      <SelectItem value="justificatif_pension_alimentaire">👶 Justificatif pension alimentaire</SelectItem>
-                      <SelectItem value="decision_taxation">📋 Dernière décision de taxation</SelectItem>
-                      <SelectItem value="declaration_fiscale">📋 Déclaration fiscale</SelectItem>
-                      <SelectItem value="accord_transmission">✅ Accord transmission partenaires financiers</SelectItem>
-                      <SelectItem value="consentement_donnees">✅ Consentement traitement données</SelectItem>
-                      <SelectItem value="autre">📄 Autre document achat</SelectItem>
-                    </>
-                  ) : (
-                    // ── Documents location ──
-                    <>
-                      <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
-                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
-                      <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                      <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
-                      <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
-                      <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                      <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                      <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
-                      <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
-                      <SelectItem value="autre">📄 Autre</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Fichier</Label>
-              <Input
-                type="file"
-                ref={fileInputRef}
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="bg-card/50 backdrop-blur-sm border-border/50"
-              />
-              <p className="text-xs text-muted-foreground">Formats acceptés: PDF, JPG, PNG (max 1GB)</p>
-            </div>
-            {selectedFile && (
-              <div className="p-3 rounded-xl bg-primary/10 border border-primary/30">
-                <p className="text-sm text-primary font-medium">
-                  Fichier sélectionné: {selectedFile.name}
-                </p>
-              </div>
-            )}
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setUploadDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
-              Annuler
-            </Button>
-            <Button 
-              onClick={handleUploadDocument} 
-              disabled={!selectedFile || isUploading}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-            >
-              {isUploading ? 'Upload en cours...' : 'Ajouter'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <UploadDocumentDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        isPurchaseEligible={isPurchaseEligible}
+        selectedDocType={selectedDocType}
+        setSelectedDocType={setSelectedDocType}
+        fileInputRef={fileInputRef}
+        selectedFile={selectedFile}
+        setSelectedFile={setSelectedFile}
+        isUploading={isUploading}
+        onSubmit={handleUploadDocument}
+      />
 
       {/* Preview Document Dialog */}
-      <Dialog open={previewDialogOpen} onOpenChange={(open) => {
-        setPreviewDialogOpen(open);
-        if (!open && previewUrl && previewUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(previewUrl);
-        }
-      }}>
-        <DialogContent className="max-w-5xl max-h-[95vh] bg-card/95 backdrop-blur-xl border-border/50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Eye className="w-5 h-5 text-primary" />
-              </div>
-              {previewDocument?.nom || 'Aperçu du document'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="h-[80vh]">
-            {previewDocument?.type?.includes('pdf') ? (
-              <object
-                data={previewUrl}
-                type="application/pdf"
-                className="w-full h-full rounded-xl"
-              >
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
-                  <Button onClick={() => handleDownloadDocument(previewDocument)} className="group">
-                    <Download className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
-                    Télécharger le PDF
-                  </Button>
-                </div>
-              </object>
-            ) : previewDocument?.type?.includes('image') ? (
-              <div className="h-full overflow-auto flex justify-center items-start">
-                <img 
-                  src={previewUrl} 
-                  alt={previewDocument?.nom}
-                  className="max-w-full h-auto rounded-xl"
-                />
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">
-                Aperçu non disponible pour ce type de fichier
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PreviewDocumentDialog
+        open={previewDialogOpen}
+        onOpenChange={(open) => {
+          setPreviewDialogOpen(open);
+          if (!open && previewUrl && previewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(previewUrl);
+          }
+        }}
+        previewDocument={previewDocument}
+        previewUrl={previewUrl}
+        onDownload={handleDownloadDocument}
+      />
 
       {/* Rename Document Dialog */}
-      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10">
-                <Pencil className="w-5 h-5 text-primary" />
-              </div>
-              Renommer / reclasser le document
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nouveau nom</Label>
-              <Input
-                value={newDocumentName}
-                onChange={(e) => setNewDocumentName(e.target.value)}
-                placeholder="Nom du document"
-                className="bg-card/50 backdrop-blur-sm border-border/50"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Catégorie / type de document</Label>
-              <Select value={newDocumentType} onValueChange={setNewDocumentType}>
-                <SelectTrigger className="bg-card/50 backdrop-blur-sm border-border/50">
-                  <SelectValue placeholder="Choisir une catégorie" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fiche_salaire">💰 Fiche de salaire</SelectItem>
-                  <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
-                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                  <SelectItem value="attestation_domicile">🏠 Attestation de domicile</SelectItem>
-                  <SelectItem value="rc_menage">🛡️ RC Ménage</SelectItem>
-                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                  <SelectItem value="copie_bail">📋 Copie du bail</SelectItem>
-                  <SelectItem value="attestation_garantie_loyer">🔐 Attestation garantie de loyer</SelectItem>
-                  <SelectItem value="dossier_complet">📎 Dossier complet</SelectItem>
-                  <SelectItem value="autre">📄 Autre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="bg-card/50 backdrop-blur-sm">
-              Annuler
-            </Button>
-            <Button 
-              onClick={handleRenameDocument} 
-              disabled={!newDocumentName.trim()}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-            >
-              Enregistrer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <RenameDocumentDialog
+        open={renameDialogOpen}
+        onOpenChange={setRenameDialogOpen}
+        name={newDocumentName}
+        setName={setNewDocumentName}
+        type={newDocumentType}
+        setType={setNewDocumentType}
+        onSubmit={handleRenameDocument}
+      />
 
       {/* Send Email Dialog */}
       <SendEmailDialog

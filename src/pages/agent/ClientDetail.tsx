@@ -32,6 +32,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { Progress } from '@/components/ui/progress';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { ClientNotesManager } from '@/components/ClientNotesManager';
@@ -42,12 +43,21 @@ import { RentalApplicationFormDialog } from '@/components/RentalApplicationFormD
 import { OnlineStatusBadge } from '@/components/premium/OnlineStatusBadge';
 import { usePurchaseProject } from '@/hooks/usePurchaseProject';
 import { PurchaseDetailSections } from '@/components/admin/purchase/PurchaseDetailSections';
+import { AchatSuiviCompteurs } from '@/components/achat/AchatSuiviCompteurs';
 import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreateButton';
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
 import { AdminCreditsCard } from '@/components/credits/AdminCreditsCard';
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
+import {
+  ReletterStatusBanner,
+  ReletterFinancialCard,
+  ReletterPropertyFeaturesCard,
+  ReletterCriteriaCard,
+  ReletterDossiersTransmisCard,
+} from '@/components/admin/ReletterDetailSections';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 interface Client {
   id: string;
@@ -123,6 +133,9 @@ export default function ClientDetail() {
   const { toast } = useToast();
   
   const [client, setClient] = useState<Client | null>(null);
+  // Dossier de relocation (reloueur pur ou parcours mixte) — lecture seule, accès limité par la RLS
+  const [relouerRequest, setRelouerRequest] = useState<any>(null);
+  const [relouerCandidates, setRelouerCandidates] = useState<any[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [offres, setOffres] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
@@ -135,6 +148,43 @@ export default function ClientDetail() {
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const purchaseSolvabilityResult = usePurchaseSolvabilityCheck(client, candidates);
   const purchaseHook = usePurchaseProject({ clientId: client?.id });
+
+  useEffect(() => {
+    const uid = client?.user_id;
+    const journey = (client as any)?.journey_type;
+    if (!uid || (journey !== 'property_reletting' && journey !== 'mixed')) {
+      setRelouerRequest(null);
+      setRelouerCandidates([]);
+      return;
+    }
+    let alive = true;
+    (async () => {
+      try {
+        const { data: req } = await supabase
+          .from('relouer_requests')
+          .select('*')
+          .eq('user_id', uid)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!alive) return;
+        setRelouerRequest(req || null);
+        if (req?.id) {
+          const { data: cands } = await supabase
+            .from('relouer_candidates')
+            .select('*')
+            .eq('request_id', req.id)
+            .order('created_at', { ascending: false });
+          if (alive) setRelouerCandidates(cands || []);
+        } else {
+          setRelouerCandidates([]);
+        }
+      } catch {
+        if (alive) { setRelouerRequest(null); setRelouerCandidates([]); }
+      }
+    })();
+    return () => { alive = false; };
+  }, [client?.user_id, (client as any)?.journey_type]);
   const isAcheteur = isPurchaseBuyer(client, purchaseHook.project);
   const isPurchaseEligible = isAcheteur;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -493,13 +543,14 @@ export default function ClientDetail() {
     if (!client || !agentId) return;
     
     try {
-      // Vérifier si une conversation existe déjà
+      // Une seule conversation par client : on ouvre la sienne si elle existe
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
         .eq('client_id', client.id)
-        .eq('agent_id', agentId)
         .eq('conversation_type', 'client-agent')
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
       
       if (existingConv) {
@@ -599,6 +650,7 @@ export default function ClientDetail() {
       'vue': 'Vue',
       'interesse': 'Intéressé',
       'souhaite_postuler': 'Souhaite postuler',
+      'offre_envisagee': "Offre d'achat envisagée",
       'visite_planifiee': 'Visite planifiée',
       'visite_effectuee': 'Visite effectuée',
       'candidature_deposee': 'Candidature déposée',
@@ -665,7 +717,7 @@ export default function ClientDetail() {
                         reloggedCandidatureForCalc?.signature_effectuee_at || 
                         reloggedCandidatureForCalc?.date_etat_lieux || null;
   
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate);
+  const daysElapsed = mandatElapsedFor(client as any, mandatEndDate);
   const daysRemaining = 90 - daysElapsed;
   const progressPercentage = (daysElapsed / 90) * 100;
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
@@ -687,6 +739,12 @@ export default function ClientDetail() {
             <h1 className="text-2xl sm:text-3xl font-bold">{profile.prenom} {profile.nom}</h1>
             <p className="text-sm text-muted-foreground">{profile.email}{profile.telephone ? ` · ${profile.telephone}` : ''}</p>
           </div>
+          {/* Crédits illimités (acheteur) : suivi de l'activité du mandat */}
+          <AchatSuiviCompteurs
+            clientId={client.id}
+            projectId={purchaseHook.project.id}
+            dateDebut={(purchaseHook.project as any).date_debut_progression || (purchaseHook.project as any).date_signature_mandat || purchaseHook.project.created_at}
+          />
           {/* Carte zones de recherche */}
           <SwissRomandeMapGoogle client={client} />
           <PurchaseDetailSections clientId={client.id} userId={client.user_id} mode="agent" />
@@ -734,6 +792,21 @@ export default function ClientDetail() {
       <div className="p-4 md:p-8 space-y-6">
         {isPurchaseEligible && !purchaseHook.project && (
           <PurchaseCreateButton clientId={client.id} userId={client.user_id} assignedAgentId={client.agent_id || null} onCreated={() => purchaseHook.reload()} />
+        )}
+        {/* Dossier de relocation — même lecture que la fiche admin */}
+        {!isPurchaseEligible && relouerRequest && (
+          <div className="space-y-4 rounded-2xl border border-border/60 bg-card/40 p-4">
+            <p className="text-sm font-semibold text-foreground">
+              {(client as any).journey_type === 'mixed' ? 'Dossier de relocation (parcours mixte)' : 'Dossier de relocation'}
+            </p>
+            <ReletterStatusBanner request={relouerRequest} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <ReletterFinancialCard request={relouerRequest} />
+              <ReletterPropertyFeaturesCard request={relouerRequest} />
+              <ReletterCriteriaCard request={relouerRequest} />
+              <ReletterDossiersTransmisCard candidates={relouerCandidates} />
+            </div>
+          </div>
         )}
         {/* Header - Responsive */}
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
@@ -2242,10 +2315,10 @@ export default function ClientDetail() {
                 className="w-full h-auto"
               />
             ) : selectedDocument?.type.includes('pdf') ? (
-              <embed
+              <PdfPreview
                 src={previewUrl}
-                type="application/pdf"
                 className="w-full h-[70vh]"
+                title={selectedDocument?.nom}
               />
             ) : (
               <p className="text-center text-muted-foreground py-8">

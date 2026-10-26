@@ -110,9 +110,8 @@ export const PremiumKPICard = memo(function PremiumKPICard({
   const config = variantConfig[variant];
 
   const shellClass = cn(
-    'group relative overflow-hidden rounded-xl w-full h-full text-left',
+    'imr-lg-card group relative overflow-hidden rounded-[22px] w-full h-full text-left',
     'min-h-[96px] sm:min-h-[108px]',
-    'bg-card border border-border/50',
     'transition-all duration-300 ease-out',
     'hover:shadow-lg motion-safe:hover:-translate-y-0.5',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
@@ -125,7 +124,7 @@ export const PremiumKPICard = memo(function PremiumKPICard({
       {/* Animated border gradient - simplified */}
       <div
         className={cn(
-          'absolute inset-0 rounded-xl p-[1px] pointer-events-none',
+          'absolute inset-0 rounded-[22px] p-[1px] pointer-events-none',
           'bg-gradient-to-r opacity-0 group-hover:opacity-100',
           'transition-opacity duration-300',
           config.borderGradient
@@ -165,7 +164,7 @@ export const PremiumKPICard = memo(function PremiumKPICard({
       <button
         type="button"
         onClick={onClick}
-        className={cn(shellClass, 'appearance-none bg-card')}
+        className={cn(shellClass, 'appearance-none')}
         style={{ animationDelay: `${delay}ms` }}
       >
         {inner}

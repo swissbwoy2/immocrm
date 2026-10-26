@@ -19,7 +19,7 @@ import {
 import { 
   Send, Home, Heart, Calendar, X, FileText, ExternalLink,
   Check, Clock, Key, Star, Mail, User, PartyPopper, FileSignature,
-  MapPin, AlertCircle, MessageCircle, Sparkles, Search
+  MapPin, AlertCircle, MessageCircle, Search, Banknote, Ruler, LayoutGrid
 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,25 +31,32 @@ import { MessageAttachment } from "@/components/MessageAttachment";
 import { parseMessageWithLinks } from "@/lib/utils";
 import { useNotifications } from "@/hooks/useNotifications";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
-import { MessagingLayout } from "@/components/MessagingLayout";
+import { MessengerSplitLayout, MESSENGER_PAGE_HEIGHT } from "@/components/messaging/MessengerSplitLayout";
 import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { PremiumMessageBubble } from "@/components/messaging/PremiumMessageBubble";
 import { PremiumConversationItem } from "@/components/messaging/PremiumConversationItem";
 import { PremiumChatInput } from "@/components/messaging/PremiumChatInput";
 import { ChatHeader } from "@/components/messaging/ChatHeader";
 import { ConversationListSkeleton, MessagesListSkeleton } from "@/components/messaging/MessagingSkeletons";
-import { FloatingParticles, MeshGradientBackground, ChatPatternBackground } from "@/components/messaging/FloatingParticles";
 import { PremiumOffreCard } from "@/components/messaging/PremiumOffreCard";
 import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
 import { format, isSameDay, parseISO } from "date-fns";
+import { formatInTimeZone } from 'date-fns-tz';
 import { fr } from "date-fns/locale";
+import { formatZurichDateTime, zurichInputToIso, zurichNowInput } from "@/lib/dateZurich";
 import { cn } from "@/lib/utils";
 import DateSeparator from "@/components/messaging/DateSeparator";
 import { isPurchaseBuyer } from "@/lib/journey";
 import { notifyPostulationRequest, getClientDisplayName } from "@/lib/postulationRequest";
+import { useClientParcours } from "@/hooks/useClientParcours";
+import { estPrixDAchat } from "@/lib/achatOffreActions";
+import { requestPostulation, POSTULATION_CONFIRMATION } from "@/lib/postulationJob";
 import { StoriesBar } from "@/components/stories/StoriesBar";
 import { MobileMessenger } from "@/components/messaging/mobile/MobileMessenger";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useClientDossier } from "@/hooks/useClientDossier";
+import { postDossierDocumentMessage, type FiledDocument } from "@/lib/clientDossier";
+import { newClientMessageId } from "@/lib/steeve";
 import { consumeVisitCoin } from "@/hooks/useUserCredits";
 
 const removeAccents = (str: string) => {
@@ -59,9 +66,14 @@ const removeAccents = (str: string) => {
 const Messagerie = () => {
   const isMobile = useIsMobile();
   const { user } = useAuth();
+  // Trombone : pièces du dossier classées dès l'envoi (location ou achat).
+  const dossier = useClientDossier();
   const { syncEvent } = useGoogleCalendarSync();
   const { toast } = useToast();
   const navigate = useNavigate();
+  // Parcours achat : les actions sur un bien se font dans « Biens proposés » (jamais de postulation locative).
+  const parcoursClient = useClientParcours();
+  const isAchat = parcoursClient === 'achat';
   const { markTypeAsRead } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
   const [conversations, setConversations] = useState<any[]>([]);
@@ -99,6 +111,8 @@ const Messagerie = () => {
     size: number;
   } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  // Filtre d'affichage de la liste (purement visuel, calculé sur les données déjà chargées)
+  const [listFilter, setListFilter] = useState<'tout' | 'non_lues'>('tout');
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
@@ -185,6 +199,7 @@ const Messagerie = () => {
       const { data } = await supabase
         .from('messages')
         .select('conversation_id')
+        .eq('masque_messagerie', false)
         .eq('read', false)
         .eq('sender_type', 'agent')
         .in('conversation_id', convIds);
@@ -286,6 +301,7 @@ const Messagerie = () => {
           filter: `conversation_id=eq.${selectedConv}`
         },
         (payload) => {
+          if ((payload.new as any)?.masque_messagerie) return;
           if (payload.eventType === 'INSERT') {
             setMessages((prev) => [...prev, payload.new]);
             // Update lastMessagesMap for realtime updates
@@ -350,6 +366,7 @@ const Messagerie = () => {
           const { data: lastMsg } = await supabase
             .from('messages')
             .select('content, attachment_name')
+            .eq('masque_messagerie', false)
             .eq('conversation_id', convId)
             .order('created_at', { ascending: false })
             .limit(1)
@@ -407,6 +424,7 @@ const Messagerie = () => {
       const { data, error } = await supabase
         .from('messages')
         .select('*, offres(*)')
+        .eq('masque_messagerie', false)
         .eq('conversation_id', convId)
         .order('created_at', { ascending: true });
 
@@ -464,6 +482,22 @@ const Messagerie = () => {
     } finally {
       setIsLoadingMessages(false);
     }
+  };
+
+  const handleDocumentFiled = async (doc: FiledDocument): Promise<boolean> => {
+    if (!user || !selectedConv) return false;
+    const { error } = await postDossierDocumentMessage({
+      conversationId: selectedConv,
+      senderId: user.id,
+      senderType: 'client',
+      doc,
+      clientMsgId: newClientMessageId(),
+    });
+    if (error) {
+      // La pièce est bien dans le dossier ; seule l'annonce dans la conversation a échoué (message unique côté sélecteur).
+      return false;
+    }
+    return true;
   };
 
   const handleSendMessage = async (textOverride?: string) => {
@@ -729,19 +763,13 @@ const Messagerie = () => {
           return;
 
         case 'demander_aide':
-          // Create candidature with dossier_complet: false
-          await supabase.from('candidatures').insert({
-            offre_id: offreId,
-            client_id: clientData.id,
-            message_client: 'Le client demande l\'aide de l\'agent pour postuler à ce bien.',
-            statut: 'candidature_deposee',
-            dossier_complet: false
-          });
-
-          await supabase
-            .from('offres')
-            .update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() })
-            .eq('id', offreId);
+          {
+            const pr = await requestPostulation(offreId);
+            if (pr.already_requested) {
+              toast({ title: POSTULATION_CONFIRMATION, description: "Votre demande était déjà enregistrée." });
+              break;
+            }
+          }
 
           try {
             await notifyPostulationRequest({
@@ -762,7 +790,7 @@ const Messagerie = () => {
             offre_id: offreId
           });
 
-          toast({ title: "Demande envoyée", description: "Votre agent va vous contacter" });
+          toast({ title: POSTULATION_CONFIRMATION, description: "Votre agent va vous contacter" });
           break;
 
         case 'visite_effectuee':
@@ -960,6 +988,12 @@ const Messagerie = () => {
   // Confirm visit planning
   const confirmPlanVisit = async () => {
     if (!selectedOffre || !visitDate || !user || !clientId) return;
+    // Champ datetime-local = heure suisse → instant ISO (sinon Postgres le lit comme de l'UTC : visite décalée de 1-2 h).
+    const visitIso = zurichInputToIso(visitDate);
+    if (!visitIso) {
+      toast({ title: "Erreur", description: "Choisissez une date et une heure de visite", variant: "destructive" });
+      return;
+    }
 
     try {
       const { data: clientData } = await supabase
@@ -984,7 +1018,7 @@ const Messagerie = () => {
       if (existingVisites && existingVisites.length > 0) {
         // Update existing visit instead of creating duplicate
         await supabase.from('visites')
-          .update({ date_visite: visitDate })
+          .update({ date_visite: visitIso })
           .eq('id', existingVisites[0].id);
       } else {
         // Create visit
@@ -993,7 +1027,7 @@ const Messagerie = () => {
           client_id: clientData.id,
           agent_id: clientData.agent_id,
           adresse: selectedOffre.adresse,
-          date_visite: visitDate,
+          date_visite: visitIso,
           statut: 'planifiee',
           est_deleguee: false,
           source: 'planifiee_client'
@@ -1005,7 +1039,7 @@ const Messagerie = () => {
         .update({ statut: 'visite_planifiee' })
         .eq('id', selectedOffre.id);
 
-      const formattedDate = format(new Date(visitDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
+      const formattedDate = formatZurichDateTime(visitIso).replace(/^./, (c) => c.toLowerCase());
       
       // Check if calendar event already exists before creating
       const { data: existingEvents } = await supabase
@@ -1019,7 +1053,7 @@ const Messagerie = () => {
         await supabase.from('calendar_events').insert({
           title: `Visite - ${selectedOffre.adresse}`,
           event_type: 'visite',
-          event_date: visitDate,
+          event_date: visitIso,
           description: `Visite planifiée par le client pour ${selectedOffre.adresse}`,
           client_id: clientData.id,
           agent_id: clientData.agent_id,
@@ -1032,7 +1066,7 @@ const Messagerie = () => {
           syncEvent(user.id, {
             title: `Visite - ${selectedOffre.adresse}`,
             description: `Visite planifiée pour ${selectedOffre.adresse}`,
-            start: visitDate,
+            start: visitIso,
           });
         }
       }
@@ -1152,7 +1186,7 @@ const Messagerie = () => {
       let messageContent: string;
       
       if (delegateDate) {
-        const formattedDate = format(new Date(delegateDate), 'EEEE d MMMM yyyy à HH:mm', { locale: fr });
+        const formattedDate = formatZurichDateTime(delegateDate);
         
         // Check for existing calendar event before creating
         const { data: existingEvents } = await supabase
@@ -1237,9 +1271,10 @@ const Messagerie = () => {
   };
 
   // Confirm candidature
+  const [submittingCandidature, setSubmittingCandidature] = useState(false);
   const confirmCandidature = async () => {
-    if (!selectedOffre || !accepteConditions || !user || !clientId) return;
-
+    if (!selectedOffre || !accepteConditions || !user || !clientId || submittingCandidature) return;
+    setSubmittingCandidature(true);
     try {
       const { data: clientData } = await supabase
         .from('clients')
@@ -1249,18 +1284,13 @@ const Messagerie = () => {
 
       if (!clientData) return;
 
-      const { data: candidature } = await supabase.from('candidatures').insert({
-        offre_id: selectedOffre.id,
-        client_id: clientData.id,
-        message_client: messageClient || null,
-        statut: 'candidature_deposee',
-        dossier_complet: true
-      }).select().single();
-
-      await supabase
-        .from('offres')
-        .update({ statut: 'souhaite_postuler', postulation_demandee_at: new Date().toISOString() })
-        .eq('id', selectedOffre.id);
+      const pr = await requestPostulation(selectedOffre.id);
+      const candidature = { id: pr.candidature_id };
+      if (pr.already_requested) {
+        setCandidatureDialogOpen(false);
+        toast({ title: POSTULATION_CONFIRMATION, description: "Votre demande était déjà enregistrée." });
+        return;
+      }
 
       try {
         await notifyPostulationRequest({
@@ -1312,11 +1342,13 @@ const Messagerie = () => {
       }
 
       setCandidatureDialogOpen(false);
-      toast({ title: "Candidature envoyée", description: "Votre dossier est en cours d'examen" });
+      toast({ title: POSTULATION_CONFIRMATION, description: "Votre dossier est en cours d'examen" });
       loadMessages(selectedConv!);
     } catch (error) {
       console.error('Error submitting candidature:', error);
-      toast({ title: "Erreur", description: "Impossible d'envoyer la candidature", variant: "destructive" });
+      toast({ title: "Erreur", description: (error as any)?.message || "Impossible d'envoyer la candidature", variant: "destructive" });
+    } finally {
+      setSubmittingCandidature(false);
     }
   };
 
@@ -1365,15 +1397,17 @@ const Messagerie = () => {
 
   // Offer card component
   const OffreCard = ({ offre }: { offre: any }) => (
-    <div className="mt-2 p-3 sm:p-4 w-full max-w-full min-w-0 box-border overflow-hidden bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950 dark:to-indigo-950 rounded-lg border-2 border-blue-200 dark:border-blue-800">
-      <div className="flex items-start gap-2 mb-2">
-        <Home className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+    <div className="mt-2 p-3 sm:p-4 w-full max-w-full min-w-0 box-border overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      <div className="flex items-start gap-3 mb-2">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Home className="h-4 w-4" />
+        </span>
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm break-words [overflow-wrap:anywhere]">{offre.adresse}</p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground min-w-0">
-            <span>💰 {offre.prix?.toLocaleString()} CHF</span>
-            {offre.surface && <span>📐 {offre.surface} m²</span>}
-            {offre.pieces && <span>🏠 {offre.pieces} pcs</span>}
+          <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5 text-xs text-muted-foreground min-w-0">
+            <span className="inline-flex items-center gap-1"><Banknote className="h-3.5 w-3.5" aria-hidden /> {offre.prix?.toLocaleString()} CHF</span>
+            {offre.surface && <span className="inline-flex items-center gap-1"><Ruler className="h-3.5 w-3.5" aria-hidden /> {offre.surface} m²</span>}
+            {offre.pieces && <span className="inline-flex items-center gap-1"><LayoutGrid className="h-3.5 w-3.5" aria-hidden /> {offre.pieces} pcs</span>}
           </div>
         </div>
       </div>
@@ -1388,12 +1422,24 @@ const Messagerie = () => {
   // Contextual action buttons based on offer/candidature status
   const OffreActions = ({ offre, visite, onAction }: { offre: any, visite?: any, onAction: (action: string, data?: any) => void }) => {
     if (!offre) return null;
+    // Parcours pas encore connu : aucune action, pour ne jamais proposer « Postuler » à un acheteur.
+    if (parcoursClient === null) return null;
+
+    if ((isAchat || isBuyer) && estPrixDAchat(offre.prix)) {
+      return (
+        <div className="mt-3">
+          <Button size="sm" className="w-full rounded-full" onClick={() => navigate(`/client/biens-proposes?offre=${offre.id}`)}>
+            <Home className="h-4 w-4 mr-1" /> Voir ce bien et donner suite
+          </Button>
+        </div>
+      );
+    }
     
     // Check if this offer has been processed (action already taken)
     if (processedOffreIds.has(offre.id)) {
       return (
-        <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
-          <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+        <div className="mt-3 px-3 py-2 bg-primary/10 rounded-xl">
+          <p className="text-xs text-primary flex items-center gap-1">
             <Check className="h-3 w-3" /> Action en cours de traitement...
           </p>
         </div>
@@ -1411,26 +1457,26 @@ const Messagerie = () => {
       return (
         <div className="mt-3 space-y-2">
           <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
-            <Button size="sm" onClick={() => onAction('interesse')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
+            <Button size="sm" onClick={() => onAction('interesse')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0 rounded-full">
               <Heart className="h-4 w-4 mr-1" /> Intéressé(e)
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
+            <Button size="sm" variant="outline" onClick={() => onAction('planifier_visite')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0 rounded-full">
               <Calendar className="h-4 w-4 mr-1" /> Planifier visite
             </Button>
           </div>
           <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
-            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0 rounded-full">
               <User className="h-4 w-4 mr-1" /> Déléguer visite
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0">
+            <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} disabled={isProcessingAction} className="flex-1 min-w-[45%] basis-0 rounded-full">
               <FileText className="h-4 w-4 mr-1" /> Postuler
             </Button>
           </div>
           <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
-            <Button size="sm" variant="ghost" onClick={() => onAction('details')} disabled={isProcessingAction}>
+            <Button size="sm" variant="ghost" onClick={() => onAction('details')} disabled={isProcessingAction} className="rounded-full">
               <ExternalLink className="h-4 w-4 mr-1" /> Détails
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => onAction('refuser')} disabled={isProcessingAction}>
+            <Button size="sm" variant="ghost" onClick={() => onAction('refuser')} disabled={isProcessingAction} className="rounded-full">
               <X className="h-4 w-4 mr-1" /> Refuser
             </Button>
           </div>
@@ -1442,20 +1488,20 @@ const Messagerie = () => {
     if (statut === 'interesse') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-green-50 dark:bg-green-950 rounded-lg">
-            <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-emerald-500/10 rounded-xl">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
               <Check className="h-3 w-3" /> Vous êtes intéressé(e) par cette offre
             </p>
           </div>
           <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
-            <Button size="sm" onClick={() => onAction('planifier_visite')} className="flex-1 min-w-[45%] basis-0">
+            <Button size="sm" onClick={() => onAction('planifier_visite')} className="flex-1 min-w-[45%] basis-0 rounded-full">
               <Calendar className="h-4 w-4 mr-1" /> Planifier visite
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1 min-w-[45%] basis-0">
+            <Button size="sm" variant="outline" onClick={() => onAction('deleguer_visite')} className="flex-1 min-w-[45%] basis-0 rounded-full">
               <User className="h-4 w-4 mr-1" /> Déléguer visite
             </Button>
           </div>
-          <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} className="w-full">
+          <Button size="sm" variant="secondary" onClick={() => onAction('postuler')} className="w-full rounded-full">
             <FileText className="h-4 w-4 mr-1" /> Postuler directement
           </Button>
         </div>
@@ -1466,24 +1512,24 @@ const Messagerie = () => {
     if (statut === 'visite_planifiee') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
-            <p className="text-xs text-blue-700 dark:text-blue-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-primary/10 rounded-xl">
+            <p className="text-xs text-primary flex items-center gap-1">
               <Calendar className="h-3 w-3" /> Visite planifiée
               {visite?.date_visite && (
                 <span className="ml-1">
-                  ({format(new Date(visite.date_visite), 'dd/MM à HH:mm', { locale: fr })})
+                  ({formatInTimeZone(new Date(visite.date_visite), 'Europe/Zurich', 'dd/MM à HH:mm', { locale: fr })})
                 </span>
               )}
             </p>
           </div>
           {isVisiteDatePassed ? (
-            <Button size="sm" onClick={() => onAction('visite_effectuee')} className="w-full">
+            <Button size="sm" onClick={() => onAction('visite_effectuee')} className="w-full rounded-full">
               <Check className="h-4 w-4 mr-1" /> Marquer visite effectuée
             </Button>
           ) : (
-            <div className="p-2 bg-amber-50 dark:bg-amber-950 rounded-lg">
-              <p className="text-xs text-amber-700 dark:text-amber-300 text-center">
-                ⏳ Actions disponibles après la visite
+            <div className="px-3 py-2 bg-amber-500/10 rounded-xl">
+              <p className="text-xs text-amber-700 dark:text-amber-400 text-center">
+                Actions disponibles après la visite
               </p>
             </div>
           )}
@@ -1495,16 +1541,16 @@ const Messagerie = () => {
     if (statut === 'visite_effectuee') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-2 bg-green-50 dark:bg-green-950 rounded-lg">
-            <p className="text-xs text-green-700 dark:text-green-300 flex items-center gap-1">
+          <div className="px-3 py-2 bg-emerald-500/10 rounded-xl">
+            <p className="text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
               <Check className="h-3 w-3" /> Visite effectuée
             </p>
           </div>
           <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
-            <Button size="sm" onClick={() => onAction('deposer_candidature')} className="flex-1">
+            <Button size="sm" onClick={() => onAction('deposer_candidature')} className="flex-1 rounded-full">
               <FileText className="h-4 w-4 mr-1" /> Déposer candidature
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('demander_aide')} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('demander_aide')} className="flex-1 rounded-full">
               <User className="h-4 w-4 mr-1" /> Demander aide agent
             </Button>
           </div>
@@ -1515,10 +1561,10 @@ const Messagerie = () => {
     // Candidature déposée / En attente
     if (statut === 'candidature_deposee' || statut === 'en_attente') {
       return (
-        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg">
+        <div className="mt-3 px-3 py-2.5 bg-amber-500/10 rounded-xl">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-600 animate-pulse" />
-            <p className="text-sm text-amber-700 dark:text-amber-300">
+            <Clock className="h-4 w-4 text-amber-600" />
+            <p className="text-sm text-amber-700 dark:text-amber-400">
               En attente de réponse de la régie...
             </p>
           </div>
@@ -1530,15 +1576,15 @@ const Messagerie = () => {
     if (statut === 'acceptee') {
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-3 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 rounded-lg">
+          <div className="px-3 py-2.5 bg-emerald-500/10 rounded-xl">
             <div className="flex items-center gap-2">
-              <PartyPopper className="h-5 w-5 text-green-600" />
-              <p className="font-semibold text-green-700 dark:text-green-300">
-                🎉 Félicitations ! Candidature acceptée !
+              <PartyPopper className="h-5 w-5 text-emerald-700" />
+              <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                Félicitations ! Candidature acceptée !
               </p>
             </div>
           </div>
-          <Button size="sm" onClick={() => onAction('confirmer_conclure')} className="w-full">
+          <Button size="sm" onClick={() => onAction('confirmer_conclure')} className="w-full rounded-full">
             <Check className="h-4 w-4 mr-1" /> Confirmer et conclure
           </Button>
         </div>
@@ -1548,8 +1594,8 @@ const Messagerie = () => {
     // Bail conclu - en attente validation régie
     if (statut === 'bail_conclu') {
       return (
-        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg">
-          <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+        <div className="mt-3 px-3 py-2.5 bg-primary/10 rounded-xl">
+          <p className="text-sm text-primary flex items-center gap-2">
             <Check className="h-4 w-4" />
             Vous avez confirmé vouloir ce bien. En attente de validation par la régie...
           </p>
@@ -1560,10 +1606,10 @@ const Messagerie = () => {
     // Attente bail
     if (statut === 'attente_bail') {
       return (
-        <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950 rounded-lg">
+        <div className="mt-3 px-3 py-2.5 bg-amber-500/10 rounded-xl">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-600 animate-pulse" />
-            <p className="text-sm text-amber-700 dark:text-amber-300">
+            <Clock className="h-4 w-4 text-amber-600" />
+            <p className="text-sm text-amber-700 dark:text-amber-400">
               L'agent attend le bail de la régie...
             </p>
           </div>
@@ -1576,10 +1622,10 @@ const Messagerie = () => {
       const datesProposees = candidature.dates_signature_proposees || [];
       return (
         <div className="mt-3 space-y-2">
-          <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-            <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+          <div className="px-3 py-2.5 bg-emerald-500/10 rounded-xl">
+            <p className="text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
               <FileSignature className="h-4 w-4" />
-              📄 Le bail est prêt ! Choisissez une date de signature.
+              Le bail est prêt ! Choisissez une date de signature.
             </p>
           </div>
           {datesProposees.length > 0 ? (
@@ -1592,13 +1638,13 @@ const Messagerie = () => {
               className="space-y-2"
             >
               {datesProposees.map((d: any, idx: number) => (
-                <div key={idx} className="flex items-center space-x-2 p-2 bg-muted rounded-lg">
+                <div key={idx} className="flex items-center space-x-2 p-3 bg-muted/60 rounded-xl">
                   <RadioGroupItem value={String(idx)} id={`date-${idx}`} />
                   <Label htmlFor={`date-${idx}`} className="flex-1 cursor-pointer">
                     <span className="font-medium">
                       {format(new Date(d.date), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
                     </span>
-                    <span className="text-muted-foreground ml-2 text-xs">📍 {d.lieu}</span>
+                    <span className="text-muted-foreground ml-2 text-xs inline-flex items-center gap-1"><MapPin className="h-3 w-3" aria-hidden />{d.lieu}</span>
                   </Label>
                 </div>
               ))}
@@ -1616,15 +1662,15 @@ const Messagerie = () => {
     // Signature planifiée
     if (statut === 'signature_planifiee' && candidature) {
       return (
-        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-1">
+        <div className="mt-3 px-3 py-2.5 bg-primary/10 rounded-xl space-y-1">
           <div className="flex items-center gap-2">
-            <FileSignature className="h-4 w-4 text-blue-600" />
-            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              📅 Signature confirmée
+            <FileSignature className="h-4 w-4 text-primary" />
+            <p className="text-sm font-medium text-primary">
+              Signature confirmée
             </p>
           </div>
           {candidature.date_signature_choisie && (
-            <p className="text-xs text-blue-600 dark:text-blue-400">
+            <p className="text-xs text-primary">
               {format(new Date(candidature.date_signature_choisie), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
             </p>
           )}
@@ -1639,10 +1685,10 @@ const Messagerie = () => {
     // Signature effectuée - attente état des lieux
     if (statut === 'signature_effectuee') {
       return (
-        <div className="mt-3 p-3 bg-green-50 dark:bg-green-950 rounded-lg">
-          <p className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+        <div className="mt-3 px-3 py-2.5 bg-emerald-500/10 rounded-xl">
+          <p className="text-sm text-emerald-700 dark:text-emerald-400 flex items-center gap-2">
             <Check className="h-4 w-4" />
-            ✅ Bail signé ! En attente de la date d'état des lieux...
+            Bail signé ! En attente de la date d'état des lieux...
           </p>
         </div>
       );
@@ -1651,15 +1697,15 @@ const Messagerie = () => {
     // État des lieux fixé
     if (statut === 'etat_lieux_fixe' && candidature) {
       return (
-        <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 rounded-lg space-y-1">
+        <div className="mt-3 px-3 py-2.5 bg-primary/10 rounded-xl space-y-1">
           <div className="flex items-center gap-2">
-            <Key className="h-4 w-4 text-blue-600" />
-            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
-              🔑 État des lieux fixé
+            <Key className="h-4 w-4 text-primary" />
+            <p className="text-sm font-medium text-primary">
+              État des lieux fixé
             </p>
           </div>
           {candidature.date_etat_lieux && (
-            <p className="text-xs text-blue-600 dark:text-blue-400">
+            <p className="text-xs text-primary">
               {format(new Date(candidature.date_etat_lieux), 'EEEE d MMMM yyyy', { locale: fr })}
               {candidature.heure_etat_lieux && ` à ${candidature.heure_etat_lieux}`}
             </p>
@@ -1672,19 +1718,19 @@ const Messagerie = () => {
     if (statut === 'cles_remises') {
       return (
         <div className="mt-3 space-y-3">
-          <div className="p-3 bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900 dark:to-emerald-900 rounded-lg">
+          <div className="px-3 py-2.5 bg-emerald-500/10 rounded-xl">
             <div className="flex items-center gap-2">
-              <Key className="h-5 w-5 text-green-600" />
-              <p className="font-semibold text-green-700 dark:text-green-300">
-                🔑 🎉 Félicitations ! Les clés vous ont été remises !
+              <Key className="h-5 w-5 text-emerald-700" />
+              <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                Félicitations ! Les clés vous ont été remises !
               </p>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 min-w-0 [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-9 [&>button]:py-2 [&>button]:text-xs">
-            <Button size="sm" variant="outline" onClick={() => onAction('avis_google')} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('avis_google')} className="flex-1 rounded-full">
               <Star className="h-4 w-4 mr-1" /> Laisser un avis Google
             </Button>
-            <Button size="sm" variant="outline" onClick={() => onAction('recommander')} className="flex-1">
+            <Button size="sm" variant="outline" onClick={() => onAction('recommander')} className="flex-1 rounded-full">
               <Mail className="h-4 w-4 mr-1" /> Recommander à des amis
             </Button>
           </div>
@@ -1695,10 +1741,10 @@ const Messagerie = () => {
     // Refusée
     if (statut === 'refusee') {
       return (
-        <div className="mt-3 p-3 bg-red-50 dark:bg-red-950 rounded-lg">
-          <p className="text-sm text-red-700 dark:text-red-300 flex items-center gap-2">
+        <div className="mt-3 px-3 py-2.5 bg-destructive/10 rounded-xl">
+          <p className="text-sm text-destructive flex items-center gap-2">
             <X className="h-4 w-4" />
-            ❌ Cette offre/candidature a été refusée
+            Cette offre/candidature a été refusée
           </p>
         </div>
       );
@@ -1708,7 +1754,7 @@ const Messagerie = () => {
   };
 
   // Filter conversations by search
-  const filteredConversations = useMemo(() => {
+  const searchedConversations = useMemo(() => {
     if (!searchQuery.trim()) return conversations;
     const query = removeAccents(searchQuery.toLowerCase());
     return conversations.filter(conv => {
@@ -1716,66 +1762,107 @@ const Messagerie = () => {
       return agentName.includes(query);
     });
   }, [conversations, searchQuery, agentsMap]);
+  const unreadConversations = useMemo(
+    () => searchedConversations.filter(conv => (unreadCountsMap.get(conv.id) || 0) > 0),
+    [searchedConversations, unreadCountsMap]
+  );
+  const filteredConversations = listFilter === 'non_lues' ? unreadConversations : searchedConversations;
+  const listFilterOptions: { key: 'tout' | 'non_lues'; label: string; count: number }[] = [
+    { key: 'tout', label: 'Toutes', count: searchedConversations.length },
+    { key: 'non_lues', label: 'Non lues', count: unreadConversations.length },
+  ];
 
   const conversationsList = (
     <div className="flex flex-col h-full relative overflow-hidden">
       <StoriesBar />
-      {/* Premium background effects */}
-      <FloatingParticles count={10} className="opacity-30" />
-      
-      {/* Premium Header */}
-      <div className="relative z-10 p-3 border-b border-border/30 bg-gradient-to-r from-background via-background to-background/95 backdrop-blur-sm">
-        <div className="flex items-center gap-3 mb-4">
+
+      {/* En-tête de la liste */}
+      <div className="px-4 pt-3 pb-3 border-b border-border/60 space-y-3">
+        <div className="flex items-center gap-2 min-w-0">
           <SidebarTrigger className="shrink-0" />
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <h2 className="font-bold text-xl gradient-text truncate">Messages</h2>
-              <Sparkles className="h-4 w-4 text-primary animate-pulse shrink-0" />
-            </div>
+            <h2 className="text-lg font-semibold tracking-tight text-foreground truncate">Messages</h2>
             {conversations.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground truncate">
                 {conversations.length} conversation{conversations.length > 1 ? 's' : ''}
               </p>
             )}
           </div>
           {/* Unread badge */}
           {conversations.some(c => messages.filter(m => m.conversation_id === c.id && !m.read && m.sender_type === 'agent').length > 0) && (
-            <Badge className="bg-primary/20 text-primary border-primary/30 animate-pulse">
+            <Badge className="shrink-0 rounded-full border-0 bg-primary/10 text-primary hover:bg-primary/10">
               Nouveau
             </Badge>
           )}
         </div>
-        
+
         {/* Search bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
           <Input
             placeholder="Rechercher..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn(
-              "pl-9 bg-muted/50 border-border/50",
-              "focus:bg-background focus:border-primary/50 focus:ring-2 focus:ring-primary/20",
-              "transition-all duration-300"
-            )}
+            className="h-11 rounded-full pl-9 pr-10 bg-muted/50 border-border/60"
+            aria-label="Rechercher une conversation"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Effacer la recherche"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
-      
+
+      {/* Filtres en pastilles */}
+      {conversations.length > 0 && (
+        <div className="border-b border-border/70 bg-card">
+          <div role="tablist" aria-label="Filtrer les conversations" className="flex gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {listFilterOptions.map((o) => {
+              const active = listFilter === o.key;
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setListFilter(o.key)}
+                  className={cn(
+                    "inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors duration-150",
+                    "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background",
+                    active
+                      ? "border-foreground bg-foreground text-background"
+                      : "border-border bg-background text-foreground hover:border-foreground/60"
+                  )}
+                >
+                  {o.label}
+                  <span className={cn("text-[11px]", active ? "text-background/70" : "text-muted-foreground")}>{o.count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Conversations list */}
-      <ScrollArea className="flex-1 relative z-10 min-w-0 max-w-full" viewportClassName="!block !w-full !min-w-0 max-w-full [&>div]:!block [&>div]:!w-full [&>div]:!min-w-0 [&>div]:max-w-full">
+      <ScrollArea className="flex-1 min-w-0 max-w-full" viewportClassName="!block !w-full !min-w-0 max-w-full [&>div]:!block [&>div]:!w-full [&>div]:!min-w-0 [&>div]:max-w-full">
         {isLoadingConversations ? (
           <ConversationListSkeleton />
         ) : filteredConversations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center p-8 text-center animate-fade-in">
-            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4 animate-float">
-              <MessageCircle className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <p className="text-muted-foreground font-medium">
-              {searchQuery ? 'Aucune conversation trouvée' : 'Aucune conversation'}
+          <div className="flex flex-col items-center justify-center px-6 py-12 text-center" role="status">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <MessageCircle className="h-6 w-6" aria-hidden />
+            </span>
+            <p className="mt-3 text-sm font-medium text-foreground">
+              {searchQuery ? 'Aucune conversation trouvée' : listFilter === 'non_lues' && conversations.length > 0 ? 'Aucun message non lu' : 'Aucune conversation'}
             </p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              {searchQuery ? 'Essayez un autre terme' : 'Vos messages apparaîtront ici'}
+            <p className="mt-1 text-xs text-muted-foreground">
+              {searchQuery ? 'Essayez un autre terme' : listFilter === 'non_lues' && conversations.length > 0 ? 'Vous êtes à jour.' : 'Vos messages apparaîtront ici'}
             </p>
           </div>
         ) : (
@@ -1828,11 +1915,8 @@ const Messagerie = () => {
   }, [selectedMessages]);
 
   const chatView = selectedConv ? (
-    <div className="flex-1 flex flex-col min-h-0 min-w-0 relative overflow-hidden">
-      {/* Premium background */}
-      <MeshGradientBackground />
-      <ChatPatternBackground />
-      
+    <div className="flex-1 flex flex-col min-h-0 min-w-0 bg-background relative overflow-hidden">
+
       {/* Messages area */}
       <ScrollArea 
         className="flex-1 relative z-10 min-w-0"
@@ -1870,6 +1954,7 @@ const Messagerie = () => {
                   <PremiumMessageBubble
                     content={msg.content || ''}
                     isSent={isSent}
+                    senderType={msg.sender_type}
                     timestamp={msg.created_at}
                     read={msg.read}
                     senderName={senderName}
@@ -1881,7 +1966,7 @@ const Messagerie = () => {
                     index={index}
                   />
                   {isLastMessageForOffre && offresMap[msg.offre_id!] && (
-                    <div className={`mt-3 ${isSent ? 'ml-auto' : 'mr-auto'} w-full max-w-[92%] sm:max-w-[80%] md:max-w-[65%] min-w-0 animate-slide-up`}>
+                    <div className={`mt-3 ${isSent ? 'ml-auto' : 'mr-auto'} w-full max-w-[92%] sm:max-w-[80%] md:max-w-[65%] min-w-0`}>
                       <PremiumOffreCard offre={offresMap[msg.offre_id!]} mode={isBuyer ? 'achat' : 'location'} />
                       <OffreActions 
                         offre={offresMap[msg.offre_id!]} 
@@ -1913,6 +1998,8 @@ const Messagerie = () => {
               conversationId={selectedConv}
               value={pendingAttachment}
               onAttachmentReady={setPendingAttachment}
+              dossier={dossier}
+              onDocumentFiled={handleDocumentFiled}
             />
           }
         />
@@ -1920,10 +2007,10 @@ const Messagerie = () => {
 
       {/* Dialog Planifier Visite */}
       <Dialog open={visitDialogOpen} onOpenChange={setVisitDialogOpen}>
-        <DialogContent className="glass-premium border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Calendar className="h-4 w-4" /></span>
               Planifier une visite
             </DialogTitle>
             <DialogDescription>
@@ -1937,11 +2024,11 @@ const Messagerie = () => {
             {proposedSlots.length > 0 ? (
               <RadioGroup value={visitDate} onValueChange={setVisitDate} className="space-y-2">
                 {proposedSlots.map((slot, idx) => (
-                  <div key={idx} className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                  <div key={idx} className="flex items-center space-x-2 p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors">
                     <RadioGroupItem value={slot.date_visite} id={`slot-${idx}`} />
                     <Label htmlFor={`slot-${idx}`} className="flex-1 cursor-pointer">
                       <span className="font-medium">
-                        {format(new Date(slot.date_visite), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                        {formatZurichDateTime(slot.date_visite)}
                       </span>
                     </Label>
                   </div>
@@ -1949,21 +2036,21 @@ const Messagerie = () => {
               </RadioGroup>
             ) : (
               <div>
-                <Label htmlFor="visit-date">Date et heure</Label>
+                <Label htmlFor="visit-date">Date et heure (heure suisse)</Label>
                 <Input
                   id="visit-date"
                   type="datetime-local"
                   value={visitDate}
                   onChange={(e) => setVisitDate(e.target.value)}
-                  min={new Date().toISOString().slice(0, 16)}
+                  min={zurichNowInput()}
                   className="mt-1.5"
                 />
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setVisitDialogOpen(false)}>Annuler</Button>
-            <Button onClick={confirmPlanVisit} disabled={!visitDate} className="bg-gradient-to-r from-primary to-primary/80">
+            <Button variant="outline" className="rounded-full" onClick={() => setVisitDialogOpen(false)}>Annuler</Button>
+            <Button onClick={confirmPlanVisit} disabled={!visitDate} className="rounded-full">
               <Calendar className="h-4 w-4 mr-2" /> Confirmer
             </Button>
           </DialogFooter>
@@ -1972,10 +2059,10 @@ const Messagerie = () => {
 
       {/* Dialog Déléguer Visite */}
       <Dialog open={delegateDialogOpen} onOpenChange={setDelegateDialogOpen}>
-        <DialogContent className="glass-premium border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><User className="h-4 w-4" /></span>
               Déléguer la visite à votre agent
             </DialogTitle>
             <DialogDescription>
@@ -1988,11 +2075,11 @@ const Messagerie = () => {
                 <Label>Sélectionnez un créneau</Label>
                 <RadioGroup value={delegateDate} onValueChange={setDelegateDate} className="space-y-2 mt-2">
                   {delegateProposedSlots.map((slot, idx) => (
-                    <div key={idx} className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                    <div key={idx} className="flex items-center space-x-2 p-3 bg-muted/50 rounded-xl hover:bg-muted transition-colors">
                       <RadioGroupItem value={slot.date_visite} id={`delegate-slot-${idx}`} />
                       <Label htmlFor={`delegate-slot-${idx}`} className="flex-1 cursor-pointer">
                         <span className="font-medium">
-                          {format(new Date(slot.date_visite), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
+                          {formatZurichDateTime(slot.date_visite)}
                         </span>
                       </Label>
                     </div>
@@ -2000,7 +2087,7 @@ const Messagerie = () => {
                 </RadioGroup>
               </div>
             ) : (
-              <div className="p-3 bg-muted/50 rounded-lg">
+              <div className="p-3 bg-muted/50 rounded-xl">
                 <p className="text-sm text-muted-foreground">
                   Aucun créneau proposé. Votre agent organisera la visite et vous proposera des dates.
                 </p>
@@ -2018,11 +2105,11 @@ const Messagerie = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDelegateDialogOpen(false)}>Annuler</Button>
+            <Button variant="outline" className="rounded-full" onClick={() => setDelegateDialogOpen(false)}>Annuler</Button>
             <Button 
               onClick={confirmDelegateVisit} 
               disabled={delegateProposedSlots.length > 0 && !delegateDate}
-              className="bg-gradient-to-r from-primary to-primary/80"
+              className="rounded-full"
             >
               <User className="h-4 w-4 mr-2" /> Déléguer
             </Button>
@@ -2034,7 +2121,10 @@ const Messagerie = () => {
       <Dialog open={candidatureDialogOpen} onOpenChange={setCandidatureDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>📝 Déposer ma candidature</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><FileText className="h-4 w-4" /></span>
+              Déposer ma candidature
+            </DialogTitle>
             <DialogDescription>
               Soumettez votre candidature pour {selectedOffre?.adresse}
             </DialogDescription>
@@ -2061,8 +2151,8 @@ const Messagerie = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCandidatureDialogOpen(false)}>Annuler</Button>
-            <Button onClick={confirmCandidature} disabled={!accepteConditions}>
+            <Button variant="outline" className="rounded-full" onClick={() => setCandidatureDialogOpen(false)}>Annuler</Button>
+            <Button className="rounded-full" onClick={confirmCandidature} disabled={!accepteConditions || submittingCandidature}>
               <FileText className="h-4 w-4 mr-2" /> Soumettre
             </Button>
           </DialogFooter>
@@ -2073,7 +2163,10 @@ const Messagerie = () => {
       <Dialog open={recommendationDialogOpen} onOpenChange={setRecommendationDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>📧 Recommander Immo-Rama</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Mail className="h-4 w-4" /></span>
+              Recommander Immo-Rama
+            </DialogTitle>
             <DialogDescription>
               Partagez votre expérience avec vos proches ! Entrez jusqu'à 5 adresses email.
             </DialogDescription>
@@ -2094,8 +2187,8 @@ const Messagerie = () => {
             ))}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRecommendationDialogOpen(false)}>Annuler</Button>
-            <Button onClick={sendRecommendations}>
+            <Button variant="outline" className="rounded-full" onClick={() => setRecommendationDialogOpen(false)}>Annuler</Button>
+            <Button className="rounded-full" onClick={sendRecommendations}>
               <Mail className="h-4 w-4 mr-2" /> Envoyer
             </Button>
           </DialogFooter>
@@ -2107,11 +2200,11 @@ const Messagerie = () => {
         <DialogContent className="max-w-md text-center">
           <DialogHeader>
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900 rounded-full flex items-center justify-center">
-                <Star className="h-8 w-8 text-amber-500" />
+              <div className="w-14 h-14 bg-amber-500/10 rounded-full flex items-center justify-center">
+                <Star className="h-7 w-7 text-amber-700" />
               </div>
             </div>
-            <DialogTitle className="text-2xl">Merci infiniment ! 🙏</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Merci infiniment !</DialogTitle>
             <DialogDescription className="text-base mt-4 space-y-3">
               <p>
                 Votre avis compte énormément pour nous et aide d'autres personnes 
@@ -2124,7 +2217,7 @@ const Messagerie = () => {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button onClick={() => setThankYouDialogOpen(false)} className="w-full">
+            <Button onClick={() => setThankYouDialogOpen(false)} className="w-full rounded-full">
               <PartyPopper className="h-4 w-4 mr-2" />
               Avec plaisir !
             </Button>
@@ -2133,42 +2226,31 @@ const Messagerie = () => {
       </Dialog>
     </div>
   ) : (
-    <div className="flex items-center justify-center h-full text-muted-foreground">
+    <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
       Sélectionnez une conversation
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <MobileMessenger
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onBack={() => setSelectedConv(null)}
-        headerName={currentConversation ? getAgentName(currentConversation.agent_id) : undefined}
-        headerSubtitle={
-          currentConversation
-            ? getAgentInfo(currentConversation.agent_id).isOnline
-              ? "En ligne"
-              : "Hors ligne"
-            : undefined
-        }
-        headerAvatarUrl={null}
-        isOnline={currentConversation ? !!getAgentInfo(currentConversation.agent_id).isOnline : false}
-      />
-    );
-  }
-
+  // Même ossature que l'admin : deux panneaux dès 768 px (tablette, PC), un panneau à la fois sur mobile.
   return (
-    <div className="h-[calc(100vh-56px)] lg:h-screen flex flex-col overflow-hidden">
-      <MessagingLayout
-        conversationsList={conversationsList}
-        chatView={chatView}
-        selectedConversation={selectedConv}
-        onSelectConversation={setSelectedConv}
-        chatHeader={chatHeader}
-      />
-    </div>
+    <MessengerSplitLayout
+      className={MESSENGER_PAGE_HEIGHT}
+      conversationsList={conversationsList}
+      chatView={chatView}
+      chatHeader={chatHeader}
+      selectedConversation={selectedConv}
+      onBack={() => setSelectedConv(null)}
+      headerName={currentConversation ? getAgentName(currentConversation.agent_id) : undefined}
+      headerSubtitle={
+        currentConversation
+          ? getAgentInfo(currentConversation.agent_id).isOnline
+            ? "En ligne"
+            : "Hors ligne"
+          : undefined
+      }
+      headerAvatarUrl={null}
+      isOnline={currentConversation ? !!getAgentInfo(currentConversation.agent_id).isOnline : false}
+    />
   );
 };
 

@@ -1,7 +1,8 @@
-import { renderCorporateEmail, emailButton } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailDetails, emailNotice, emailParagraph, EMAIL_THEME } from '../_shared/email-shell.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "../_shared/tracked-resend.ts";
+import { addDaysISO, formatDateFR, toZurichISODate } from "../_shared/date-fr.ts";
 
 const ADMIN_EMAIL = "info@immo-rama.ch";
 const STAFF_FROM = "Logisorama <support@logisorama.ch>";
@@ -22,6 +23,39 @@ type Action = typeof VALID_ACTIONS[number];
 
 function daysBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+type MandateDates = {
+  mandat_date_signature?: string | null;
+  mandate_pause_days?: number | null;
+  mandate_official_end_date?: string | null;
+};
+
+/** Jours écoulés depuis la signature, pause déduite (même calcul que le flux principal). */
+function pauseAdjustedDays(c: MandateDates, today: Date): number {
+  if (!c.mandat_date_signature) return 0;
+  const raw = daysBetween(new Date(c.mandat_date_signature), today);
+  return Math.max(0, raw - (c.mandate_pause_days ?? 0));
+}
+
+/**
+ * Fin officielle du mandat ("YYYY-MM-DD") : la colonne si elle est renseignée,
+ * sinon signature + 90 j + jours de pause, sur le cycle en cours en cas de
+ * renouvellement automatique (même logique que nextWindowEnd). null si aucune
+ * date de signature n'est connue.
+ */
+function resolveOfficialEnd(c: MandateDates, daysSinceSignature: number): string | null {
+  const stored = toZurichISODate(c.mandate_official_end_date ?? null);
+  if (stored) return stored;
+  if (!c.mandat_date_signature) return null;
+  const sig = new Date(c.mandat_date_signature);
+  if (isNaN(sig.getTime())) return null;
+  const cyclesPassed = daysSinceSignature > MANDAT_DURATION_DAYS
+    ? Math.floor(daysSinceSignature / MANDAT_DURATION_DAYS)
+    : 0;
+  const end = new Date(sig);
+  end.setDate(end.getDate() + cyclesPassed * MANDAT_DURATION_DAYS + MANDAT_DURATION_DAYS + (c.mandate_pause_days ?? 0));
+  return toZurichISODate(end);
 }
 
 serve(async (req) => {
@@ -72,7 +106,7 @@ serve(async (req) => {
         if (!adminRole) return jsonResponse({ ok: false, error: "Admin uniquement" }, 403);
 
         const { data: cli } = await supabase
-          .from("clients").select("id, user_id, agent_id, mandate_official_end_date")
+          .from("clients").select("id, user_id, agent_id, mandat_date_signature, mandate_pause_days, mandate_official_end_date")
           .eq("id", body.client_id).maybeSingle();
         if (!cli) return jsonResponse({ ok: false, error: "Client introuvable" }, 404);
         const { data: cliProfile } = await supabase
@@ -94,8 +128,11 @@ serve(async (req) => {
           }
         }
 
-        const officialEnd = cli.mandate_official_end_date ?? new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
-        const refundProcessDate = (() => { const d = new Date(officialEnd); d.setDate(d.getDate() + 30); return d.toISOString().split("T")[0]; })();
+        // Vraie date de fin (calculée depuis la signature si la colonne est vide) ;
+        // dernier recours pour l'aperçu uniquement : aujourd'hui + 7 j.
+        const officialEnd = resolveOfficialEnd(cli, pauseAdjustedDays(cli, new Date())) ??
+          addDaysISO(new Date(), 7)!;
+        const refundProcessDate = addDaysISO(officialEnd, 30) ?? "";
 
         const { subject, html } = buildClientEmail({
           variant: "refund",
@@ -419,10 +456,12 @@ serve(async (req) => {
       const { data: clientProfile } = await supabase
         .from("profiles").select("prenom, nom, email").eq("id", client.user_id).maybeSingle();
       const clientFullName = clientProfile ? `${clientProfile.prenom ?? ""} ${clientProfile.nom ?? ""}`.trim() : "Un client";
-      const officialEnd = client.mandate_official_end_date ?? "le jour 90";
-      const refundProcessDate = client.mandate_official_end_date
-        ? (() => { const d = new Date(client.mandate_official_end_date); d.setDate(d.getDate() + 30); return d.toISOString().split("T")[0]; })()
-        : "30 jours après la fin du mandat";
+      // Date de fin réelle : colonne si renseignée, sinon signature + 90 j + pause
+      // (cycle en cours). Jamais de texte libre passé à un parseur de date.
+      const officialEndISO = resolveOfficialEnd(client, daysSinceSignature);
+      const refundProcessISO = officialEndISO ? addDaysISO(officialEndISO, 30) : null;
+      const officialEnd = officialEndISO ? formatDateFR(officialEndISO) : "terme de la période en cours";
+      const refundProcessDate = refundProcessISO ? formatDateFR(refundProcessISO) : "30e jour suivant la fin du mandat";
 
       dbAction = refundEligible ? "cancelled_with_refund" : "cancelled";
 
@@ -481,8 +520,8 @@ serve(async (req) => {
           variant: refundEligible ? "refund" : "cancellation",
           initiator,
           firstName: clientProfile?.prenom ?? "",
-          officialEnd: String(officialEnd),
-          refundProcessDate: String(refundProcessDate),
+          officialEnd: officialEndISO ?? "",
+          refundProcessDate: refundProcessISO ?? "",
           daysSinceSignature,
           reasonLabel: reasonLabel(reason),
           isTest: false,
@@ -642,14 +681,6 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-function formatDateFR(iso: string): string {
-  try {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return iso;
-    return d.toLocaleDateString("fr-CH", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Zurich" });
-  } catch { return iso; }
-}
-
 interface ClientEmailParams {
   variant: "refund" | "cancellation";
   initiator: "client" | "admin" | "agent";
@@ -666,8 +697,20 @@ function buildClientEmail(p: ClientEmailParams): { subject: string; html: string
   const dashboardUrl = `${PUBLIC_BASE_URL}/client/mon-contrat`;
   const firstNameSafe = p.firstName?.trim() ? escapeHtml(p.firstName.trim()) : "";
   const greeting = firstNameSafe ? `Bonjour ${firstNameSafe},` : "Bonjour,";
-  const officialEndFR = formatDateFR(p.officialEnd);
-  const refundDateFR = formatDateFR(p.refundProcessDate);
+  // formatDateFR (date-fr.ts) ne parse que des dates ISO : jamais « 1 janvier 1990 ».
+  const officialEndFR = formatDateFR(p.officialEnd, { fallback: "" });
+  const refundDateFR = formatDateFR(p.refundProcessDate, { fallback: "" });
+  const strong = (t: string) => `<strong style="color:${EMAIL_THEME.heading};">${t}</strong>`;
+  const activeUntil = officialEndFR
+    ? `Votre mandat reste ${strong(`actif jusqu'au ${escapeHtml(officialEndFR)}`)}`
+    : `Votre mandat reste ${strong("actif jusqu'au terme de la période en cours")}`;
+  const refundDeadline = refundDateFR
+    ? `, soit au plus tard le ${strong(escapeHtml(refundDateFR))}`
+    : "";
+  const contactLine = emailParagraph(
+    `Si cette demande ne correspond pas à votre intention, contactez-nous au plus vite à <a href="mailto:info@immo-rama.ch" style="color:${EMAIL_THEME.green};text-decoration:underline;">info@immo-rama.ch</a>.`,
+    true,
+  );
 
   const initiatorLabel =
     p.initiator === "admin" ? "un administrateur Logisorama" :
@@ -676,51 +719,63 @@ function buildClientEmail(p: ClientEmailParams): { subject: string; html: string
 
   let subject: string;
   let title: string;
+  let preview: string;
   let bodyHtml: string;
+
+  const refundDetails = emailDetails([
+    ["Mandat actif jusqu'au", officialEndFR || "Terme de la période en cours"],
+    ["Remboursement au plus tard le", refundDateFR || "30 jours après la fin du mandat"],
+  ]);
 
   if (p.variant === "refund") {
     if (p.initiator === "client") {
       subject = `✅ Votre demande de remboursement a bien été reçue`;
       title = "Demande de remboursement bien reçue";
-      bodyHtml = `
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Nous confirmons la bonne réception de <strong style="color:#205a43;">votre demande de remboursement</strong>. Elle a été validée automatiquement (jour ${p.daysSinceSignature} de votre mandat).</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Votre mandat reste <strong style="color:#205a43;">actif jusqu'au ${escapeHtml(officialEndFR)}</strong> et nous continuons à vous envoyer des offres pendant cette période. Profitez-en pleinement.</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Le remboursement sera versé sous un délai de <strong style="color:#205a43;">30 jours</strong> après la fin du mandat, soit au plus tard le <strong style="color:#205a43;">${escapeHtml(refundDateFR)}</strong>. Vous recevrez un email de confirmation dès que le virement sera émis.</p>`;
+      preview = "Votre demande est validée. Votre mandat reste actif jusqu'à sa date de fin.";
+      bodyHtml =
+        emailParagraph(greeting) +
+        emailParagraph(`Nous confirmons la bonne réception de ${strong("votre demande de remboursement")}. Elle a été validée automatiquement (jour ${p.daysSinceSignature} de votre mandat).`) +
+        refundDetails +
+        emailParagraph(`${activeUntil} et nous continuons à vous envoyer des offres pendant cette période. Profitez-en pleinement.`) +
+        emailParagraph(`Le remboursement sera versé sous un délai de ${strong("30 jours")} après la fin du mandat${refundDeadline}. Vous recevrez un email de confirmation dès que le virement sera émis.`);
     } else {
       subject = `💰 Votre demande de remboursement est en cours de traitement`;
       title = "Votre remboursement est en cours";
-      bodyHtml = `
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Suite à votre demande adressée à ${initiatorLabel}, nous avons enregistré pour votre compte une <strong style="color:#205a43;">demande de remboursement</strong> de votre acompte de mandat.</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Votre mandat reste <strong style="color:#205a43;">actif jusqu'au ${escapeHtml(officialEndFR)}</strong> et nous continuons à vous envoyer des offres pendant cette période. Profitez-en pour décrocher votre logement.</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Le remboursement sera versé sous un délai de <strong style="color:#205a43;">30 jours</strong> après la fin du mandat, soit au plus tard le <strong style="color:#205a43;">${escapeHtml(refundDateFR)}</strong>. Vous recevrez un email de confirmation dès que le virement sera émis.</p>
-        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Si cette demande ne correspond pas à votre intention, contactez-nous au plus vite à <a href="mailto:info@immo-rama.ch" style="color:#205a43;text-decoration:underline;">info@immo-rama.ch</a>.</p>`;
+      preview = "Une demande de remboursement a été enregistrée pour votre compte.";
+      bodyHtml =
+        emailParagraph(greeting) +
+        emailParagraph(`Suite à votre demande adressée à ${initiatorLabel}, nous avons enregistré pour votre compte une ${strong("demande de remboursement")} de votre acompte de mandat.`) +
+        refundDetails +
+        emailParagraph(`${activeUntil} et nous continuons à vous envoyer des offres pendant cette période. Profitez-en pour décrocher votre logement.`) +
+        emailParagraph(`Le remboursement sera versé sous un délai de ${strong("30 jours")} après la fin du mandat${refundDeadline}. Vous recevrez un email de confirmation dès que le virement sera émis.`) +
+        contactLine;
     }
   } else {
     if (p.initiator === "client") {
       subject = `Confirmation de l'annulation de votre mandat`;
       title = "Annulation confirmée";
-      bodyHtml = `
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Nous confirmons l'annulation de votre mandat de recherche${p.reasonLabel ? ` (raison : ${escapeHtml(p.reasonLabel)})` : ""}.</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Merci pour la confiance que vous nous avez accordée. L'équipe Logisorama reste à votre disposition si vous souhaitez reprendre vos recherches.</p>`;
+      preview = "Nous confirmons l'annulation de votre mandat de recherche.";
+      bodyHtml =
+        emailParagraph(greeting) +
+        emailParagraph(`Nous confirmons l'annulation de votre mandat de recherche${p.reasonLabel ? ` (raison : ${escapeHtml(p.reasonLabel)})` : ""}.`) +
+        emailParagraph("Merci pour la confiance que vous nous avez accordée. L'équipe Logisorama reste à votre disposition si vous souhaitez reprendre vos recherches.");
     } else {
       subject = `Confirmation de l'annulation de votre mandat`;
       title = "Annulation de votre mandat";
-      bodyHtml = `
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">${greeting}</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Suite à votre demande adressée à ${initiatorLabel}, votre mandat de recherche a été <strong style="color:#205a43;">annulé</strong>${p.reasonLabel ? ` (raison : ${escapeHtml(p.reasonLabel)})` : ""}.</p>
-        <p style="margin:0 0 14px;font-size:15px;line-height:1.65;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Merci pour la confiance que vous nous avez accordée. L'équipe Logisorama reste à votre disposition.</p>
-        <p style="margin:0 0 14px;font-size:14px;line-height:1.6;color:#5c665e;font-family:Arial,Helvetica,sans-serif;">Si cette demande ne correspond pas à votre intention, contactez-nous au plus vite à <a href="mailto:info@immo-rama.ch" style="color:#205a43;text-decoration:underline;">info@immo-rama.ch</a>.</p>`;
+      preview = "Votre mandat de recherche a été annulé à votre demande.";
+      bodyHtml =
+        emailParagraph(greeting) +
+        emailParagraph(`Suite à votre demande adressée à ${initiatorLabel}, votre mandat de recherche a été ${strong("annulé")}${p.reasonLabel ? ` (raison : ${escapeHtml(p.reasonLabel)})` : ""}.`) +
+        emailParagraph("Merci pour la confiance que vous nous avez accordée. L'équipe Logisorama reste à votre disposition.") +
+        contactLine;
     }
   }
 
   const finalSubject = p.isTest ? `[TEST] ${subject}` : subject;
 
-  const html = renderCorporateEmail({ title, category: 'VOTRE MANDAT',
-    bodyHtml: (p.isTest ? '<p><strong>Aperçu de TEST</strong> — aucun mandat n’a été modifié.</p>' : '') + bodyHtml + emailButton('Accéder à mon espace', dashboardUrl),
-    footerHtml: 'Immo-Rama.ch · CHE-442.303.796<br>Ch. de la Vignettaz 7 · 1023 Crissier<br><a href="mailto:info@immo-rama.ch">info@immo-rama.ch</a><br>Email transactionnel lié à votre mandat de recherche.',
+  const html = renderCorporateEmail({ title, preview, category: 'VOTRE MANDAT',
+    bodyHtml: (p.isTest ? emailNotice('<strong>Aperçu de TEST</strong> — aucun mandat n’a été modifié.', 'warning') : '') + bodyHtml + emailButton('Accéder à mon espace', dashboardUrl),
+    footerHtml: 'Immo-Rama.ch · CHE-442.303.796 · Chemin de l’Esparcette 5 · 1023 Crissier<br><a href="mailto:info@immo-rama.ch" style="color:inherit;text-decoration:underline;">info@immo-rama.ch</a> · Email transactionnel lié à votre mandat de recherche.',
   });
 
   return { subject: finalSubject, html };

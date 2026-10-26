@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { isPurchaseBuyer } from '@/lib/journey';
 
 export interface UserCredits {
   user_id: string;
@@ -33,6 +34,18 @@ export const NO_VISIT_CREDIT_MSG = "Vous n'avez plus de crédits visite — vous
 export async function consumeVisitCoin(): Promise<{ ok: boolean; message?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (user) {
+    // Parcours ACHAT : crédits illimités — aucune consommation, aucun blocage.
+    try {
+      const { data: cl } = await supabase.from('clients').select('id, user_id, type_recherche, journey_type').eq('user_id', user.id).maybeSingle();
+      let pp: any = null;
+      const { data: byUser } = await (supabase as any).from('purchase_projects').select('id').eq('user_id', user.id).maybeSingle();
+      pp = byUser;
+      if (!pp && cl?.id) {
+        const { data: byClient } = await (supabase as any).from('purchase_projects').select('id').eq('client_id', cl.id).maybeSingle();
+        pp = byClient;
+      }
+      if (isPurchaseBuyer(cl as any, pp)) return { ok: true };
+    } catch { /* en cas de doute : comportement habituel ci-dessous */ }
     const { data: c } = await (supabase as any).from('user_credits').select('mandat_statut').eq('user_id', user.id).maybeSingle();
     if (c?.mandat_statut === 'suspendu') return { ok: false, message: 'Votre mandat est en suspens — renouvelez-le depuis votre tableau de bord pour déléguer.' };
   }

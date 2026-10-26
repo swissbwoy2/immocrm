@@ -11,7 +11,7 @@ export function MetaFormAnswers({ lead }: Props) {
 
   if (entries.length === 0) {
     return (
-      <div className="text-xs text-muted-foreground italic py-3 px-3 rounded-md border border-dashed">
+      <div className="text-xs text-muted-foreground italic py-3 px-3 rounded-xl border border-dashed">
         Aucune réponse de formulaire enregistrée.
       </div>
     );
@@ -20,9 +20,9 @@ export function MetaFormAnswers({ lead }: Props) {
   return (
     <div className="space-y-2">
       {entries.map((e, i) => (
-        <Card key={i} className="p-3 bg-muted/30 border-border/60">
+        <Card key={i} className="p-3 rounded-xl bg-muted/30 border-border/70 shadow-none">
           <div className="flex items-start gap-2">
-            <div className="h-6 w-6 rounded-md bg-[#1877F2]/15 text-[#1877F2] flex items-center justify-center flex-shrink-0">
+            <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
               <HelpCircle className="h-3.5 w-3.5" />
             </div>
             <div className="flex-1 min-w-0 space-y-1">

@@ -6,25 +6,21 @@ import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBann
 
 
 
-// Above the fold - eager
-import { HeroSection } from '@/components/public-site/sections/HeroSection';
-import { DossierAnalyseSection } from '@/components/public-site/sections/DossierAnalyseSection';
-import { ForWhoSection } from '@/components/public-site/sections/ForWhoSection';
-import { HowItWorksSection } from '@/components/public-site/sections/HowItWorksSection';
+// Page d'accueil condensée (style du tunnel /courtier) : choix Louer / Acheter en haut,
+// toutes les sections suivent le parcours choisi. Les anciennes sections restent disponibles.
+import { HomeHero } from '@/components/public-site/home/HomeHero';
+import { HomeCalculator } from '@/components/public-site/home/HomeCalculator';
+import { HomeMobileBar } from '@/components/public-site/home/HomeMobileBar';
 
-// Below the fold - lazy
-const ServicesFullSection = lazy(() => import('@/components/public-site/sections/ServicesFullSection').then(m => ({ default: m.ServicesFullSection })));
-const GuaranteeSection = lazy(() => import('@/components/public-site/sections/GuaranteeSection').then(m => ({ default: m.GuaranteeSection })));
-const PricingSection = lazy(() => import('@/components/public-site/sections/PricingSection').then(m => ({ default: m.PricingSection })));
-const BudgetCalcSection = lazy(() => import('@/components/public-site/sections/BudgetCalcSection').then(m => ({ default: m.BudgetCalcSection })));
-const CoverageSection = lazy(() => import('@/components/public-site/sections/CoverageSection').then(m => ({ default: m.CoverageSection })));
-const SeoLocalSection = lazy(() => import('@/components/landing/SeoLocalSection').then(m => ({ default: m.SeoLocalSection })));
-const StatsSection = lazy(() => import('@/components/public-site/sections/StatsSection').then(m => ({ default: m.StatsSection })));
-const PartnersSection = lazy(() => import('@/components/public-site/sections/PartnersSection').then(m => ({ default: m.PartnersSection })));
-const TechSection = lazy(() => import('@/components/public-site/sections/TechSection').then(m => ({ default: m.TechSection })));
-const FAQSection = lazy(() => import('@/components/public-site/sections/FAQSection').then(m => ({ default: m.FAQSection })));
-const CloserSection = lazy(() => import('@/components/public-site/sections/CloserSection').then(m => ({ default: m.CloserSection })));
-const AppShowcaseSection = lazy(() => import('@/components/public-site/sections/AppShowcaseSection').then(m => ({ default: m.AppShowcaseSection })));
+const HomeSelection = lazy(() => import('@/components/public-site/home/HomeSelection').then(m => ({ default: m.HomeSelection })));
+const HomeHowItWorks = lazy(() => import('@/components/public-site/home/HomeHowItWorks').then(m => ({ default: m.HomeHowItWorks })));
+const HomePricing = lazy(() => import('@/components/public-site/home/HomePricing').then(m => ({ default: m.HomePricing })));
+const HomeProof = lazy(() => import('@/components/public-site/home/HomeProof').then(m => ({ default: m.HomeProof })));
+const HomeReviews = lazy(() => import('@/components/public-site/home/HomeReviews').then(m => ({ default: m.HomeReviews })));
+const HomeApp = lazy(() => import('@/components/public-site/home/HomeApp').then(m => ({ default: m.HomeApp })));
+const HomeFaq = lazy(() => import('@/components/public-site/home/HomeFaq').then(m => ({ default: m.HomeFaq })));
+const HomeClosing = lazy(() => import('@/components/public-site/home/HomeClosing').then(m => ({ default: m.HomeClosing })));
+const HomeZones = lazy(() => import('@/components/public-site/home/HomeZones').then(m => ({ default: m.HomeZones })));
 
 
 export default function HomePage() {
@@ -52,53 +48,34 @@ export default function HomePage() {
   }, [user, userRole, loading, navigate]);
 
   return (
-    <PublicSiteLayout>
+    <PublicSiteLayout stickyCta={<HomeMobileBar />}>
+      <div className="home-tokens bg-white">
+        {/* Bannière publicitaire configurable par l'admin, tout en haut (masquée si aucune bannière active) */}
+        <div className="mx-auto w-full max-w-[1120px] px-4 pt-4 md:px-6 md:pt-6 empty:hidden">
+          <DashboardAdBanner />
+        </div>
 
+        {/* 1. Choix du parcours, accroche, « Notre sélection », propriétaires */}
+        <HomeHero />
 
+        {/* 2. Calculateur (ancre #analyse-dossier) */}
+        <HomeCalculator />
 
-      {/* Bannière publicitaire configurable par l'admin (masquée si aucune bannière active) */}
-      <div className="container mx-auto px-4 pt-4">
-        <DashboardAdBanner />
+        <Suspense fallback={null}>
+          <HomeSelection />
+          <HomeHowItWorks />
+          <HomePricing />
+          <HomeProof />
+          <HomeReviews />
+          <HomeApp />
+          <HomeFaq />
+          <HomeClosing />
+          <HomeZones />
+        </Suspense>
+
+        {/* Place pour la barre fixe du bas sur téléphone */}
+        <div className="h-20 lg:hidden" aria-hidden="true" />
       </div>
-
-      {/* Eager sections */}
-      <DossierAnalyseSection />
-
-
-      {/* Bloc hero de choix de parcours (location / achat) */}
-      <HeroSection />
-
-      {/* Calculateurs gratuits (location + achat) juste en dessous du choix de parcours */}
-      <Suspense fallback={null}>
-        <BudgetCalcSection />
-      </Suspense>
-
-
-
-      {/* Lazy sections */}
-      <Suspense fallback={null}>
-        <AppShowcaseSection />
-      </Suspense>
-
-      <Suspense fallback={null}>
-        <PricingSection />
-      </Suspense>
-
-      <ForWhoSection />
-      <HowItWorksSection />
-
-      {/* Lazy sections */}
-      <Suspense fallback={null}>
-        <ServicesFullSection />
-        <GuaranteeSection />
-        <CoverageSection />
-        <SeoLocalSection />
-        <StatsSection />
-        <PartnersSection />
-        <TechSection />
-        <FAQSection />
-        <CloserSection />
-      </Suspense>
     </PublicSiteLayout>
   );
 }

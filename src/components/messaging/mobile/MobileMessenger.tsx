@@ -1,10 +1,8 @@
 import { ReactNode } from "react";
-import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ChatAvatar } from "@/components/messaging/ChatAvatar";
 import { useSwipeGesture } from "@/hooks/useSwipeGesture";
 import { useImmersiveMode } from "@/contexts/MobileImmersiveContext";
-import { ConversationCallControls } from "@/components/calls/ConversationCallControls";
+import { ChatHeader } from "@/components/messaging/ChatHeader";
+import { IMR_CHAT_NEUTRAL_STYLE } from "@/components/messaging/messengerTheme";
 
 interface MobileMessengerProps {
   conversationsList: ReactNode;
@@ -15,14 +13,16 @@ interface MobileMessengerProps {
   headerSubtitle?: string;
   headerAvatarUrl?: string | null;
   isOnline?: boolean;
+  /** Optionnel : actions supplémentaires (boutons ronds) dans l'en-tête de conversation. */
+  headerActions?: ReactNode;
 }
 
 /**
- * Two-screen mobile messenger (client role).
- * - No selection → full-screen conversations list (with its StoriesBar, search, tabs, items).
- * - Selection → sticky mobile chat header (back arrow + avatar + name) + existing chatView
- *   (which already renders offre cards, video, compte-rendu, composer, dialogs).
- * Reuses the existing render logic: nothing is duplicated.
+ * Messagerie mobile : un panneau à la fois.
+ * - Aucune sélection → liste des conversations plein écran.
+ * - Sélection → en-tête sobre (retour, avatar, nom, statut, appels) + chatView existant.
+ * Remplit la zone du shell mobile (h-full) : aucun calcul de hauteur propre.
+ * L'en-tête respecte la zone sûre iOS (le header de l'app est masqué en mode immersif).
  */
 export function MobileMessenger({
   conversationsList,
@@ -33,6 +33,7 @@ export function MobileMessenger({
   headerSubtitle,
   headerAvatarUrl,
   isOnline,
+  headerActions,
 }: MobileMessengerProps) {
   useSwipeGesture({
     onSwipeRight: () => {
@@ -49,6 +50,7 @@ export function MobileMessenger({
     return (
       <div
         className="imr-chat flex h-full min-h-0 flex-col overflow-hidden bg-card"
+        style={IMR_CHAT_NEUTRAL_STYLE}
       >
         {conversationsList}
       </div>
@@ -57,42 +59,27 @@ export function MobileMessenger({
 
   return (
     <div
-      className="imr-chat flex flex-col h-full min-h-0 overflow-hidden"
-      style={{ background: "hsl(160 30% 97%)" }}
+      className="imr-chat flex flex-col h-full min-h-0 overflow-hidden bg-background"
+      style={IMR_CHAT_NEUTRAL_STYLE}
     >
-      {/* Sticky mobile chat header */}
+      {/* En-tête de conversation (zone sûre iOS en haut) + bandeau Steeve */}
       <div
-        className="sticky top-0 z-30 flex items-center gap-2 px-2 py-2 border-b border-border/40"
-        style={{
-          background: "hsl(158 55% 38%)",
-          color: "white",
-          paddingTop: "calc(0.5rem + env(safe-area-inset-top, 0px))",
-        }}
+        className="sticky top-0 z-30 shrink-0 bg-card"
+        style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
       >
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          className="shrink-0 h-11 w-11 text-white hover:bg-white/15 hover:text-white"
-          aria-label="Retour aux conversations"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Button>
-        <ChatAvatar name={headerName || "Agent"} avatarUrl={headerAvatarUrl ?? null} size="sm" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold truncate text-white">
-            {headerName || "Agent"}
-          </p>
-          {headerSubtitle && (
-            <p className="text-[11px] truncate text-white/85">
-              {isOnline ? "● En ligne" : headerSubtitle}
-            </p>
-          )}
-        </div>
-        <ConversationCallControls conversationId={selectedConversation} variant="onColor" />
+        <ChatHeader
+          name={headerName || "Agent"}
+          avatarUrl={headerAvatarUrl ?? null}
+          isOnline={isOnline || undefined}
+          subtitle={isOnline ? undefined : headerSubtitle}
+          conversationId={selectedConversation}
+          onBackClick={onBack}
+          backAlwaysVisible
+          actions={headerActions}
+        />
       </div>
 
-      {/* Existing chat view (messages + offre cards + video + composer + dialogs) */}
+      {/* Vue de conversation existante (messages, cartes d'offre, vidéo, saisie, dialogues) */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
         {chatView}
       </div>

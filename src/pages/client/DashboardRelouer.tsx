@@ -16,6 +16,13 @@ import {
 import { RelouerUploader } from '@/components/relouer/RelouerUploader';
 import { RelouerSlotsManager } from '@/components/relouer/RelouerSlotsManager';
 import { RelouerTimeline } from '@/components/relouer/RelouerTimeline';
+import { useNavigate } from 'react-router-dom';
+import { MessageSquare } from 'lucide-react';
+import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { PremiumDashboardHeader, PremiumKPICard, PremiumAgentCard } from '@/components/premium';
+import { QuickTileXL } from '@/components/client/dashboard/QuickTileXL';
+import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 const STATUS_HELP: Record<string, { label: string; tone: string; bgTone: string }> = {
   new_request:           { label: 'Nouvelle demande reçue', tone: 'text-blue-700',    bgTone: 'bg-blue-50 border-blue-200' },
@@ -50,6 +57,7 @@ const PROGRESS_STEPS = [
 
 export default function DashboardRelouer() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [r, setR] = useState<any>(null);
   const [agent, setAgent] = useState<any>(null);
@@ -143,19 +151,24 @@ export default function DashboardRelouer() {
   }, [r, photosCount, docsCount, slotsCount]);
 
   if (loading) {
-    return <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-sky-600" /></div>;
+    return <div className="p-12 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
   }
 
   if (!r) {
     return (
-      <div className="container mx-auto px-4 py-12 max-w-2xl text-center">
-        <Card className="p-8 border-sky-100">
-          <Key className="h-10 w-10 text-sky-600 mx-auto mb-3" />
-          <h1 className="text-xl font-bold mb-2">Aucun dossier Relouer</h1>
-          <p className="text-sm text-muted-foreground">
-            Aucune demande « Relouer mon appartement » n'est encore associée à votre compte.
-          </p>
-        </Card>
+      <div className="flex-1 overflow-y-auto">
+        <PremiumPageShellV2>
+          <DashboardAdBanner />
+          <PremiumDashboardHeader userName={profile?.prenom} parcoursType="relocation" headingBadge="Client reloueur" />
+          <MaJourneeBanner role="client" />
+          <Card className="p-8 text-center">
+            <Key className="h-10 w-10 text-primary mx-auto mb-3" />
+            <h2 className="text-xl font-bold mb-2">Aucun dossier Relouer</h2>
+            <p className="text-sm text-muted-foreground">
+              Aucune demande « Relouer mon appartement » n'est encore associée à votre compte.
+            </p>
+          </Card>
+        </PremiumPageShellV2>
       </div>
     );
   }
@@ -168,72 +181,37 @@ export default function DashboardRelouer() {
   const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   return (
-    <div className="container mx-auto px-4 py-6 max-w-7xl space-y-6">
-      {/* HERO HEADER PREMIUM */}
-      <div className="relative overflow-hidden rounded-3xl border border-sky-100 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50 p-6 md:p-8">
-        <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-sky-200/30 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 w-72 h-72 rounded-full bg-blue-200/30 blur-3xl" />
-        <div className="relative flex flex-col lg:flex-row gap-6 lg:items-center lg:justify-between">
-          <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-white shadow-md text-sky-700 flex items-center justify-center font-bold text-lg flex-shrink-0">
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <Badge className="bg-sky-600 hover:bg-sky-600 text-white border-0 mb-2">
-                <Key className="h-3 w-3 mr-1" /> Client reloueur
-              </Badge>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground">{fullName}</h1>
-              <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                <MapPin className="h-4 w-4" /> {address || 'Adresse à compléter'}
-              </div>
-              <div className={`text-sm font-medium mt-2 ${help.tone}`}>{help.label}</div>
-              {nextAction && (
-                <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                  <ArrowRight className="h-3 w-3" /> Prochaine étape : <span className="font-medium text-foreground">{nextAction}</span>
-                </div>
-              )}
-            </div>
-          </div>
+    <div className="flex-1 overflow-y-auto">
+    <PremiumPageShellV2>
+      {/* Bannière : tout en haut de l'accueil */}
+      <DashboardAdBanner />
+      {/* EN-TÊTE — même habillage que le dashboard client */}
+      <PremiumDashboardHeader
+        userName={profile?.prenom}
+        parcoursType="relocation"
+        headingBadge="Client reloueur"
+        subtitle={`${address || 'Adresse à compléter'}${nextAction ? ` — Prochaine étape : ${nextAction}` : ''}`}
+      />
 
-          {/* Agent + actions rapides */}
-          <div className="flex flex-col gap-3 lg:items-end">
-            {agent ? (
-              <Card className="p-3 bg-white/80 backdrop-blur border-sky-100 flex items-center gap-3 min-w-[240px]">
-                <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-semibold">
-                  {(agent.prenom?.[0] || '?') + (agent.nom?.[0] || '')}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] uppercase tracking-wide text-sky-700 font-semibold">Votre conseiller</div>
-                  <div className="text-sm font-semibold truncate">{agent.prenom} {agent.nom}</div>
-                  {agent.telephone && (
-                    <a href={`tel:${agent.telephone}`} className="text-xs text-muted-foreground hover:text-sky-600">{agent.telephone}</a>
-                  )}
-                </div>
-              </Card>
-            ) : (
-              <Card className="p-3 bg-white/80 backdrop-blur border-amber-200 text-sm text-amber-800 flex items-center gap-2">
-                <Clock className="h-4 w-4" /> Un conseiller vous sera bientôt assigné
-              </Card>
-            )}
-            <div className="flex flex-wrap gap-2 justify-end">
-              <Button size="sm" variant="outline" className="bg-white" onClick={() => scrollTo('section-photos')}>
-                <Camera className="h-4 w-4 mr-1" /> Photos
-              </Button>
-              <Button size="sm" variant="outline" className="bg-white" onClick={() => scrollTo('section-docs')}>
-                <FileText className="h-4 w-4 mr-1" /> Document
-              </Button>
-              <Button size="sm" variant="outline" className="bg-white" onClick={() => scrollTo('section-slots')}>
-                <Calendar className="h-4 w-4 mr-1" /> Créneau
-              </Button>
-              {agent?.email && (
-                <Button size="sm" className="bg-sky-600 hover:bg-sky-700" asChild>
-                  <a href={`mailto:${agent.email}`}><Mail className="h-4 w-4 mr-1" /> Mon agent</a>
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* ACCÈS RAPIDES */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 items-stretch">
+        <QuickTileXL index={0} icon={Camera} title="Photos" subtitle={`${photosCount} ajoutée(s)`} onClick={() => scrollTo('section-photos')} />
+        <QuickTileXL index={1} icon={FileText} title="Documents" subtitle={`${docsCount} ajouté(s)`} onClick={() => scrollTo('section-docs')} />
+        <QuickTileXL index={2} icon={Calendar} title="Créneaux" subtitle={`${activeSlots} actif(s)`} onClick={() => scrollTo('section-slots')} />
+        <QuickTileXL index={3} icon={MessageSquare} title="Messagerie" subtitle="Écrire à l'équipe" onClick={() => navigate('/client/messagerie')} />
       </div>
+
+      {/* CONSEILLER */}
+      {agent ? (
+        <PremiumAgentCard
+          agent={{ prenom: agent.prenom || '', nom: agent.nom || '', email: agent.email || '', telephone: agent.telephone || undefined }}
+          onMessage={() => navigate('/client/messagerie')}
+        />
+      ) : (
+        <Card className="p-4 text-sm text-muted-foreground flex items-center gap-2">
+          <Clock className="h-4 w-4 text-primary" /> Un conseiller vous sera bientôt assigné
+        </Card>
+      )}
 
       {/* BANDEAU D'ÉTAT */}
       <Card className={`p-5 border ${help.bgTone}`}>
@@ -251,22 +229,22 @@ export default function DashboardRelouer() {
       </Card>
 
       {/* KPI CARDS */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Kpi icon={Sparkles} label="Progression" value={`${progressPct}%`} sub={`${stepsDone}/${PROGRESS_STEPS.length} étapes`} color="text-sky-600" />
-        <Kpi icon={Camera}   label="Photos"      value={photosCount} sub={`${photosValidated} validée(s)`} color="text-emerald-600" />
-        <Kpi icon={FileText} label="Documents"   value={docsCount}   sub={`${docsValidated} validé(s)`} color="text-emerald-600" />
-        <Kpi icon={Calendar} label="Créneaux"    value={activeSlots} sub="actif(s)" color="text-indigo-600" />
-        <Kpi icon={Users}    label="Candidatures" value={candidatesCount} sub="reçue(s)" color="text-indigo-600" />
-        <Kpi icon={CheckCircle2} label="Statut"  value={help.label.split('—')[0].trim()} sub="" color="text-amber-600" small />
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4 items-stretch">
+        <PremiumKPICard title="Progression" value={`${progressPct}%`} subtitle={`${stepsDone}/${PROGRESS_STEPS.length} étapes`} icon={Sparkles} />
+        <PremiumKPICard title="Photos" value={photosCount} subtitle={`${photosValidated} validée(s)`} icon={Camera} variant="success" onClick={() => scrollTo('section-photos')} />
+        <PremiumKPICard title="Documents" value={docsCount} subtitle={`${docsValidated} validé(s)`} icon={FileText} variant="success" onClick={() => scrollTo('section-docs')} />
+        <PremiumKPICard title="Créneaux" value={activeSlots} subtitle="actif(s)" icon={Calendar} onClick={() => scrollTo('section-slots')} />
+        <PremiumKPICard title="Candidatures" value={candidatesCount} subtitle="reçue(s)" icon={Users} />
+        <PremiumKPICard title="Statut" value={help.label.split('—')[0].trim()} icon={CheckCircle2} variant="warning" />
       </div>
 
       {/* PROGRESSION DOSSIER */}
-      <Card className="p-6 border-sky-100">
+      <Card className="p-6 border-border">
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-sky-600" /> Progression de votre relocation
+            <ShieldCheck className="h-5 w-5 text-primary" /> Progression de votre relocation
           </h2>
-          <Badge variant="outline" className="border-sky-200 text-sky-700">{progressPct}% complété</Badge>
+          <Badge variant="outline" className="border-primary/30 text-primary">{progressPct}% complété</Badge>
         </div>
         <Progress value={progressPct} className="h-2 mb-5" />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
@@ -396,6 +374,7 @@ export default function DashboardRelouer() {
           </Section>
         </div>
       </div>
+    </PremiumPageShellV2>
     </div>
   );
 }
@@ -404,28 +383,14 @@ export default function DashboardRelouer() {
 
 function Section({ id, title, icon: Icon, children }: { id?: string; title: string; icon: any; children: React.ReactNode }) {
   return (
-    <Card id={id} className="p-6 border-sky-100/80 hover:border-sky-200 transition">
+    <Card id={id} className="p-6 scroll-mt-20 transition hover:shadow-md">
       <h3 className="text-base font-semibold mb-4 flex items-center gap-2 text-foreground">
-        <span className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center">
+        <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
           <Icon className="h-4 w-4" />
         </span>
         {title}
       </h3>
       {children}
-    </Card>
-  );
-}
-
-function Kpi({ icon: Icon, label, value, sub, color = 'text-foreground', small }: { icon: any; label: string; value: any; sub?: string; color?: string; small?: boolean }) {
-  return (
-    <Card className="p-4 border-sky-100 flex items-center gap-3 hover:shadow-md transition">
-      <div className={`w-10 h-10 rounded-xl bg-sky-50 ${color} flex items-center justify-center flex-shrink-0`}>
-        <Icon className="h-5 w-5" />
-      </div>
-      <div className="min-w-0">
-        <div className={`font-bold ${small ? 'text-sm' : 'text-xl'} ${color}`}>{value}</div>
-        <div className="text-[11px] text-muted-foreground truncate">{label}{sub ? ` · ${sub}` : ''}</div>
-      </div>
     </Card>
   );
 }

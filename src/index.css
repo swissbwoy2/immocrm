@@ -1,3 +1,5 @@
+/* Hallmark v2.0.0 · redesign: homepage polish · theme: Logisorama brand · shape: split-stage · signature: property handover photograph */
+/* Critique: the former opening buried the choice of journey below an oversized analysis block and repeated competing claims. */
 @tailwind base;
 
 /* Anchor scroll offset to clear sticky header */
@@ -245,6 +247,58 @@ All colors MUST be HSL.
   }
   .theme-luxury [data-split-title] {
     color: #ffffff !important;
+  }
+
+  /* FORMULAIRES PUBLICS — skin marketplace (réf. tunnel /courtier), scopé via .funnel-skin.
+     Se pose par-dessus .theme-luxury : mêmes composants, jetons de couleur Logisorama sobres. */
+  .theme-luxury.funnel-skin,
+  .funnel-skin {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+    --primary: 160 59% 30%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 97%;
+    --secondary-foreground: 0 0% 13%;
+    --muted: 0 0% 97%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 160 59% 30%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 12 80% 42%;
+    --border: 0 0% 87%;
+    --input: 0 0% 69%;
+    --ring: 0 0% 13%;
+    --radius: 0.875rem;
+    --shadow-glow: none;
+    --shadow-card-hover: none;
+    --imr-green: 160 59% 30%;
+    --imr-green-light: 160 59% 30%;
+    --imr-green-pale: 0 0% 97%;
+    --imr-ink: 0 0% 13%;
+    --imr-ink-soft: 0 0% 25%;
+    font-family: Inter, -apple-system, system-ui, Roboto, 'Helvetica Neue', sans-serif;
+  }
+  .theme-luxury.funnel-skin h1,
+  .theme-luxury.funnel-skin h2,
+  .theme-luxury.funnel-skin h3,
+  .theme-luxury.funnel-skin h4 { color: #222222; letter-spacing: -0.01em; }
+  .funnel-skin input,
+  .funnel-skin select,
+  .funnel-skin textarea { font-size: 16px; }
+  .funnel-skin .luxury-icon-badge {
+    background: #f7f7f7 !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+  .funnel-skin .luxury-icon-badge > span { color: #222222 !important; }
+  .funnel-skin .luxury-shimmer-btn,
+  .funnel-skin .luxury-cta-glow {
+    background-image: none !important;
+    background-color: #1F7A5C !important;
+    box-shadow: none !important;
   }
 }
 
@@ -1688,6 +1742,37 @@ html.imr-native-shell body {
   overscroll-behavior: none;
 }
 
+/* ==== Clavier ouvert (iPhone, app et Safari) : tout tient au-dessus du clavier ==== */
+/* Variables publiées par KeyboardInset : --imr-vv-top / --imr-vv-h = zone visible au-dessus du clavier. */
+html.imr-kb-open .imr-mobile-shell {
+  top: var(--imr-vv-top, 0px) !important;
+  bottom: auto !important;
+  height: var(--imr-vv-h, 100dvh) !important;
+}
+/* Panneaux de discussion en feuille (messagerie flottante, Steeve partenaires) : collés au clavier. */
+html.imr-kb-open .imr-kb-sheet {
+  top: calc(var(--imr-vv-top, 0px) + max(env(safe-area-inset-top, 0px), 8px)) !important;
+  bottom: auto !important;
+  height: calc(var(--imr-vv-h, 100dvh) - max(env(safe-area-inset-top, 0px), 8px)) !important;
+  padding-bottom: 0 !important;
+}
+/* Barre de saisie : la marge de l'indicateur d'accueil est inutile au-dessus du clavier. */
+html.imr-kb-open .imr-kb-composer {
+  padding-bottom: 0.5rem !important;
+}
+/* Steeve public / candidat : le panneau monte au-dessus du clavier, la mascotte s'efface le temps de l'écriture. */
+html.imr-kb-open .imr-kb-float {
+  top: calc(var(--imr-vv-top, 0px) + max(env(safe-area-inset-top, 0px), 8px)) !important;
+  bottom: auto !important;
+}
+html.imr-kb-open .imr-kb-float .imr-kb-float-panel {
+  height: calc(var(--imr-vv-h, 100dvh) - max(env(safe-area-inset-top, 0px), 8px) - 8px) !important;
+  max-height: 560px;
+}
+html.imr-kb-open .imr-kb-float .imr-kb-hide {
+  display: none !important;
+}
+
 /* ==== Mode immersif mobile (conversation plein écran) ==== */
 /* Aucun bouton flottant global ne doit recouvrir la barre de saisie. */
 body.imr-immersive [data-floating-widget],
@@ -1705,3 +1790,434 @@ body.imr-immersive iframe[src*="whatsapp"] {
   pointer-events: none !important;
 }
 
+
+/* Page d'accueil (style du tunnel /courtier) : jetons de couleur, un seul accent vert foncé. */
+.home-tokens {
+  --home-accent: #1F7A5C;
+  --home-accent-hover: #1A6B50;
+  --home-accent-active: #155A43;
+  --home-accent-disabled: #9cc4b6;
+  --home-surface: #f7f7f7;
+  --home-surface-strong: #f2f2f2;
+  --home-rule: #ebebeb;
+  --home-field: #b0b0b0;
+  --home-notice-bg: #fffbeb;
+  --home-notice-ink: #92400e;
+  --home-error: #c13515;
+}
+
+/* ===== Espace client : accent vert de la marque + menu clair (scopé par AppSidebar) ===== */
+html[data-imr-role="client"] {
+  --primary: 160 59% 30%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 160 59% 30%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 0 0% 13%;
+  --sidebar-primary: 160 59% 30%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 96%;
+  --sidebar-accent-foreground: 0 0% 13%;
+  --sidebar-border: 0 0% 92%;
+  --sidebar-ring: 160 59% 30%;
+}
+html.dark[data-imr-role="client"] {
+  --sidebar-background: 222 47% 8%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-accent: 217 19% 15%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 19% 15%;
+}
+
+/* ===== Admin / agent : même menu clair et même accent vert que l'espace client ===== */
+html[data-imr-sidebar="clair"] {
+  /* Accent vert de la marque sur toutes les pages admin / agent (boutons, liens, sélections) */
+  --primary: 160 59% 30%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 160 59% 30%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 0 0% 13%;
+  --sidebar-primary: 160 59% 30%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 0 0% 96%;
+  --sidebar-accent-foreground: 0 0% 13%;
+  --sidebar-border: 0 0% 92%;
+  --sidebar-ring: 160 59% 30%;
+}
+html.dark[data-imr-sidebar="clair"] {
+  --sidebar-background: 222 47% 8%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-accent: 217 19% 15%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 217 19% 15%;
+}
+
+/* Barre du bas client : bulle flottante en verre dépoli (façon iOS) */
+.imr-glass-nav {
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  backdrop-filter: saturate(180%) blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.04),
+    0 8px 28px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+.dark .imr-glass-nav {
+  background: rgba(28, 28, 30, 0.72);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .imr-glass-nav { background: rgba(255, 255, 255, 0.97); }
+  .dark .imr-glass-nav { background: rgba(28, 28, 30, 0.97); }
+}
+
+/* ==== Steeve 3D, déclencheur de la messagerie ==== */
+/* Largeur du canevas (le personnage en occupe une partie) : discret sur mobile, lisible sur ordinateur. */
+.steeve-launcher-size {
+  --steeve-size: 145px;
+  width: var(--steeve-size);
+}
+@media (max-width: 600px) {
+  .steeve-launcher-size { --steeve-size: 82px; }
+}
+@media (min-width: 601px) and (max-width: 1024px) {
+  .steeve-launcher-size { --steeve-size: 115px; }
+}
+@media (min-width: 1800px) {
+  .steeve-launcher-size { --steeve-size: 165px; }
+}
+.steeve-app-launcher {
+  bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+/* Application mobile : Steeve se place au-dessus de la barre de navigation du bas. */
+html.imr-native-shell .steeve-app-launcher,
+html.imr-native-shell .steeve-public-launcher {
+  bottom: calc(max(env(safe-area-inset-bottom, 0px), 12px) + 84px);
+}
+
+/* ───────────── Liquid Glass (style Apple iOS 26) ─────────────
+   Verre clair qui laisse passer le contenu, reflet spéculaire en haut,
+   liseré lumineux, ombre douce. Boutons en capsule, barre du bas flottante. */
+@layer components {
+  .imr-lg-tint,
+  .imr-lg-glass {
+    position: relative;
+    isolation: isolate;
+    -webkit-backdrop-filter: blur(14px) saturate(180%);
+    backdrop-filter: blur(14px) saturate(180%);
+    transition: transform .18s cubic-bezier(.2,.8,.2,1), box-shadow .18s ease, background-color .18s ease, filter .18s ease;
+  }
+  /* Bouton principal : verre teinté vert Immo-Rama */
+  .imr-lg-tint {
+    color: hsl(var(--primary-foreground));
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,0) 48%),
+      hsl(var(--lg-tint, var(--primary)) / .9);
+    border: 1px solid rgba(255,255,255,.32);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.55),
+      inset 0 -1px 1px rgba(0,0,0,.10),
+      0 1px 2px hsl(var(--lg-tint, var(--primary)) / .25),
+      0 6px 16px -6px hsl(var(--lg-tint, var(--primary)) / .42);
+  }
+  .imr-lg-tint:hover { filter: brightness(1.05) saturate(1.05); box-shadow: inset 0 1px 0 rgba(255,255,255,.6), inset 0 -1px 1px rgba(0,0,0,.1), 0 2px 4px hsl(var(--lg-tint, var(--primary)) / .25), 0 10px 24px -8px hsl(var(--lg-tint, var(--primary)) / .6); }
+  .imr-lg-tint:active { filter: brightness(.96); }
+  .imr-lg-danger { --lg-tint: var(--destructive); color: hsl(var(--destructive-foreground)); }
+  .imr-lg-success { --lg-tint: 142 72% 32%; color: #fff; }
+  .imr-lg-warning { --lg-tint: 38 92% 50%; color: #fff; }
+
+  /* Bouton secondaire : verre clair */
+  .imr-lg-glass {
+    color: hsl(var(--foreground));
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.75) 0%, rgba(255,255,255,.45) 100%);
+    border: 1px solid rgba(255,255,255,.7);
+    box-shadow:
+      0 0 0 .5px rgba(0,0,0,.08),
+      inset 0 1px 0 rgba(255,255,255,.95),
+      inset 0 -1px 1px rgba(0,0,0,.04),
+      0 4px 14px -6px rgba(0,0,0,.18);
+  }
+  .imr-lg-glass:hover { background: linear-gradient(180deg, rgba(255,255,255,.9) 0%, rgba(255,255,255,.6) 100%); }
+  .imr-lg-glass:active { background: rgba(255,255,255,.55); }
+  .dark .imr-lg-glass {
+    background: linear-gradient(180deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.06) 100%);
+    border-color: rgba(255,255,255,.14);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 14px -6px rgba(0,0,0,.6);
+  }
+  .dark .imr-lg-glass:hover { background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,.1) 100%); }
+  .dark .imr-lg-tint { border-color: rgba(255,255,255,.18); }
+
+  /* Bouton discret : verre qui n'apparaît qu'au survol / à l'appui */
+  .imr-lg-plain { transition: background-color .18s ease, transform .18s cubic-bezier(.2,.8,.2,1); }
+  .imr-lg-plain:hover { background: hsl(var(--foreground) / .06); }
+  .imr-lg-plain:active { background: hsl(var(--foreground) / .1); }
+
+  /* Lentille de l'onglet actif (barre du bas, pastilles de filtre) */
+  .imr-lg-lens {
+    background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.7) 100%);
+    box-shadow:
+      0 0 0 .5px rgba(0,0,0,.06),
+      inset 0 1px 0 rgba(255,255,255,1),
+      inset 0 -1px 2px hsl(var(--primary) / .12),
+      0 2px 10px -2px hsl(var(--primary) / .28);
+  }
+  .dark .imr-lg-lens {
+    background: linear-gradient(180deg, hsl(var(--primary) / .38) 0%, hsl(var(--primary) / .22) 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 10px -2px rgba(0,0,0,.6);
+  }
+}
+
+/* Barre du bas : verre liquide plus transparent, liseré spéculaire */
+.imr-glass-nav {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255,255,255,.62) 0%, rgba(255,255,255,.48) 100%);
+  -webkit-backdrop-filter: blur(22px) saturate(200%) brightness(1.04);
+  backdrop-filter: blur(22px) saturate(200%) brightness(1.04);
+  border: 1px solid rgba(255,255,255,.75);
+  box-shadow:
+    0 0 0 .5px rgba(0,0,0,.08),
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -1px 0 rgba(255,255,255,.35),
+    0 10px 30px -6px rgba(0,0,0,.20),
+    0 2px 6px rgba(0,0,0,.06);
+}
+.imr-glass-nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(120% 60% at 50% -10%, rgba(255,255,255,.55), rgba(255,255,255,0) 60%);
+}
+.dark .imr-glass-nav {
+  background: linear-gradient(180deg, rgba(44,44,46,.62) 0%, rgba(28,28,30,.55) 100%);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 10px 30px -6px rgba(0,0,0,.6);
+}
+.dark .imr-glass-nav::before { background: radial-gradient(120% 60% at 50% -10%, rgba(255,255,255,.12), rgba(255,255,255,0) 60%); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .imr-glass-nav, .imr-lg-glass { background: hsl(var(--background)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .imr-glass-nav { background: rgba(255,255,255,.97); }
+  .dark .imr-glass-nav { background: rgba(28,28,30,.97); }
+}
+
+/* Liquid Glass sur le site public : teinte = vert accent du site (--home-accent) */
+.imr-lg-tint.imr-lg-accent {
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.26) 0%, rgba(255,255,255,0) 50%),
+    var(--home-accent, hsl(var(--primary)));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.5),
+    inset 0 -1px 1px rgba(0,0,0,.12),
+    0 1px 2px rgba(31,122,92,.25),
+    0 6px 16px -6px rgba(31,122,92,.5);
+}
+/* Rail de choix segmenté (Louer / Acheter, onglets, vues) */
+.imr-lg-segment {
+  background: linear-gradient(180deg, rgba(118,118,128,.10) 0%, rgba(118,118,128,.14) 100%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+  backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,.05), inset 0 0 0 .5px rgba(0,0,0,.04);
+}
+.dark .imr-lg-segment { background: rgba(255,255,255,.08); }
+.imr-lg-segment > * { border-radius: 9999px; }
+.imr-lg-segment > [data-state=active] {
+  color: hsl(var(--foreground));
+  background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(255,255,255,.75) 100%);
+  box-shadow: 0 0 0 .5px rgba(0,0,0,.06), inset 0 1px 0 #fff, 0 2px 8px -2px rgba(0,0,0,.18);
+}
+.dark .imr-lg-segment > [data-state=active] {
+  background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,.1) 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 8px -2px rgba(0,0,0,.6);
+}
+
+/* ───────────── Liquid Glass : menu latéral, en-tête de bienvenue, KPI ───────────── */
+/* Menu latéral (ordinateur : panneau flottant ; mobile : tiroir) */
+.group[data-variant=floating] > div > [data-sidebar=sidebar],
+[data-sidebar=sidebar][data-mobile=true] {
+  background: linear-gradient(180deg, rgba(255,255,255,.80) 0%, rgba(255,255,255,.64) 100%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow:
+    0 0 0 .5px rgba(0,0,0,.07),
+    inset 0 1px 0 rgba(255,255,255,1),
+    0 12px 40px -12px rgba(0,0,0,.22);
+}
+.group[data-variant=floating] > div > [data-sidebar=sidebar] { border-radius: 24px; overflow: hidden; border-color: rgba(255,255,255,.85); }
+[data-sidebar=sidebar][data-mobile=true] { border-radius: 0 26px 26px 0; border-left: 0; }
+.dark .group[data-variant=floating] > div > [data-sidebar=sidebar],
+.dark [data-sidebar=sidebar][data-mobile=true] {
+  background: linear-gradient(180deg, rgba(40,40,44,.78) 0%, rgba(24,24,28,.68) 100%);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 12px 40px -12px rgba(0,0,0,.7);
+}
+
+/* Carte KPI en verre */
+.imr-lg-card {
+  position: relative;
+  background:
+    radial-gradient(120% 70% at 0% 0%, hsl(var(--primary) / .07), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.86) 0%, rgba(255,255,255,.66) 100%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow:
+    0 0 0 .5px rgba(0,0,0,.07),
+    inset 0 1px 0 #fff,
+    inset 0 -1px 1px rgba(0,0,0,.03),
+    0 10px 26px -14px rgba(0,0,0,.22);
+}
+.dark .imr-lg-card {
+  background:
+    radial-gradient(120% 70% at 0% 0%, hsl(var(--primary) / .14), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.05) 100%);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 10px 26px -14px rgba(0,0,0,.7);
+}
+
+/* En-tête de bienvenue : verre posé sur des reflets de couleur */
+.imr-lg-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 120% at 0% 0%, hsl(var(--primary) / .30), transparent 65%),
+    radial-gradient(55% 110% at 100% 0%, rgba(246,190,92,.32), transparent 65%),
+    radial-gradient(70% 110% at 60% 130%, hsl(var(--primary) / .24), transparent 65%),
+    #ffffff;
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow:
+    0 0 0 .5px rgba(0,0,0,.07),
+    inset 0 1px 0 #fff,
+    0 14px 36px -18px rgba(0,0,0,.25);
+}
+.imr-lg-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 22%);
+}
+.dark .imr-lg-hero {
+  background:
+    linear-gradient(180deg, rgba(30,30,34,.55) 0%, rgba(20,20,24,.45) 100%),
+    radial-gradient(55% 90% at 8% 0%, hsl(var(--primary) / .45), transparent 62%),
+    radial-gradient(45% 80% at 96% 10%, rgba(246,190,92,.22), transparent 62%),
+    radial-gradient(60% 90% at 65% 125%, hsl(var(--primary) / .3), transparent 62%),
+    hsl(var(--background));
+  border-color: rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 14px 36px -18px rgba(0,0,0,.7);
+}
+.dark .imr-lg-hero::before { background: radial-gradient(120% 55% at 50% -15%, rgba(255,255,255,.10), rgba(255,255,255,0) 60%); }
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-variant=floating] [data-sidebar=sidebar], [data-sidebar=sidebar][data-mobile=true], .imr-lg-card {
+    background: hsl(var(--card)); -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+}
+[data-sidebar=sidebar] .imr-lg-lens {
+  background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.78) 100%);
+}
+.dark [data-sidebar=sidebar] .imr-lg-lens {
+  background: linear-gradient(180deg, hsl(var(--primary) / .38) 0%, hsl(var(--primary) / .22) 100%);
+}
+
+/* ───────────── Liquid Glass : pages de connexion ───────────── */
+.imr-lg-auth-card {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, rgba(255,255,255,.74) 0%, rgba(255,255,255,.58) 100%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
+  backdrop-filter: blur(34px) saturate(190%);
+  border: 1px solid rgba(255,255,255,.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -1px 0 rgba(255,255,255,.25),
+    0 0 0 .5px rgba(0,0,0,.08),
+    0 30px 80px -24px rgba(0,0,0,.6);
+}
+.imr-lg-auth-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,0) 35%);
+}
+.dark .imr-lg-auth-card {
+  background: linear-gradient(180deg, rgba(36,36,40,.72) 0%, rgba(22,22,26,.62) 100%);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 30px 80px -24px rgba(0,0,0,.8);
+}
+.dark .imr-lg-auth-card::before { background: linear-gradient(160deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 35%); }
+
+/* Champ de saisie en verre */
+.imr-lg-field {
+  background: rgba(255,255,255,.58);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.8);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.06), 0 0 0 .5px rgba(0,0,0,.07);
+  transition: background-color .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.imr-lg-field:focus {
+  background: rgba(255,255,255,.85);
+  border-color: hsl(var(--primary) / .55);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.05), 0 0 0 4px hsl(var(--primary) / .16);
+}
+.imr-lg-field[aria-invalid=true] { border-color: hsl(var(--destructive) / .6); }
+.dark .imr-lg-field { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); }
+.dark .imr-lg-field:focus { background: rgba(255,255,255,.12); }
+@media (prefers-reduced-transparency: reduce) {
+  .imr-lg-auth-card { background: hsl(var(--background)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+html[data-imr-auth] {
+  --primary: 160 59% 30%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 160 59% 30%;
+}
+
+/* ───────────── Liquid Glass : bandeau des stories ───────────── */
+.imr-story-ring {
+  position: relative;
+  border-radius: 9999px;
+  padding: 2.5px;
+  background: conic-gradient(from 210deg, hsl(var(--primary)), hsl(158 60% 52%), hsl(var(--primary) / .55), hsl(var(--primary)));
+  box-shadow: 0 6px 16px -8px hsl(var(--primary) / .55);
+  transition: transform .18s cubic-bezier(.2,.8,.2,1);
+}
+.imr-story-ring[data-viewed=true] {
+  background: linear-gradient(180deg, rgba(0,0,0,.14), rgba(0,0,0,.08));
+  box-shadow: none;
+}
+.imr-story-ring > .imr-story-inner {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 9999px;
+  padding: 2px;
+  background: rgba(255,255,255,.95);
+}
+.dark .imr-story-ring > .imr-story-inner { background: hsl(var(--background)); }
+.imr-story-ring .imr-story-media {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(240,243,240,.8));
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 .5px rgba(0,0,0,.06);
+}
+.dark .imr-story-ring .imr-story-media { background: rgba(255,255,255,.08); box-shadow: none; }
+.imr-story-btn:active .imr-story-ring { transform: scale(.94); }

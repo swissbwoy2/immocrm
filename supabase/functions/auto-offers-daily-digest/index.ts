@@ -1,4 +1,5 @@
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailParagraph, emailSubheading, emailTable, escapeEmailHtml, emailUrl } from '../_shared/email-shell.ts';
+import { formatDateFR, formatDateTimeFR } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "../_shared/tracked-resend.ts";
@@ -23,12 +24,8 @@ function needsManual(commentaires: string | null, visits: any[]): boolean {
 
 function fmtDateCH(iso: string | null): string {
   if (!iso) return "—";
-  try {
-    return new Date(iso).toLocaleString("fr-CH", {
-      timeZone: "Europe/Zurich", day: "2-digit", month: "2-digit", year: "numeric",
-      hour: "2-digit", minute: "2-digit",
-    });
-  } catch { return iso; }
+  // Europe/Zurich ; une date sans heure n'affiche jamais « 00:00 »
+  return formatDateTimeFR(iso, { weekday: false, fallback: iso });
 }
 
 serve(async (req) => {
@@ -80,27 +77,28 @@ serve(async (req) => {
       lien: o.lien_annonce ?? "",
     }));
 
-    const html = renderCorporateEmail({ title: `Récap Auto-Offres — ${startOfDay.toLocaleDateString('fr-CH', {timeZone:'Europe/Zurich'})}`, category: "SUIVI ÉQUIPE", bodyHtml: `
-        <p style="margin:0 0 18px;"><strong>${totalOffres}</strong> offres automatiques envoyées à <strong>${clientsServis}</strong> client(s).</p>
-
-        <h3 style="margin-top:24px;color:#065f46;">Visites planifiées aujourd'hui (${visitesFixees.length})</h3>
-        ${visitesFixees.length === 0 ? '<p style="color:#666;">Aucune visite planifiée.</p>' : `
-          <table style="width:100%;border-collapse:collapse;font-size:14px;">
-            <thead><tr style="background:#f3f4f6;"><th style="text-align:left;padding:6px;">Date</th><th style="text-align:left;padding:6px;">Client</th><th style="text-align:left;padding:6px;">Adresse</th></tr></thead>
-            <tbody>${visitesFixees.map(v => `<tr><td style="padding:6px;border-top:1px solid #eee;">${fmtDateCH(v.date)}</td><td style="padding:6px;border-top:1px solid #eee;">${v.client}</td><td style="padding:6px;border-top:1px solid #eee;">${v.adresse}</td></tr>`).join("")}</tbody>
-          </table>
-        `}
-
-        <h3 style="margin-top:24px;color:#b91c1c;">À gérer manuellement (${manuel.length})</h3>
-        ${manuel.length === 0 ? '<p style="color:#666;">Rien à faire, toutes les visites sont fixées.</p>' : `
-          <table style="width:100%;border-collapse:collapse;font-size:14px;">
-            <thead><tr style="background:#f3f4f6;"><th style="text-align:left;padding:6px;">Client</th><th style="text-align:left;padding:6px;">Adresse</th><th style="text-align:left;padding:6px;">Info</th></tr></thead>
-            <tbody>${manuel.map(m => `<tr><td style="padding:6px;border-top:1px solid #eee;">${m.client}<br><span style="color:#666;font-size:12px;">${m.email}</span></td><td style="padding:6px;border-top:1px solid #eee;">${m.adresse}${m.lien ? ` <a href="${m.lien}">↗</a>` : ""}</td><td style="padding:6px;border-top:1px solid #eee;">${m.info}</td></tr>`).join("")}</tbody>
-          </table>
-        `}
-
-        <p style="margin-top:32px;"><a href="${APP_URL}/admin/offres-auto" style="background:#205a43;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;">Ouvrir /admin/offres-auto</a></p>
-      ` });
+    const e = escapeEmailHtml;
+    const muted = (t: string) => `<span style="color:#66736a;font-size:13px;">${t}</span>`;
+    const html = renderCorporateEmail({
+      title: `Récap Auto-Offres — ${formatDateFR(now)}`,
+      preview: `${totalOffres} offres envoyées, ${visitesFixees.length} visite(s) planifiée(s), ${manuel.length} à gérer.`,
+      category: "SUIVI ÉQUIPE",
+      bodyHtml:
+        emailParagraph(`<strong>${totalOffres}</strong> offres automatiques envoyées à <strong>${clientsServis}</strong> client(s).`) +
+        emailSubheading(`Visites planifiées aujourd'hui (${visitesFixees.length})`) +
+        (visitesFixees.length === 0
+          ? emailParagraph("Aucune visite planifiée.", true)
+          : emailTable(["Date", "Client", "Adresse"], visitesFixees.map((v) => [e(fmtDateCH(v.date)), e(v.client), e(v.adresse)]))) +
+        emailSubheading(`À gérer manuellement (${manuel.length})`) +
+        (manuel.length === 0
+          ? emailParagraph("Rien à faire, toutes les visites sont fixées.", true)
+          : emailTable(["Client", "Adresse", "Info"], manuel.map((m) => [
+            `${e(m.client)}${m.email ? `<br>${muted(e(m.email))}` : ""}`,
+            `${e(m.adresse)}${m.lien ? ` <a href="${e(emailUrl(m.lien))}" style="color:#205a43;">↗</a>` : ""}`,
+            e(m.info),
+          ]))) +
+        emailButton("Ouvrir /admin/offres-auto", `${APP_URL}/admin/offres-auto`),
+    });
 
     if (!resendApiKey) {
       console.log("RESEND_API_KEY not configured, skipping email");

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUTMParams } from '@/hooks/useUTMParams';
-import { ArrowLeft, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
@@ -14,18 +13,13 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
-import { LEGAL_CHECKBOXES } from '@/components/mandat-v3/types';
+import { legalCheckboxesFor } from '@/components/mandat/achat/achatMandat';
+import { acceptedConsentsFor, contractTextFor, contractTitleFor } from '@/components/mandat/mandatContrats';
 import MandatAchatStepSignature from '@/components/mandat/achat/MandatAchatStepSignature';
 import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
 import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
 import MandatAchatStepPersonal from '@/components/mandat/achat/MandatAchatStepPersonal';
-import { LandingFormShell } from '@/components/forms-premium/LandingFormShell';
-import { LandingStepIndicator } from '@/components/forms-premium/LandingStepIndicator';
-import { LandingGuaranteeBanner } from '@/components/forms-premium/LandingGuaranteeBanner';
-import { LandingProgressBlock } from '@/components/forms-premium/LandingProgressBlock';
-import { LandingFormCard } from '@/components/forms-premium/LandingFormCard';
-import { LandingButton } from '@/components/forms-premium/LandingButton';
-import { PremiumStepTransition } from '@/components/forms-premium/PremiumStepTransition';
+import { FunnelBottomBar, FunnelHeader, FunnelMain, FunnelPage, StepTransition, TrustLine } from '@/components/funnel-ui/FunnelKit';
 
 const normalizeDate = (val: string | null | undefined): string | null =>
   val && val.trim() !== '' ? val.trim() : null;
@@ -59,7 +53,7 @@ const PURCHASE_STEPS: StepDef[] = [
   { key: 'financement', title: 'Financement', component: MandatAchatStepFinancing, icon: '💰' },
   { key: 'situation_perso', title: 'Situation personnelle', component: MandatAchatStepPersonal, icon: '👤' },
   { key: 'co_acquereurs', title: 'Co-acquéreurs', component: MandatFormStep5, icon: '👥' },
-  { key: 'docs', title: 'Documents', component: MandatFormStep6, icon: '📄' },
+  // Pas d'étape Documents à l'achat : les justificatifs sont demandés ultérieurement, dans l'espace client.
   { key: 'signature', title: 'Signature', component: MandatAchatStepSignature, icon: '✍️' },
 ];
 
@@ -69,6 +63,7 @@ export default function NouveauMandat() {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<MandatFormData>(initialFormData);
   const [submitting, setSubmitting] = useState(false);
+  const [journeyPreset, setJourneyPreset] = useState(false);
 
   // Charger les données sauvegardées
   useEffect(() => {
@@ -77,6 +72,11 @@ export default function NouveauMandat() {
       try {
         const parsed = JSON.parse(saved);
         setFormData({ ...initialFormData, ...parsed });
+        // Projet déjà choisi (tunnel /courtier ou brouillon) : on passe directement aux informations.
+        if (parsed?.journey === 'rental' || parsed?.journey === 'purchase') {
+          setJourneyPreset(true);
+          setCurrentStep((s) => (s === 0 ? 1 : s));
+        }
       } catch (e) {
         console.error('Error parsing saved data:', e);
       }
@@ -127,7 +127,9 @@ export default function NouveauMandat() {
 
   const steps = formData.journey === 'purchase' ? PURCHASE_STEPS : RENTAL_STEPS;
   const currentStepDef = steps[currentStep] ?? steps[0];
-  const allLegalAccepted = LEGAL_CHECKBOXES.every((cb) => (formData as any)[cb.key] === true);
+  // Dispositions du parcours choisi (achat : mandat d'achat révisé ; location : mandat de location).
+  const allLegalAccepted = legalCheckboxesFor(formData.journey, formData.type_recherche)
+    .every((cb) => (formData as any)[cb.key] === true);
 
   const validateStep = (step: number): boolean => {
     const def = steps[step];
@@ -214,7 +216,7 @@ export default function NouveauMandat() {
         return;
       }
 
-      const isPurchase = formData.journey === 'purchase' || formData.type_recherche === 'Acheter';
+      const isPurchase = formData.journey ? formData.journey === 'purchase' : formData.type_recherche === 'Acheter';
       // ⚠️ Activation exacte : CHF 2'500 pour achat (imputee sur commission 1 %), CHF 300 pour location.
       const montantAcompte = isPurchase ? 2500 : 300;
 
@@ -336,7 +338,13 @@ export default function NouveauMandat() {
         signature_data: formData.signature_data,
         cgv_acceptees: formData.cgv_acceptees,
         cgv_acceptees_at: new Date().toISOString(),
-        legal_consents: formData.legal_consents_at as any,
+        // Horodatage de chaque disposition + copie exacte du mandat affiché et signé (pour « Mon contrat » et l'admin)
+        legal_consents: {
+          ...(formData.legal_consents_at || {}),
+          _contrat_titre: contractTitleFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+          _contrat_texte: contractTextFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+          _contrat_signe_le: new Date().toISOString(),
+        } as any,
         code_promo: formData.code_promo,
         payment_method: formData.payment_method ?? 'qr_invoice',
         montant_acompte: montantAcompte,
@@ -432,7 +440,7 @@ export default function NouveauMandat() {
             vehicules: formData.vehicules,
             numero_plaques: formData.numero_plaques,
             decouverte_agence: formData.decouverte_agence,
-            type_recherche: formData.type_recherche,
+            type_recherche: isPurchase ? 'Acheter' : formData.type_recherche,
             nombre_occupants: formData.nombre_occupants,
             type_bien: formData.type_bien,
             pieces_recherche: formData.pieces_recherche,
@@ -443,7 +451,13 @@ export default function NouveauMandat() {
             candidats: formData.candidats,
             signature_data: formData.signature_data,
             code_promo: formData.code_promo,
-            payment_method: formData.payment_method ?? 'qr_invoice'
+            payment_method: formData.payment_method ?? 'qr_invoice',
+            // Mandat réellement affiché et signé + dispositions approuvées (horodatées)
+            demande_id: demandeMandatId,
+            contract_title: contractTitleFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+            contract_text: contractTextFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+            consents: acceptedConsentsFor({ ...formData, type_recherche: isPurchase ? 'Acheter' : formData.type_recherche }),
+            signed_at: new Date().toISOString(),
           }
         });
         console.log('Mandat PDF email sent');
@@ -488,7 +502,7 @@ export default function NouveauMandat() {
               employeur: formData.employeur,
               revenus_mensuels: formData.revenus_mensuels,
               decouverte_agence: formData.decouverte_agence,
-              type_recherche: formData.type_recherche,
+              type_recherche: isPurchase ? 'Acheter' : formData.type_recherche,
               nombre_occupants: formData.nombre_occupants,
               type_bien: formData.type_bien,
               pieces_recherche: formData.pieces_recherche,
@@ -585,75 +599,80 @@ export default function NouveauMandat() {
     }
   };
 
+  // Projet déjà connu (tunnel /courtier, brouillon, compte) : on ne repose pas la question louer/acheter.
+  const offset = journeyPreset ? 1 : 0;
+  const shownStep = Math.max(0, currentStep - offset);
+  const shownTotal = steps.length - offset;
+  const isFirst = currentStep <= offset;
+  const isLastStep = currentStep === steps.length - 1;
+
+  const onBack = () => {
+    if (!isFirst) return handlePrevious();
+    if (window.history.length > 1) navigate(-1); else navigate('/');
+  };
+
   return (
-    <LandingFormShell>
-      <div className="container mx-auto px-4 max-w-3xl pt-8 md:pt-12 pb-16 space-y-6">
-        {/* Mini-hero aligné landing */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/40 rounded-full px-4 py-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-xs md:text-sm font-semibold text-primary">
-              {isPurchaseJourney ? 'Accompagnement à l\'achat' : 'Nouveau mandat de recherche'}
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight">
-            {isPurchaseJourney
-              ? <>Démarrons votre <span className="text-primary">projet d'achat</span></>
-              : <>Démarrons votre <span className="text-primary">recherche</span></>}
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            {isPurchaseJourney
-              ? 'Acompte d\'activation CHF 2\'499.– · Mandat 6 mois à compter de l\'activation par votre conseiller.'
-              : 'Quelques minutes suffisent. Garantie remboursement 90 jours, sans succès.'}
-          </p>
-        </div>
-
-        <LandingGuaranteeBanner />
-        <LandingProgressBlock
-          currentStep={currentStep}
-          totalSteps={steps.length}
-          stepTitle={currentStepDef.title}
-        />
-        <LandingStepIndicator steps={steps} currentStep={currentStep} />
-
-        <LandingFormCard>
-          <PremiumStepTransition stepKey={currentStep} direction={1}>
-            {currentStepDef.key === 'criteres' ? (
-              <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
-            ) : (
-              <StepComponent data={formData} onChange={handleChange} />
+    <FunnelPage className="theme-luxury funnel-skin">
+      <FunnelHeader step={shownStep} total={shownTotal} width="max-w-2xl" />
+      <FunnelMain width="max-w-2xl">
+        {isFirst && (
+          <section className="mb-8">
+            <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-[#222222] md:text-[40px]">
+              {currentStepDef.key === 'journey'
+                ? 'Démarrons votre mandat'
+                : isPurchaseJourney ? "Démarrons votre projet d'achat" : 'Démarrons votre recherche'}
+            </h1>
+            <p className="mt-2 text-[16px] leading-relaxed text-[#3f3f3f]">
+              Quelques minutes suffisent. Votre brouillon est enregistré automatiquement sur cet appareil.
+            </p>
+            {formData.journey && (
+              <div className="mt-5 rounded-[14px] bg-[#f7f7f7] p-5">
+                <p className="text-[14px] font-semibold text-[#6a6a6a]">
+                  {isPurchaseJourney ? "Mandat d'achat · 6 mois" : 'Mandat de recherche location · 90 jours'}
+                </p>
+                <p className="mt-1 text-[22px] font-semibold tracking-[-0.2px] text-[#222222]">
+                  {isPurchaseJourney ? "Activation 2'500.– CHF" : 'Activation 300.– CHF'}
+                </p>
+                <p className="mt-2 text-[15px] leading-relaxed text-[#3f3f3f]">
+                  {isPurchaseJourney
+                    ? "Imputée sur la commission de 1 % du prix d'achat. Remboursée si aucun achat au terme des 6 mois."
+                    : "Déduite de la commission d'un mois de loyer, due seulement si un bail est signé. Remboursée si aucun bail au terme des 90 jours."}
+                  {' '}Paiement par facture QR ou Twint via{' '}
+                  <a href="tel:+41764839199" className="cursor-pointer font-medium text-[#222222] underline">076 483 91 99</a>.
+                </p>
+                {journeyPreset && (
+                  <button type="button" onClick={() => { setJourneyPreset(false); setCurrentStep(0); window.scrollTo(0, 0); }}
+                    className="mt-3 cursor-pointer text-[15px] font-semibold text-[#222222] underline underline-offset-4">
+                    {isPurchaseJourney ? 'Je veux plutôt louer' : 'Je veux plutôt acheter'}
+                  </button>
+                )}
+              </div>
             )}
-          </PremiumStepTransition>
+          </section>
+        )}
 
-          <div className="flex justify-between items-center mt-10 pt-6 border-t border-border/50">
-            <LandingButton
-              variant="back"
-              onClick={currentStep === 0 ? () => navigate('/login') : handlePrevious}
-            >
-              {currentStep === 0 ? <><ArrowLeft className="h-4 w-4" /> Retour</> : undefined}
-            </LandingButton>
+        <StepTransition stepKey={currentStepDef.key} dir={1}>
+          {currentStepDef.key === 'criteres' ? (
+            <MandatFormStep4 data={formData} onChange={handleChange} onAddCoBuyer={handleAddCoBuyer} />
+          ) : (
+            <StepComponent data={formData} onChange={handleChange} />
+          )}
+        </StepTransition>
 
-            {currentStep < steps.length - 1 ? (
-              <LandingButton variant="next" onClick={handleNext} disabled={currentStepDef.key === 'journey' && !formData.journey}>
-                Continuer
-              </LandingButton>
-            ) : (
-              <LandingButton
-                variant="submit"
-                onClick={handleSubmit}
-                loading={submitting}
-                disabled={submitting || !allLegalAccepted || !formData.signature_data}
-              >
-                Envoyer la demande
-              </LandingButton>
-            )}
-          </div>
-        </LandingFormCard>
+        <TrustLine>Vos recherches seront activées dès réception de l'acompte.</TrustLine>
+      </FunnelMain>
 
-        <p className="text-center text-xs text-muted-foreground">
-          Vos recherches seront activées dès réception de l'acompte.
-        </p>
-      </div>
-    </LandingFormShell>
+      <FunnelBottomBar
+        step={shownStep}
+        total={shownTotal}
+        width="max-w-2xl"
+        showBack
+        onBack={onBack}
+        onNext={isLastStep ? handleSubmit : handleNext}
+        loading={submitting}
+        nextDisabled={isLastStep ? (!allLegalAccepted || !formData.signature_data) : (currentStepDef.key === 'journey' && !formData.journey)}
+        nextLabel={isLastStep ? 'Envoyer la demande' : 'Continuer'}
+      />
+    </FunnelPage>
   );
 }

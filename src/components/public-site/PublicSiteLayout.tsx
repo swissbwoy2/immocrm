@@ -8,8 +8,9 @@ import { ScrollProgressBar } from './animations/ScrollProgressBar';
 import { useStoryDialogOpen } from './showcase/storyDialogState';
 
 const CookieConsentBanner = lazy(() => import('@/components/CookieConsentBanner').then(m => ({ default: m.CookieConsentBanner })));
+const SteevePublicChat = lazy(() => import('./SteevePublicChat').then(m => ({ default: m.SteevePublicChat })));
 
-function PublicSiteInner({ children }: { children: ReactNode }) {
+function PublicSiteInner({ children, stickyCta }: { children: ReactNode; stickyCta?: ReactNode }) {
   useWhatsAppTracking();
   const storyDialogOpen = useStoryDialogOpen();
 
@@ -67,19 +68,13 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
 
       <PublicSiteFooter />
 
-      {/* Sticky Mobile CTA */}
-      <StickyMobileCTA />
+      {/* Sticky Mobile CTA (une page peut fournir sa propre barre, ex. l'accueil) */}
+      {stickyCta === undefined ? <StickyMobileCTA /> : stickyCta}
 
-      {/* WhatsApp / Google Reviews Widget — desktop only to avoid overlapping mobile sticky CTA */}
-      <div
-        data-floating-widget
-        className={`hidden md:block fixed left-6 bottom-6 z-[60] transition-opacity duration-300 ${
-          storyDialogOpen ? 'opacity-0 pointer-events-none' : 'opacity-90 hover:opacity-100'
-        }`}
-      >
-        <div className="elfsight-app-015a7ee8-3cf5-416f-a607-eb9d4a46e860" data-elfsight-app-lazy></div>
-      </div>
-
+      {/* Steeve : assistant des visiteurs (affiché seulement s'il est activé) */}
+      <Suspense fallback={null}>
+        <SteevePublicChat hidden={storyDialogOpen} />
+      </Suspense>
 
       {/* Cookie Consent */}
       <Suspense fallback={null}>
@@ -89,10 +84,10 @@ function PublicSiteInner({ children }: { children: ReactNode }) {
   );
 }
 
-export function PublicSiteLayout({ children }: { children: ReactNode }) {
+export function PublicSiteLayout({ children, stickyCta }: { children: ReactNode; stickyCta?: ReactNode }) {
   return (
     <SearchTypeProvider>
-      <PublicSiteInner>{children}</PublicSiteInner>
+      <PublicSiteInner stickyCta={stickyCta}>{children}</PublicSiteInner>
     </SearchTypeProvider>
   );
 }

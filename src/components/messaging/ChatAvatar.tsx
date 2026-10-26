@@ -31,7 +31,7 @@ const getColorFromName = (name: string): string => {
   }
   
   const hue = hash % 360;
-  return `hsl(${hue}, 60%, 50%)`;
+  return `hsl(${hue}, 40%, 46%)`;
 };
 
 export const ChatAvatar: React.FC<ChatAvatarProps> = ({
@@ -45,7 +45,7 @@ export const ChatAvatar: React.FC<ChatAvatarProps> = ({
   const bgColor = getColorFromName(name);
 
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <Avatar className={cn(sizeClasses[size], className)}>
         {avatarUrl && <AvatarImage src={avatarUrl} alt={name} />}
         <AvatarFallback 
@@ -56,7 +56,7 @@ export const ChatAvatar: React.FC<ChatAvatarProps> = ({
         </AvatarFallback>
       </Avatar>
       {online && (
-        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-success border-2 border-background" />
+        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-emerald-500 border-2 border-card" aria-label="En ligne" />
       )}
     </div>
   );

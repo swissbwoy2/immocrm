@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface VideoMedia {
@@ -35,24 +35,29 @@ function resolveMime(m: VideoMedia): string {
   return 'video/mp4';
 }
 
-export function VisitVideoPlayer({ medias, title = '🎥 Vidéo(s) de la visite' }: Props) {
+export function VisitVideoPlayer({ medias, title = 'Vidéo(s) de la visite' }: Props) {
   const list: VideoMedia[] = Array.isArray(medias) ? medias.filter(isVideoMedia) : [];
   if (list.length === 0) return null;
 
   return (
-    <div className="space-y-3">
-      <div className="text-sm font-medium">{title}</div>
+    <section className="imr-lg-card min-w-0 space-y-3 rounded-[22px] p-4" aria-label={title}>
+      <div className="flex min-h-8 items-center gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Video className="h-4 w-4" />
+        </span>
+        <h3 className="min-w-0 flex-1 truncate text-[15px] font-semibold text-foreground">{title}</h3>
+      </div>
       <div className="space-y-3">
         {list.map((m, i) => {
           const mime = resolveMime(m);
           const isMov = /\.(mov|m4v)$/i.test(m.name || m.url || '');
           return (
-            <div key={i} className="rounded-lg overflow-hidden border border-border bg-black/5">
+            <div key={i} className="overflow-hidden rounded-2xl bg-muted/60">
               <video
                 controls
                 playsInline
                 preload="metadata"
-                className="w-full max-h-[70vh] bg-black rounded-t-lg"
+                className="w-full max-h-[70vh] bg-black"
                 onError={(e) => {
                   const el = e.currentTarget.parentElement?.querySelector('[data-video-error]') as HTMLElement | null;
                   if (el) el.style.display = 'block';
@@ -69,14 +74,14 @@ export function VisitVideoPlayer({ medias, title = '🎥 Vidéo(s) de la visite'
               >
                 Format non lisible dans le navigateur — téléchargez la vidéo ci-dessous.
               </div>
-              <div className="flex items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
+              <div className="flex items-center justify-between gap-2 px-3 py-2 text-sm text-muted-foreground">
                 <span className="truncate">
                   {m.name || `Vidéo ${i + 1}`}
                   {typeof m.size === 'number' && ` · ${(m.size / (1024 * 1024)).toFixed(1)} Mo`}
                 </span>
-                <Button asChild size="sm" variant="default" className="h-7 px-2">
+                <Button asChild size="sm" variant="outline" className="min-h-10 shrink-0">
                   <a href={m.url} download={m.name || 'visite.mp4'} target="_blank" rel="noreferrer">
-                    <Download className="w-3.5 h-3.5 mr-1" /> 📥 Télécharger
+                    <Download className="w-4 h-4" /> Télécharger
                   </a>
                 </Button>
               </div>
@@ -84,6 +89,6 @@ export function VisitVideoPlayer({ medias, title = '🎥 Vidéo(s) de la visite'
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }

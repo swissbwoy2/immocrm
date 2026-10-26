@@ -1,8 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { MapPin, Bed, Maximize2, Building2, Heart, Star, ExternalLink, Sparkles } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { MapPin, Bed, Maximize2, Heart, ExternalLink, Sparkles, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { usePublicFavoris } from '@/hooks/usePublicFavoris';
@@ -87,36 +85,43 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
   // Annonce sourcée + visiteur public : on n'héberge pas la fiche, on renvoie à la source
   const externalOnly = !!annonce.lien_annonce && !userRoles.some((role) => role === 'admin' || role === 'agent');
 
+  const linkCls =
+    'block rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background';
+
   const Wrapper = ({ children }: { children: React.ReactNode }) =>
     externalOnly ? (
       <a
         href={annonce.lien_annonce as string}
         target="_blank"
         rel="noopener noreferrer nofollow"
-        className="block"
+        className={linkCls}
       >
         {children}
       </a>
     ) : (
-      <Link to={`/annonces/${annonce.slug || annonce.id}`}>{children}</Link>
+      <Link to={`/annonces/${annonce.slug || annonce.id}`} className={linkCls}>{children}</Link>
     );
+
+  const typeLabel = annonce.type_transaction === 'vente' ? 'À vendre' : 'À louer';
+  const chip =
+    'inline-flex items-center gap-1 rounded-full bg-background px-2 py-0.5 text-[11px] font-medium leading-4 text-foreground';
+  const photoCount = annonce.photos_annonces_publiques?.length ?? 0;
 
   return (
     <Wrapper>
-      <Card 
-        className={cn(
-          "group overflow-hidden transition-all duration-200 hover:shadow-lg border-border/50 bg-card",
-          featured && "ring-2 ring-primary/20 shadow-md",
-          compact ? "flex flex-row h-28" : "hover:-translate-y-0.5"
-        )}
+      <article
+        className={cn('group', compact ? 'flex flex-row h-28 gap-3' : 'flex flex-col', featured && 'is-featured')}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Image Container */}
-        <div className={cn(
-          "relative overflow-hidden bg-muted",
-          compact ? "w-32 h-full shrink-0" : "aspect-[4/3]"
-        )}>
+        {/* Photo */}
+        <div
+          className={cn(
+            'relative overflow-hidden bg-muted',
+            compact ? 'w-32 h-full shrink-0 rounded-[10px]' : 'aspect-[4/3] rounded-[14px]',
+            externalOnly && 'border border-border',
+          )}
+        >
           {externalOnly ? (
             <ExternalListingPlaceholder />
           ) : (
@@ -129,60 +134,41 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
                 if (img.src.endsWith('/placeholder.svg')) return;
                 img.src = '/placeholder.svg';
               }}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              className="w-full h-full object-cover"
             />
           )}
 
-
-          {/* Gradient + Price overlay */}
-          {!compact && (
-            <>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/60 to-transparent" />
-              <span className="absolute bottom-2 left-2 rounded-md bg-background/95 backdrop-blur-sm px-2 py-1 text-sm font-bold text-primary shadow-sm">
-                {formatPrice(annonce.prix, annonce.type_transaction)}
-              </span>
-            </>
-          )}
-
-          {/* Overlay badges */}
-          <div className="absolute top-2 left-2 flex flex-wrap gap-1">
-            <Badge 
-              variant={annonce.type_transaction === 'vente' ? 'default' : 'secondary'}
-              className="text-[10px] font-semibold px-1.5 py-0.5 shadow-sm"
-            >
-              {annonce.type_transaction === 'vente' ? 'À vendre' : 'À louer'}
-            </Badge>
+          {/* Étiquettes : une seule famille, blanches, sans ombre */}
+          <div className={cn('absolute flex flex-wrap gap-1.5', compact ? 'top-1.5 left-1.5 right-1.5' : 'top-3 left-3 right-12')}>
+            <span className={chip}>{typeLabel}</span>
             {annonce.est_mise_en_avant && (
-              <Badge className="border-0 bg-gradient-to-r from-primary to-accent text-primary-foreground text-[10px] font-bold shadow-md px-2 py-0.5 ring-1 ring-primary/30">
-                <Sparkles className="h-2.5 w-2.5 mr-0.5 fill-current" />
+              <span className={chip}>
+                <Sparkles className="h-3 w-3 text-primary fill-current" aria-hidden="true" />
                 Excellente offre
-              </Badge>
+              </span>
             )}
-
             {externalOnly && (
-              <Badge variant="secondary" className="bg-background/95 text-foreground/80 text-[10px] shadow-sm px-1.5 py-0.5">
-                <ExternalLink className="h-2.5 w-2.5 mr-0.5" />
+              <span className={chip}>
+                <ExternalLink className="h-3 w-3" aria-hidden="true" />
                 Annonce externe
-              </Badge>
+              </span>
             )}
-            {annonce.disponible_immediatement && (
-              <Badge variant="outline" className="bg-emerald-500/90 text-white border-0 text-[10px] shadow-sm px-1.5 py-0.5">
-                Dispo
-              </Badge>
-            )}
+            {annonce.disponible_immediatement && <span className={chip}>Dispo</span>}
           </div>
 
-          {/* Favorite button */}
+          {/* Favori */}
           <Button
             variant="ghost"
             size="icon"
+            aria-label={isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
             className={cn(
-              "absolute top-2 right-2 h-7 w-7 rounded-full bg-background/90 backdrop-blur-sm hover:bg-background shadow-sm transition-all",
-              isFavorite && "text-red-500"
+              'absolute rounded-full bg-background text-foreground hover:bg-background hover:scale-105 transition-transform duration-150',
+              compact ? 'bottom-1.5 right-1.5 h-7 w-7' : 'top-2.5 right-2.5 h-8 w-8',
+              isFavorite && 'text-red-500 hover:text-red-500',
             )}
             onClick={handleFavoriteClick}
           >
-            <Heart className={cn("h-3.5 w-3.5", isFavorite && "fill-current")} />
+            <Heart className={cn('h-4 w-4', isFavorite && 'fill-current')} />
           </Button>
 
           {/* Bulle annonceur (uniquement si logo/photo) */}
@@ -196,94 +182,91 @@ export function PublicAnnonceCard({ annonce, featured, compact }: PublicAnnonceC
               }}
               title={advertiserName}
               aria-label={`Voir toutes les annonces de ${advertiserName}`}
-              className="absolute bottom-2 right-2 h-9 w-9 rounded-full overflow-hidden border-2 border-background shadow-md bg-background hover:scale-105 transition-transform"
+              className="absolute bottom-3 right-3 h-9 w-9 rounded-full overflow-hidden border-2 border-background bg-background hover:scale-105 transition-transform duration-150"
             >
               <img src={annonce.annonceurs.logo_url} alt={advertiserName} className="h-full w-full object-cover" />
             </button>
           )}
 
-          {/* Photo count indicator */}
-          {!compact && annonce.photos_annonces_publiques && annonce.photos_annonces_publiques.length > 1 && (
-            <div className={cn("absolute bottom-2", annonce.annonceurs?.logo_url ? "right-14" : "right-2")}>
-              <Badge variant="secondary" className="bg-background/95 backdrop-blur-sm text-[10px] font-medium shadow-sm px-1.5 py-0.5">
-                {annonce.photos_annonces_publiques.length}
-              </Badge>
-            </div>
+          {/* Nombre de photos */}
+          {!compact && photoCount > 1 && (
+            <span
+              className={cn(chip, 'absolute bottom-3 tabular-nums', annonce.annonceurs?.logo_url ? 'right-14' : 'right-3')}
+              aria-label={`${photoCount} photos`}
+            >
+              <Camera className="h-3 w-3" aria-hidden="true" />
+              {photoCount}
+            </span>
           )}
-
         </div>
 
-        {/* Content */}
-        <CardContent className={cn("flex-1", compact ? "p-2.5 flex flex-col justify-center" : "p-3")}>
-          {/* Price - compact mode only */}
+        {/* Texte */}
+        <div className={cn('min-w-0', compact ? 'flex flex-1 flex-col justify-center' : 'pt-3')}>
           {compact && (
-            <span className="font-bold text-primary text-base mb-0.5">
+            <span className="text-sm font-semibold text-foreground tabular-nums mb-0.5">
               {formatPrice(annonce.prix, annonce.type_transaction)}
             </span>
           )}
 
-          {/* Title */}
-          <h3 className={cn(
-            "font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2",
-            compact ? "text-xs mb-0.5" : "text-sm mb-1"
-          )}>
+          <h3
+            className={cn(
+              'text-foreground line-clamp-2 leading-snug decoration-1 underline-offset-2 group-hover:underline',
+              compact ? 'text-xs mb-0.5' : 'text-[15px]',
+            )}
+          >
             {annonce.titre}
           </h3>
 
-          {/* Location */}
-          <div className={cn(
-            "flex items-center gap-1 text-muted-foreground",
-            compact ? "text-[10px] mb-1" : "text-xs mb-2"
-          )}>
-            <MapPin className="h-3 w-3 shrink-0 text-primary/70" />
+          <p className={cn('flex items-center gap-1 text-muted-foreground', compact ? 'text-xs' : 'mt-1 text-sm')}>
+            <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span className="line-clamp-1">
               {annonce.ville}{annonce.canton && `, ${annonce.canton}`}
             </span>
-          </div>
+          </p>
 
-          {/* Features - compact inline pills */}
-          {!compact && (
-            <div className="flex items-center flex-wrap gap-2">
+          {!compact && (annonce.nombre_pieces || annonce.surface_habitable || annonce.nb_chambres) && (
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-3 text-sm text-muted-foreground tabular-nums">
               {annonce.nombre_pieces && (
-                <div className="flex items-center gap-1 bg-muted/60 rounded-full px-2 py-0.5">
-                  <Bed className="h-3 w-3 text-primary/80" />
-                  <span className="text-[11px] font-medium">{annonce.nombre_pieces} p.</span>
-                </div>
+                <span className="inline-flex items-center gap-1">
+                  <Bed className="h-3.5 w-3.5" aria-hidden="true" />
+                  {annonce.nombre_pieces} p.
+                </span>
               )}
               {annonce.surface_habitable && (
-                <div className="flex items-center gap-1 bg-muted/60 rounded-full px-2 py-0.5">
-                  <Maximize2 className="h-3 w-3 text-primary/80" />
-                  <span className="text-[11px] font-medium">{annonce.surface_habitable} m²</span>
-                </div>
+                <span className="inline-flex items-center gap-1">
+                  <Maximize2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  {annonce.surface_habitable} m²
+                </span>
               )}
-              {annonce.nb_chambres && (
-                <div className="flex items-center gap-1 bg-muted/60 rounded-full px-2 py-0.5">
-                  <span className="text-[11px] font-medium">{annonce.nb_chambres} ch.</span>
-                </div>
-              )}
+              {annonce.nb_chambres && <span>{annonce.nb_chambres} ch.</span>}
+            </p>
+          )}
+
+          {!compact && (
+            <p className="mt-2 text-base font-semibold text-foreground tabular-nums">
+              {formatPrice(annonce.prix, annonce.type_transaction)}
               {annonce.charges_mensuelles && annonce.type_transaction === 'location' && (
-                <span className="text-[10px] text-muted-foreground">
+                <span className="ml-1.5 text-sm font-normal text-muted-foreground">
                   + {annonce.charges_mensuelles} CHF/mois
                 </span>
               )}
-            </div>
+            </p>
           )}
 
-          {/* Compact mode footer */}
           {compact && (
             <div className="flex items-center gap-1.5 mt-auto">
               {annonce.annonceurs?.logo_url && (
-                <img 
-                  src={annonce.annonceurs.logo_url} 
+                <img
+                  src={annonce.annonceurs.logo_url}
                   alt={advertiserName}
                   className="h-5 w-5 rounded-full object-cover border border-border"
                 />
               )}
-              <span className="text-[10px] text-muted-foreground line-clamp-1">{advertiserName}</span>
+              <span className="text-xs text-muted-foreground line-clamp-1">{advertiserName}</span>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </article>
     </Wrapper>
   );
 }

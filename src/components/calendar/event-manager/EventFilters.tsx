@@ -40,23 +40,23 @@ export function EventFilters({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <div className="relative flex-1 min-w-[200px] max-w-md">
-        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <div className="relative min-w-0 flex-1 basis-full sm:basis-auto sm:min-w-[200px] sm:max-w-md">
+        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           placeholder="Rechercher un événement…"
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9 h-9"
+          className="h-9 rounded-full pl-9"
         />
       </div>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="h-9 gap-2">
+          <Button variant="outline" size="sm" className="h-9 gap-2 rounded-full">
             <Filter className="h-4 w-4" />
             Catégories
             {selectedTypes.length > 0 && (
-              <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">
+              <Badge variant="secondary" className="h-5 rounded-full px-1.5 text-[10px]">
                 {selectedTypes.length}
               </Badge>
             )}
@@ -75,7 +75,7 @@ export function EventFilters({
               <div className="flex items-center gap-2">
                 <span
                   className={cn(
-                    'w-3 h-3 rounded',
+                    'h-2.5 w-2.5 rounded-full',
                     eventTypeCalendarColors[type] || 'bg-gray-500',
                   )}
                 />
@@ -90,7 +90,7 @@ export function EventFilters({
         <Button
           variant="ghost"
           size="sm"
-          className="h-9 gap-1 text-muted-foreground"
+          className="h-9 gap-1 rounded-full text-muted-foreground"
           onClick={() => {
             onSearchChange('');
             onTypesChange([]);

@@ -1,5 +1,5 @@
 import { Card } from '@/components/ui/card';
-import { CheckCircle2, Clock, Circle } from 'lucide-react';
+import { CheckCircle2, Clock, Circle, AlertCircle } from 'lucide-react';
 import { ACHAT_STEPS, AchatStep } from '@/lib/purchaseFinancing';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +18,7 @@ const GROUP_LABEL: Record<AchatStep['group'], string> = {
 
 export function AchatStepsTimeline({ steps }: AchatStepsTimelineProps) {
   const statutByKey = new Map(steps.map((s) => [s.step_key, s.statut]));
+  const dateByKey = new Map(steps.map((s) => [s.step_key, s.date_fait]));
 
   const groups: Record<string, AchatStep[]> = {};
   ACHAT_STEPS.forEach((s) => {
@@ -39,29 +40,40 @@ export function AchatStepsTimeline({ steps }: AchatStepsTimelineProps) {
                 const statut = statutByKey.get(s.key) || 'a_faire';
                 const done = statut === 'fait';
                 const enCours = statut === 'en_cours';
+                const bloque = statut === 'bloque';
+                const dateFait = dateByKey.get(s.key);
                 return (
                   <div
                     key={s.key}
                     className={cn(
                       'flex items-center gap-2 p-3 rounded-xl border transition',
                       done ? 'bg-emerald-50/40 border-emerald-100'
+                        : bloque ? 'bg-red-50/40 border-red-100'
                         : enCours ? 'bg-primary/5/40 border-primary/20'
                         : 'bg-muted/30 border-border',
                     )}
                   >
                     {done ? <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                      : bloque ? <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
                       : enCours ? <Clock className="h-4 w-4 text-primary flex-shrink-0" />
                       : <Circle className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
                     <span
                       className={cn(
                         'text-sm',
                         done ? 'text-emerald-900 font-medium'
+                          : bloque ? 'text-red-700 font-medium'
                           : enCours ? 'text-primary font-medium'
                           : 'text-muted-foreground',
                       )}
                     >
                       <span className="text-xs opacity-70 mr-1">{s.ordre}.</span>
                       {s.label}
+                      {done && dateFait && (
+                        <span className="block text-[11px] font-normal opacity-70">
+                          {new Date(dateFait).toLocaleDateString('fr-CH')}
+                        </span>
+                      )}
+                      {bloque && <span className="block text-[11px] font-normal">Votre conseiller vous contacte</span>}
                     </span>
                   </div>
                 );

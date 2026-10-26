@@ -158,34 +158,45 @@ export function DashboardBannerManager() {
   };
 
   return (
-    <Card className="border-primary/20">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ImageIcon className="w-5 h-5 text-primary" />
+    <Card className="imr-lg-card min-w-0 rounded-[22px]">
+      <CardHeader className="p-4 md:p-6">
+        <CardTitle className="flex items-center gap-3 text-base font-semibold md:text-[17px]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><ImageIcon className="h-5 w-5" /></span>
           Bannière dashboard client
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm">
           Image publicitaire affichée tout en haut du tableau de bord des clients.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 px-4 pb-4 md:px-6 md:pb-6">
         {loading ? (
-          <div className="h-32 rounded-xl bg-muted animate-pulse" />
+          <div className="h-32 rounded-2xl bg-muted animate-pulse" />
         ) : (
           <>
-            <div className="flex items-center justify-between rounded-xl border p-4">
-              <div>
-                <Label className="text-sm font-medium">Bannière active</Label>
-                <p className="text-xs text-muted-foreground">
-                  Si désactivée, aucun espace n'est affiché chez les clients.
-                </p>
+            <div className="divide-y divide-border/60 rounded-2xl border border-border/60 bg-background/50 px-4 dark:bg-white/[0.03]">
+              <div className="flex min-h-[56px] items-center justify-between gap-4 py-3">
+                <div className="min-w-0">
+                  <Label htmlFor="banner-actif" className="text-[15px] font-medium">Bannière active</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Si désactivée, aucun espace n'est affiché chez les clients.
+                  </p>
+                </div>
+                <Switch id="banner-actif" checked={actif} onCheckedChange={setActif} />
               </div>
-              <Switch checked={actif} onCheckedChange={setActif} />
+              <div className="flex min-h-[56px] items-center justify-between gap-4 py-3">
+                <div className="min-w-0">
+                  <Label htmlFor="banner-overlay" className="text-[15px] font-medium">Afficher un texte par-dessus l'image</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Désactivé : seule l'image est affichée (recommandé si le visuel contient déjà du texte).
+                  </p>
+                </div>
+                <Switch id="banner-overlay" checked={afficherOverlay} onCheckedChange={setAfficherOverlay} />
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label>Image de couverture (ratio conseillé 16:5)</Label>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <input
                   ref={fileRef}
                   type="file"
@@ -193,76 +204,75 @@ export function DashboardBannerManager() {
                   className="hidden"
                   onChange={handleUpload}
                 />
-                <Button variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                <Button variant="outline" className="min-h-11" onClick={() => fileRef.current?.click()} disabled={uploading}>
                   {uploading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
                   {imageUrl ? "Changer l'image" : 'Téléverser une image'}
                 </Button>
                 {imageUrl && (
-                  <Button variant="ghost" onClick={() => setImageUrl('')}>
+                  <Button variant="ghost" className="min-h-11" onClick={() => setImageUrl('')}>
                     Retirer l'image
                   </Button>
                 )}
               </div>
               <Input
+                className="h-11 rounded-xl"
                 placeholder="…ou collez une URL d'image"
+                aria-label="URL de l'image"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
               />
             </div>
 
-            <div className="flex items-center justify-between rounded-xl border p-4">
-              <div>
-                <Label className="text-sm font-medium">Afficher un texte par-dessus l'image</Label>
-                <p className="text-xs text-muted-foreground">
-                  Désactivé : seule l'image est affichée (recommandé si le visuel contient déjà du texte).
-                </p>
-              </div>
-              <Switch checked={afficherOverlay} onCheckedChange={setAfficherOverlay} />
-            </div>
-
-            <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
               Si tu remplis les liens iOS/Android, le clic ouvre le bon store selon l'appareil ;
               sinon l'URL simple s'ouvre pour tous.
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Lien App Store (iOS)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="banner-ios">Lien App Store (iOS)</Label>
                 <Input
+                  id="banner-ios"
+                  className="h-11 rounded-xl"
+                  inputMode="url"
                   placeholder="https://apps.apple.com/…"
                   value={lienIos}
                   onChange={(e) => setLienIos(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Lien Play Store (Android)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="banner-android">Lien Play Store (Android)</Label>
                 <Input
+                  id="banner-android"
+                  className="h-11 rounded-xl"
+                  inputMode="url"
                   placeholder="https://play.google.com/store/apps/…"
                   value={lienAndroid}
                   onChange={(e) => setLienAndroid(e.target.value)}
                 />
               </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>URL simple (optionnel)</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="banner-url">URL simple (optionnel)</Label>
                 <Input
+                  id="banner-url"
+                  className="h-11 rounded-xl"
+                  inputMode="url"
                   placeholder="https://… ou /client/offres-recues"
                   value={lienUrl}
                   onChange={(e) => setLienUrl(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Titre (optionnel)</Label>
-                <Input value={titre} onChange={(e) => setTitre(e.target.value)} maxLength={80} />
+              <div className="space-y-1.5">
+                <Label htmlFor="banner-titre">Titre (optionnel)</Label>
+                <Input id="banner-titre" className="h-11 rounded-xl" value={titre} onChange={(e) => setTitre(e.target.value)} maxLength={80} />
               </div>
             </div>
 
-
-            <div className="space-y-2">
-              <Label>Texte (optionnel)</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="banner-texte">Texte (optionnel)</Label>
               <Textarea
+                id="banner-texte"
+                className="rounded-xl"
                 value={texte}
                 onChange={(e) => setTexte(e.target.value)}
                 rows={2}
@@ -288,23 +298,24 @@ export function DashboardBannerManager() {
                   }}
                 />
               ) : (
-                <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-dashed border-border/70 p-6 text-center text-sm text-muted-foreground">
                   Aucune image sélectionnée
                 </div>
               )}
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={handleSave} disabled={saving}>
-                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Enregistrer
-              </Button>
+            {/* Actions : barre collée en bas sur mobile (formulaire long), pied de carte sur ordinateur */}
+            <div className="sticky bottom-0 z-10 -mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-[22px] border-t border-border/60 bg-background/85 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:static sm:mx-0 sm:mb-0 sm:flex-row sm:justify-end sm:rounded-none sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-4 sm:backdrop-blur-none">
               {id && (
-                <Button variant="outline" onClick={handleDelete} disabled={saving}>
+                <Button variant="outline" className="min-h-11" onClick={handleDelete} disabled={saving}>
                   <Trash2 className="w-4 h-4 mr-2" />
                   Supprimer
                 </Button>
               )}
+              <Button className="min-h-11" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Enregistrer
+              </Button>
             </div>
           </>
         )}

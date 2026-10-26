@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Target, Plus, Trash2, Edit2, Save, X, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
 
 interface DefaultGoal {
   id: string;
@@ -155,17 +156,17 @@ export function AdminDefaultGoalsManager() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
+      <Card className="imr-lg-card min-w-0 rounded-[22px]">
+        <CardHeader className="p-4 md:p-6">
+          <CardTitle className="flex items-center gap-3 text-base font-semibold md:text-[17px]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Settings className="h-5 w-5" /></span>
             Objectifs par défaut des agents
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20" />
+              <Skeleton key={i} className="h-20 rounded-2xl" />
             ))}
           </div>
         </CardContent>
@@ -174,125 +175,129 @@ export function AdminDefaultGoalsManager() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
+    <Card className="imr-lg-card min-w-0 rounded-[22px]">
+      <CardHeader className="p-4 md:p-6">
+        <CardTitle className="flex items-center gap-3 text-base font-semibold md:text-[17px]">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><Target className="h-5 w-5" /></span>
           Objectifs par défaut des agents
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm">
           Définissez les objectifs journaliers/mensuels qui s'appliquent à tous les agents
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 pb-4 md:px-6 md:pb-6">
         {/* Add new goal */}
         {isAdding ? (
-          <Card className="border-primary/50 bg-primary/5">
-            <CardContent className="pt-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Type d'objectif</Label>
-                  <Select
-                    value={newGoal.goal_type}
-                    onValueChange={(v) => setNewGoal({ ...newGoal, goal_type: v, title: goalTypeLabels[v] })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(goalTypeLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Période</Label>
-                  <Select
-                    value={newGoal.period}
-                    onValueChange={(v) => setNewGoal({ ...newGoal, period: v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.entries(periodLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+          <div className="space-y-4 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Type d'objectif</Label>
+                <Select
+                  value={newGoal.goal_type}
+                  onValueChange={(v) => setNewGoal({ ...newGoal, goal_type: v, title: goalTypeLabels[v] })}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(goalTypeLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Titre</Label>
-                  <Input
-                    value={newGoal.title || ''}
-                    onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
-                    placeholder={goalTypeLabels[newGoal.goal_type || 'offres']}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Objectif minimum</Label>
-                  <Input
-                    type="number"
-                    value={newGoal.target_min || 0}
-                    onChange={(e) => setNewGoal({ ...newGoal, target_min: Number(e.target.value) })}
-                    min={1}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Objectif maximum</Label>
-                  <Input
-                    type="number"
-                    value={newGoal.target_max || 0}
-                    onChange={(e) => setNewGoal({ ...newGoal, target_max: Number(e.target.value) })}
-                    min={1}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label>Période</Label>
+                <Select
+                  value={newGoal.period}
+                  onValueChange={(v) => setNewGoal({ ...newGoal, period: v })}
+                >
+                  <SelectTrigger className="h-11 rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(periodLabels).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Description</Label>
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <div className="col-span-2 space-y-1.5 sm:col-span-1">
+                <Label>Titre</Label>
                 <Input
-                  value={newGoal.description || ''}
-                  onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
-                  placeholder="Description de l'objectif"
+                  className="h-11 rounded-xl"
+                  value={newGoal.title || ''}
+                  onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
+                  placeholder={goalTypeLabels[newGoal.goal_type || 'offres']}
                 />
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsAdding(false)}>
-                  <X className="h-4 w-4 mr-1" />
-                  Annuler
-                </Button>
-                <Button size="sm" onClick={() => createGoalMutation.mutate(newGoal)} disabled={createGoalMutation.isPending}>
-                  <Save className="h-4 w-4 mr-1" />
-                  Créer
-                </Button>
+              <div className="space-y-1.5">
+                <Label>Objectif minimum</Label>
+                <Input
+                  className="h-11 rounded-xl"
+                  type="number"
+                  inputMode="numeric"
+                  value={newGoal.target_min || 0}
+                  onChange={(e) => setNewGoal({ ...newGoal, target_min: Number(e.target.value) })}
+                  min={1}
+                />
               </div>
-            </CardContent>
-          </Card>
+              <div className="space-y-1.5">
+                <Label>Objectif maximum</Label>
+                <Input
+                  className="h-11 rounded-xl"
+                  type="number"
+                  inputMode="numeric"
+                  value={newGoal.target_max || 0}
+                  onChange={(e) => setNewGoal({ ...newGoal, target_max: Number(e.target.value) })}
+                  min={1}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Description</Label>
+              <Input
+                className="h-11 rounded-xl"
+                value={newGoal.description || ''}
+                onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
+                placeholder="Description de l'objectif"
+              />
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="outline" className="min-h-11" onClick={() => setIsAdding(false)}>
+                <X className="h-4 w-4 mr-1" />
+                Annuler
+              </Button>
+              <Button className="min-h-11" onClick={() => createGoalMutation.mutate(newGoal)} disabled={createGoalMutation.isPending}>
+                <Save className="h-4 w-4 mr-1" />
+                Créer
+              </Button>
+            </div>
+          </div>
         ) : (
-          <Button onClick={() => setIsAdding(true)} variant="outline" className="w-full">
+          <Button onClick={() => setIsAdding(true)} variant="outline" className="min-h-11 w-full">
             <Plus className="h-4 w-4 mr-2" />
             Ajouter un objectif par défaut
           </Button>
         )}
 
         {/* Goals list */}
-        <div className="space-y-2">
+        {goals.length > 0 && (
+        <ul className="divide-y divide-border/60 overflow-hidden rounded-2xl border border-border/60 bg-background/50 dark:bg-white/[0.03]">
           {goals.map((goal) => (
-            <Card key={goal.id} className={!goal.is_active ? 'opacity-50' : ''}>
-              <CardContent className="py-3">
+            <li key={goal.id} className={`p-3 sm:p-4 ${!goal.is_active ? 'opacity-50' : ''}`}>
                 {editingGoal?.id === goal.id ? (
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Type</Label>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="space-y-1.5">
+                        <Label>Type</Label>
                         <Select
                           value={editingGoal.goal_type}
                           onValueChange={(v) => setEditingGoal({ ...editingGoal, goal_type: v })}
                         >
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="h-11 rounded-xl">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -302,13 +307,13 @@ export function AdminDefaultGoalsManager() {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Période</Label>
+                      <div className="space-y-1.5">
+                        <Label>Période</Label>
                         <Select
                           value={editingGoal.period}
                           onValueChange={(v) => setEditingGoal({ ...editingGoal, period: v })}
                         >
-                          <SelectTrigger className="h-8">
+                          <SelectTrigger className="h-11 rounded-xl">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -319,68 +324,75 @@ export function AdminDefaultGoalsManager() {
                         </Select>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Titre</Label>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      <div className="col-span-2 space-y-1.5 sm:col-span-1">
+                        <Label>Titre</Label>
                         <Input
-                          className="h-8"
+                          className="h-11 rounded-xl"
                           value={editingGoal.title}
                           onChange={(e) => setEditingGoal({ ...editingGoal, title: e.target.value })}
                         />
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Min</Label>
+                      <div className="space-y-1.5">
+                        <Label>Min</Label>
                         <Input
-                          className="h-8"
+                          className="h-11 rounded-xl"
                           type="number"
+                          inputMode="numeric"
                           value={editingGoal.target_min}
                           onChange={(e) => setEditingGoal({ ...editingGoal, target_min: Number(e.target.value) })}
                         />
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs">Max</Label>
+                      <div className="space-y-1.5">
+                        <Label>Max</Label>
                         <Input
-                          className="h-8"
+                          className="h-11 rounded-xl"
                           type="number"
+                          inputMode="numeric"
                           value={editingGoal.target_max}
                           onChange={(e) => setEditingGoal({ ...editingGoal, target_max: Number(e.target.value) })}
                         />
                       </div>
                     </div>
                     <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="sm" onClick={() => setEditingGoal(null)}>
-                        <X className="h-4 w-4" />
+                      <Button variant="outline" className="min-h-11" onClick={() => setEditingGoal(null)} aria-label="Annuler la modification">
+                        <X className="h-4 w-4 mr-1" /> Annuler
                       </Button>
-                      <Button size="sm" onClick={() => updateGoalMutation.mutate(editingGoal)}>
-                        <Save className="h-4 w-4" />
+                      <Button className="min-h-11" onClick={() => updateGoalMutation.mutate(editingGoal)} aria-label="Enregistrer l'objectif">
+                        <Save className="h-4 w-4 mr-1" /> Enregistrer
                       </Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{goal.title}</p>
-                        <span className="text-xs bg-muted px-2 py-0.5 rounded">{periodLabels[goal.period]}</span>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium text-foreground">{goal.title}</p>
+                        <DashBadge tone="muted">{periodLabels[goal.period]}</DashBadge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="mt-0.5 text-sm text-muted-foreground">
                         Objectif: {goal.target_min} - {goal.target_max} {goal.goal_type === 'commissions' ? 'CHF' : ''}
                       </p>
                       {goal.description && (
-                        <p className="text-xs text-muted-foreground mt-1">{goal.description}</p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">{goal.description}</p>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={goal.is_active}
-                        onCheckedChange={() => toggleGoalActive(goal)}
-                      />
-                      <Button variant="ghost" size="icon" onClick={() => setEditingGoal(goal)}>
+                    <div className="flex items-center justify-end gap-1">
+                      <span className="flex h-11 items-center px-1">
+                        <Switch
+                          checked={goal.is_active}
+                          onCheckedChange={() => toggleGoalActive(goal)}
+                          aria-label={goal.is_active ? 'Désactiver l’objectif' : 'Activer l’objectif'}
+                        />
+                      </span>
+                      <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setEditingGoal(goal)} aria-label="Modifier l'objectif">
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-11 w-11"
+                        aria-label="Supprimer l'objectif"
                         onClick={() => {
                           if (confirm('Supprimer cet objectif par défaut ?')) {
                             deleteGoalMutation.mutate(goal.id);
@@ -392,10 +404,10 @@ export function AdminDefaultGoalsManager() {
                     </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+            </li>
           ))}
-        </div>
+        </ul>
+        )}
       </CardContent>
     </Card>
   );

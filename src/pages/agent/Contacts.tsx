@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { fetchAllContacts, contactMatchesSearch, CONTACTS_PAGE_AFFICHAGE } from "@/lib/contactsFetch";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -42,6 +43,9 @@ export default function AgentContacts() {
   const [typeFilter, setTypeFilter] = useState<ContactType | "all">("all");
   const [sortBy, setSortBy] = useState<SortOption>("nom_asc");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(CONTACTS_PAGE_AFFICHAGE);
+  // Nouveau filtre ou tri : on repart des premières fiches.
+  useEffect(() => setVisibleCount(CONTACTS_PAGE_AFFICHAGE), [search, typeFilter, sortBy, showFavoritesOnly]);
 
   // Fetch agent ID
   useEffect(() => {
@@ -61,16 +65,12 @@ export default function AgentContacts() {
   const fetchContacts = async () => {
     if (!agentId) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .eq("agent_id", agentId)
-      .order("nom", { ascending: true });
+    const { data, error } = await fetchAllContacts(agentId);
 
     if (error) {
       toast.error("Erreur lors du chargement des contacts");
     } else {
-      setContacts((data as Contact[]) || []);
+      setContacts(data);
     }
     setLoading(false);
   };
@@ -95,15 +95,7 @@ export default function AgentContacts() {
     let result = [...contacts];
 
     if (search) {
-      const searchLower = search.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.nom.toLowerCase().includes(searchLower) ||
-          c.prenom?.toLowerCase().includes(searchLower) ||
-          c.email?.toLowerCase().includes(searchLower) ||
-          c.telephone?.includes(search) ||
-          c.entreprise?.toLowerCase().includes(searchLower)
-      );
+      result = result.filter((c) => contactMatchesSearch(c, search));
     }
 
     if (typeFilter !== "all") {
@@ -330,18 +322,30 @@ export default function AgentContacts() {
             }
           />
         ) : (
+          <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredContacts.map((contact, index) => (
+            {filteredContacts.slice(0, visibleCount).map((contact, index) => (
               <PremiumContactCard
                 key={contact.id}
                 contact={contact}
                 onEdit={handleEdit}
                 onDelete={setDeleteContact}
                 onToggleFavorite={handleToggleFavorite}
-                delay={index * 50}
+                delay={Math.min(index, 20) * 50}
               />
             ))}
           </div>
+          {filteredContacts.length > visibleCount && (
+            <div className="flex flex-col items-center gap-2 pt-2">
+              <p className="text-sm text-muted-foreground">
+                {visibleCount.toLocaleString("fr-CH")} sur {filteredContacts.length.toLocaleString("fr-CH")} contacts affichés
+              </p>
+              <Button variant="outline" onClick={() => setVisibleCount((n) => n + CONTACTS_PAGE_AFFICHAGE * 2)}>
+                Afficher plus
+              </Button>
+            </div>
+          )}
+          </>
         )}
       </div>
 

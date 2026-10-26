@@ -10,6 +10,7 @@ import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { formatSwissDateTime } from '@/lib/dateUtils';
 import { getOrCreateClientConversation } from '@/lib/clientConversation';
 import { notifyPostulationRequest, getClientDisplayName } from '@/lib/postulationRequest';
+import { requestPostulation } from '@/lib/postulationJob';
 
 interface Props {
   visite: any;
@@ -42,58 +43,35 @@ export async function submitVisitVideoDecision(params: {
   const { user, visiteId: initialVisiteId, offreId, agentIdHint, address = '', choice } = params;
 
   const decisionAt = new Date().toISOString();
-  let visiteId = initialVisiteId;
+  const visiteId = initialVisiteId;
 
-  // If no linked visite exists, create one so the decision can be recorded.
-  if (!visiteId) {
-    const { data: clientRow } = await supabase
-      .from('clients')
-      .select('id, agent_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const clientIdForVisite = clientRow?.id ?? null;
-    const agentIdForVisite = clientRow?.agent_id ?? agentIdHint ?? null;
-
-    if (clientIdForVisite) {
-      const { data: newVisite, error: createErr } = await supabase
-        .from('visites')
-        .insert({
-          offre_id: offreId ?? null,
-          client_id: clientIdForVisite,
-          agent_id: agentIdForVisite,
-          adresse: address,
-          date_visite: decisionAt,
-          statut: 'effectuee',
-          client_decision: choice,
-          client_decision_at: decisionAt,
-        })
-        .select('id')
-        .maybeSingle();
-      if (createErr) throw createErr;
-      visiteId = newVisite?.id ?? '';
+  // 15.10.2026 : on ne fabrique plus de visite « effectuée » au moment du clic.
+  // La demande de postulation est vérifiée côté serveur (visite réellement faite) AVANT
+  // d'enregistrer la décision, pour ne rien laisser à moitié en cas de refus.
+  if (offreId && choice === 'souhaite_postuler') {
+    // Demande atomique et idempotente ; un second clic ne renvoie ni message ni notification.
+    const pr = await requestPostulation(offreId);
+    if (visiteId) {
+      await supabase.from('visites')
+        .update({ client_decision: choice, client_decision_at: decisionAt })
+        .eq('id', visiteId);
     }
+    if (pr.already_requested) return;
   } else {
-    const { error: vErr } = await supabase
-      .from('visites')
-      .update({ client_decision: choice, client_decision_at: decisionAt })
-      .eq('id', visiteId);
-    if (vErr) throw vErr;
-  }
-
-  if (offreId) {
-    const nextStatut = choice === 'souhaite_postuler' ? 'souhaite_postuler' : 'refusee';
-    let q = supabase.from('offres').update(
-      choice === 'souhaite_postuler'
-        ? { statut: nextStatut, postulation_demandee_at: new Date().toISOString() }
-        : { statut: nextStatut }
-    ).eq('id', offreId);
-    // Ne jamais rétrograder une demande de postulation déjà enregistrée.
-    if (choice === 'refuse') {
-      q = q.not('statut', 'in', '(souhaite_postuler,candidature_deposee,acceptee)');
+    if (visiteId) {
+      const { error: vErr } = await supabase
+        .from('visites')
+        .update({ client_decision: choice, client_decision_at: decisionAt })
+        .eq('id', visiteId);
+      if (vErr) throw vErr;
     }
-    const { error: oErr } = await q;
-    if (oErr) throw oErr;
+    if (offreId) {
+      // Ne jamais rétrograder une demande de postulation déjà enregistrée.
+      const { error: oErr } = await supabase.from('offres').update({ statut: 'refusee' })
+        .eq('id', offreId)
+        .not('statut', 'in', '(souhaite_postuler,candidature_deposee,acceptee)');
+      if (oErr) throw oErr;
+    }
   }
 
   const { data: clientRow } = await supabase
@@ -157,7 +135,7 @@ export function VisitVideoDecisionCard({ visite, onUpdated }: Props) {
       });
       toast.success(
         choice === 'souhaite_postuler'
-          ? 'Merci, votre agent a été notifié de votre intérêt.'
+          ? 'Demande enregistrée et transmise à l’équipe.'
           : 'Merci, votre choix a été enregistré.'
       );
       onUpdated?.();

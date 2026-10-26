@@ -1,10 +1,11 @@
-import { CalendarDays, CalendarPlus, ExternalLink, Home } from 'lucide-react';
+import { Banknote, CalendarDays, CalendarPlus, ChevronRight, ExternalLink, FileCheck, Home } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote } from '@/components/visites/VisitDetailParts';
+import { formatZurichDay, formatZurichTime, zurichDayKey } from '@/lib/dateZurich';
 import { Capacitor } from '@capacitor/core';
 import { ExternalListingPlaceholder } from '@/components/public/ExternalListingPlaceholder';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { PremiumPageShellV2 } from '@/components/dashboard/v2';
+import { DASH_CARD, DashBadge, DashEmptyState, DashPage, DashPageHeader, DashSection } from '@/components/client/dashboard/DashPrimitives';
 import { useCandidatCandidatures, statutLabel, type UnifiedCandidature } from '@/hooks/useCandidatCandidatures';
 import { toast } from 'sonner';
 import { useState } from 'react';
@@ -99,7 +100,7 @@ async function addToCalendar(c: UnifiedCandidature) {
   }
 }
 
-function VisiteCard({ c, past, nextSlot, onReserve }: { c: UnifiedCandidature; past?: boolean; nextSlot?: string; onReserve?: () => void }) {
+function VisiteCard({ c, past, nextSlot, onReserve, onOpen }: { c: UnifiedCandidature; past?: boolean; nextSlot?: string; onReserve?: () => void; onOpen: () => void }) {
   const a = annonceOf(c);
   const annulee = !!c.annulee;
   // Règle métier : le placeholder « Annonce externe » ne s'applique qu'aux annonces
@@ -107,62 +108,139 @@ function VisiteCard({ c, past, nextSlot, onReserve }: { c: UnifiedCandidature; p
   // que PublicAnnonceCard). Annonces internes/clients : vraie photo pour tous les rôles.
   const isExternal = !!a?.lien_annonce;
   const photo = isExternal ? null : photoOf(a);
-  const url = annonceUrl(a);
   const prix = fmtPrix(a);
   return (
-    <Card className={annulee ? 'opacity-80' : past ? 'opacity-70' : undefined}>
-      <CardContent className="flex flex-col gap-3 p-3 sm:flex-row sm:p-4">
-        <div className="h-32 w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:h-24 sm:w-32">
+    <div className={`${DASH_CARD} min-w-0 overflow-hidden ${annulee ? 'opacity-90' : past ? 'opacity-75' : ''}`}>
+      <button type="button" onClick={onOpen} className="flex min-h-[88px] w-full items-center gap-3 p-3 text-left active:scale-[0.99] sm:p-4">
+        <span className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-muted">
           {photo ? (
-            <img src={photo} alt={a?.titre || c.adresse} loading="lazy" className="h-full w-full object-cover" />
+            <img src={photo} alt="" loading="lazy" className="h-full w-full object-cover" />
           ) : a ? (
             <ExternalListingPlaceholder />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground"><Home className="h-8 w-8" /></div>
+            <span className="flex h-full w-full items-center justify-center text-muted-foreground"><Home className="h-6 w-6" /></span>
           )}
+        </span>
+        <span className="min-w-0 flex-1 space-y-1">
+          {c.date_visite && (
+            <span className={`block text-[15px] font-semibold leading-tight ${annulee ? 'text-muted-foreground line-through' : 'text-primary'}`}>{formatZurichTime(c.date_visite)}</span>
+          )}
+          <span className="block truncate text-[15px] font-semibold text-foreground">{a?.titre || c.adresse}</span>
+          {a?.titre && <span className="block truncate text-sm text-muted-foreground">{c.adresse}</span>}
+          {!c.date_visite && (
+            <span className="block text-sm text-muted-foreground">Candidature du {c.date ? new Date(c.date).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : '—'}</span>
+          )}
+          <span className="flex flex-wrap items-center gap-2">
+            {annulee ? <DashBadge tone="danger">Annulé — nouvelle date à venir</DashBadge> : <DashBadge tone="muted">{statutLabel(c.statut)}</DashBadge>}
+            {prix && <span className="text-sm font-semibold text-foreground">{prix}</span>}
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      </button>
+      {annulee && nextSlot && (
+        <div className="mx-3 mb-3 flex flex-col gap-2 rounded-2xl bg-primary/10 p-3 sm:mx-4 sm:mb-4">
+          <p className="flex items-start gap-2 text-sm font-medium text-primary">
+            <CalendarDays className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>Nouvelle date disponible : {fmtVisite(nextSlot)}</span>
+          </p>
+          <Button size="sm" className="min-h-[44px]" onClick={onReserve}>Réserver ce créneau</Button>
         </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-start justify-between gap-2">
-            <p className="line-clamp-2 font-medium text-foreground">{a?.titre || c.adresse}</p>
-            {annulee ? (
-              <Badge variant="destructive" className="shrink-0">Annulé — nouvelle date à venir</Badge>
-            ) : (
-              <Badge variant="secondary" className="shrink-0">{statutLabel(c.statut)}</Badge>
+      )}
+    </div>
+  );
+}
+
+/** Détail d'une visite : même gabarit que les autres rôles (VisitHero, tuiles, barre d'actions). */
+function VisiteDetail({ c, onClose }: { c: UnifiedCandidature | null; onClose: () => void }) {
+  const a = c ? annonceOf(c) : null;
+  const isExternal = !!a?.lien_annonce;
+  const photo = c && !isExternal ? photoOf(a) : null;
+  const url = annonceUrl(a);
+  const prix = fmtPrix(a);
+  const past = !!c?.date_visite && new Date(c.date_visite).getTime() < Date.now();
+  const adresse = a ? [a.adresse, [a.code_postal, a.ville].filter(Boolean).join(' ')].filter(Boolean).join(', ') : c?.adresse;
+  return (
+    <Dialog open={!!c} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className={VISIT_DIALOG_CLASS}>
+        {c && (
+          <>
+            <VisitHero
+              TitleAs={DialogTitle}
+              kicker="Visite"
+              badges={c.annulee ? <DashBadge tone="danger">Annulé — nouvelle date à venir</DashBadge> : <DashBadge tone="muted">{statutLabel(c.statut)}</DashBadge>}
+              date={c.date_visite}
+              title={a?.titre || c.adresse}
+              address={adresse}
+              photoUrl={photo}
+            />
+            <DialogDescription className="sr-only">Détail de la visite et de la candidature</DialogDescription>
+            <VisitBody>
+              <VisitInfoTiles
+                items={[
+                  { icon: Banknote, label: 'Loyer', value: prix ?? undefined },
+                  { icon: FileCheck, label: 'Candidature', value: statutLabel(c.statut) },
+                  { icon: CalendarDays, label: 'Déposée le', value: c.date ? new Date(c.date).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : undefined },
+                ]}
+              />
+              {c.annulee && c.annulation_message && <VisitNote tone="warning">{c.annulation_message}</VisitNote>}
+              {!c.annulee && c.date_visite && !past && (
+                <VisitNote>Merci d'être ponctuel(le) à votre visite. Ajoutez-la à votre agenda pour recevoir un rappel une heure avant.</VisitNote>
+              )}
+            </VisitBody>
+            {(url || (c.date_visite && !past && !c.annulee)) && (
+              <VisitActionBar
+                primary={c.date_visite && !past && !c.annulee ? (
+                  <Button onClick={() => addToCalendar(c)}>
+                    <CalendarPlus className="mr-1 h-4 w-4" />Ajouter à mon agenda
+                  </Button>
+                ) : undefined}
+              >
+                {url && (
+                  <Button asChild variant="outline">
+                    <a href={url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Voir l'annonce</a>
+                  </Button>
+                )}
+              </VisitActionBar>
             )}
-          </div>
-          {a?.titre && <p className="truncate text-xs text-muted-foreground">{c.adresse}</p>}
-          {c.date_visite ? (
-            <p className={annulee ? 'text-sm font-medium text-muted-foreground line-through' : 'text-sm font-medium text-primary'}>
-              Visite le {fmtVisite(c.date_visite)}
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">Candidature du {c.date ? new Date(c.date).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' }) : '—'}</p>
-          )}
-          {annulee && c.annulation_message && (
-            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">{c.annulation_message}</p>
-          )}
-          {annulee && nextSlot && (
-            <div className="flex flex-col gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 sm:flex-row sm:items-center">
-              <p className="flex-1 text-sm font-medium text-primary">📅 Nouvelle date disponible : {fmtVisite(nextSlot)}</p>
-              <Button size="sm" className="min-h-[36px]" onClick={onReserve}>Réserver ce créneau</Button>
-            </div>
-          )}
-          {prix && <p className="text-sm font-semibold text-foreground">{prix}</p>}
-          <div className="flex flex-wrap gap-2 pt-1">
-            {url && (
-              <Button asChild size="sm" variant="outline" className="min-h-[36px]">
-                <a href={url} target="_blank" rel="noopener noreferrer"><ExternalLink className="mr-1 h-4 w-4" />Voir l'annonce</a>
-              </Button>
-            )}
-            {c.date_visite && !past && !annulee && (
-              <Button size="sm" className="min-h-[36px]" onClick={() => addToCalendar(c)}>
-                <CalendarPlus className="mr-1 h-4 w-4" />Ajouter à mon agenda
-              </Button>
-            )}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Regroupe des candidatures par jour de visite (heure suisse). */
+function groupByDay(list: UnifiedCandidature[]) {
+  const groups: { key: string; label: string; items: UnifiedCandidature[] }[] = [];
+  list.forEach((c) => {
+    const key = zurichDayKey(c.date_visite);
+    let g = groups.find((x) => x.key === key);
+    if (!g) {
+      const label = formatZurichDay(c.date_visite, { weekday: true });
+      g = { key, label: label ? label.charAt(0).toUpperCase() + label.slice(1) : '', items: [] };
+      groups.push(g);
+    }
+    g.items.push(c);
+  });
+  return groups;
+}
+
+function DayGroups({ list, past, onOpen }: { list: UnifiedCandidature[]; past?: boolean; onOpen: (c: UnifiedCandidature) => void }) {
+  return (
+    <div className="space-y-5">
+      {groupByDay(list).map((g) => (
+        <div key={g.key} className="space-y-2.5">
+          <h3 className="flex items-center gap-2 px-0.5 text-[15px] font-semibold text-foreground">
+            {g.key === zurichDayKey(new Date()) && <DashBadge tone="primary">Aujourd'hui</DashBadge>}
+            <span className="min-w-0 truncate">{g.label}</span>
+            <span className="text-sm font-normal text-muted-foreground">· {g.items.length}</span>
+          </h3>
+          <div className="grid gap-3 lg:grid-cols-2">
+            {g.items.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} past={past} onOpen={() => onOpen(c)} />)}
           </div>
         </div>
-      </CardContent>
-    </Card>
+      ))}
+    </div>
   );
 }
 
@@ -176,6 +254,7 @@ export default function CandidatAgenda() {
   const past = active.filter((c) => new Date(c.date_visite!).getTime() < now).sort((a, b) => b.date_visite!.localeCompare(a.date_visite!));
   const others = data.filter((c) => !c.date_visite);
   const [reserve, setReserve] = useState<{ id: string; titre: string } | null>(null);
+  const [detail, setDetail] = useState<UnifiedCandidature | null>(null);
   const cancelledIds = Array.from(new Set(cancelled.map((c) => c.raw?.annonce_id).filter(Boolean))) as string[];
   const { data: slots = {} } = useQuery({
     queryKey: ['candidat-new-slots', cancelledIds.join(',')],
@@ -190,47 +269,48 @@ export default function CandidatAgenda() {
   });
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <>
       <VisiteConfirmGate list={data} />
+      <VisiteDetail c={detail} onClose={() => setDetail(null)} />
       {reserve && <ReserverVisiteDialog open onOpenChange={(o) => !o && setReserve(null)} annonce={reserve} />}
-      <PremiumPageShellV2>
-        <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
-        <p className="text-sm text-muted-foreground">Vos visites et candidatures</p>
+      <DashPage>
+        <DashPageHeader title="Agenda" subtitle="Vos visites et candidatures, en heure suisse" />
         {isLoading ? <p className="text-sm text-muted-foreground">Chargement…</p> : data.length === 0 ? (
-          <Card><CardContent className="flex items-center gap-3 p-6 text-sm text-muted-foreground"><CalendarDays className="h-5 w-5" />Aucun événement pour le moment.</CardContent></Card>
+          <DashEmptyState icon={CalendarDays} title="Aucun événement pour le moment." />
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {upcoming.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">À venir</h2>
-                {upcoming.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
-              </section>
+              <DashSection title="À venir" action={<DashBadge tone="muted">{upcoming.length}</DashBadge>}>
+                <DayGroups list={upcoming} onOpen={setDetail} />
+              </DashSection>
             )}
             {past.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Passées</h2>
-                {past.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} past />)}
-              </section>
+              <DashSection title="Passées" action={<DashBadge tone="muted">{past.length}</DashBadge>}>
+                <DayGroups list={past} past onOpen={setDetail} />
+              </DashSection>
             )}
             {cancelled.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-destructive">Annulées</h2>
-                {cancelled.map((c) => {
-                  const aid = c.raw?.annonce_id as string | undefined;
-                  return <VisiteCard key={`${c.source}-${c.id}`} c={c} nextSlot={aid ? (slots as Record<string, string>)[aid] : undefined}
-                    onReserve={() => aid && setReserve({ id: aid, titre: annonceOf(c)?.titre || c.adresse })} />;
-                })}
-              </section>
+              <DashSection title="Annulées" action={<DashBadge tone="muted">{cancelled.length}</DashBadge>}>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {cancelled.map((c) => {
+                    const aid = c.raw?.annonce_id as string | undefined;
+                    return <VisiteCard key={`${c.source}-${c.id}`} c={c} nextSlot={aid ? (slots as Record<string, string>)[aid] : undefined}
+                      onOpen={() => setDetail(c)}
+                      onReserve={() => aid && setReserve({ id: aid, titre: annonceOf(c)?.titre || c.adresse })} />;
+                  })}
+                </div>
+              </DashSection>
             )}
             {others.length > 0 && (
-              <section className="space-y-3">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Autres candidatures</h2>
-                {others.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} />)}
-              </section>
+              <DashSection title="Autres candidatures" action={<DashBadge tone="muted">{others.length}</DashBadge>}>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  {others.map((c) => <VisiteCard key={`${c.source}-${c.id}`} c={c} onOpen={() => setDetail(c)} />)}
+                </div>
+              </DashSection>
             )}
           </div>
         )}
-      </PremiumPageShellV2>
-    </div>
+      </DashPage>
+    </>
   );
 }

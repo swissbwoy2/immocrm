@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { NormalizedEvent } from './useEventManagerData';
+import { eventTypeChipColors, DEFAULT_EVENT_CHIP } from '../types';
 import { formatSwissDate, formatSwissTime, getSwissDateString } from '@/lib/dateUtils';
 import { Calendar as CalendarIcon } from 'lucide-react';
 
@@ -26,19 +27,21 @@ export const ListView = memo(function ListView({ events, onEventClick }: ListVie
 
   if (grouped.length === 0) {
     return (
-      <Card className="p-12 text-center border-dashed">
-        <CalendarIcon className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-        <p className="text-muted-foreground">Aucun événement à afficher</p>
+      <Card className="rounded-2xl border-border/70 px-6 py-12 text-center shadow-none">
+        <span className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+          <CalendarIcon className="h-7 w-7 text-primary" />
+        </span>
+        <p className="text-sm text-muted-foreground">Aucun événement à afficher</p>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {grouped.map(([dateKey, dayEvents]) => (
         <div key={dateKey}>
-          <div className="sticky top-0 z-10 bg-background/95 backdrop-blur py-2 mb-3 border-b border-border">
-            <h3 className="text-sm font-semibold text-foreground capitalize">
+          <div className="sticky top-0 z-10 mb-2 bg-card py-2">
+            <h3 className="text-base font-semibold capitalize text-foreground">
               {formatSwissDate(dayEvents[0].date, 'EEEE d MMMM yyyy')}
             </h3>
           </div>
@@ -48,16 +51,17 @@ export const ListView = memo(function ListView({ events, onEventClick }: ListVie
                 key={ev.id}
                 onClick={() => onEventClick(ev)}
                 className={cn(
-                  'w-full text-left p-4 rounded-lg border border-border bg-card',
-                  'hover:bg-accent hover:border-primary/40 transition-all',
+                  'w-full rounded-2xl border border-border/70 bg-card p-3 text-left sm:p-4',
+                  'shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]',
+                  'transition-colors hover:border-foreground/30',
                   'flex items-start gap-3',
                 )}
               >
-                <div className={cn('w-1 self-stretch rounded-full', ev.colorClass)} />
+                <span className={cn('mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full', ev.colorClass)} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 mb-1">
-                    <h4 className="font-semibold text-sm truncate">{ev.title}</h4>
-                    <Badge variant="outline" className="text-[10px] shrink-0">
+                    <h4 className="truncate text-sm font-semibold text-foreground">{ev.title}</h4>
+                    <Badge variant="outline" className={cn('shrink-0 rounded-full text-[10px] font-medium', eventTypeChipColors[ev.type] || DEFAULT_EVENT_CHIP)}>
                       {ev.typeLabel}
                     </Badge>
                   </div>
@@ -67,7 +71,7 @@ export const ListView = memo(function ListView({ events, onEventClick }: ListVie
                       : `${formatSwissTime(ev.date)}${ev.endDate ? ` – ${formatSwissTime(ev.endDate)}` : ''}`}
                   </div>
                   {ev.description && (
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
                       {ev.description}
                     </p>
                   )}

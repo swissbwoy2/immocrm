@@ -1,16 +1,27 @@
 import { useEffect, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
+import { DashBadge } from "@/components/client/dashboard/DashPrimitives";
+import {
+  DETAIL_SHEET,
+  DetailHeader,
+  DetailBody,
+  KeyFacts,
+  DetailSection,
+  DetailRow,
+  DetailRows,
+  DetailText,
+  DetailActions,
+  chfDetail,
+  dateTimeCH,
+} from "@/components/details/DetailPrimitives";
 import {
   Phone, Mail, MessageSquare, MapPin, Wallet, ShieldCheck, ShieldX,
   CheckCircle, Circle, Send, UserPlus, Trash2, Loader2, Calendar,
   Briefcase, Globe, Award, FileText
 } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { getLeadSource } from "@/lib/lead-source";
 import { initials, fullName, type Lead, type PhoneAppointment } from "./types";
@@ -70,14 +81,21 @@ const ToneIcon = ({ tone }: { tone: Tone }) => {
 };
 
 const FormRow = ({ label, value, tone }: { label: string; value: React.ReactNode; tone?: Tone }) => (
-  <div className="grid grid-cols-[140px_1fr] gap-2 items-start">
-    <span className="text-muted-foreground">{label}</span>
-    <span className={cn("font-medium break-words inline-flex items-center gap-1.5", tone && toneClasses[tone])}>
+  <div className="flex min-h-[44px] items-start justify-between gap-4 py-2.5">
+    <span className="text-sm text-muted-foreground">{label}</span>
+    <span className={cn("inline-flex items-center gap-1.5 break-words text-right text-[15px] font-medium", tone ? toneClasses[tone] : "text-foreground")}>
       {tone && <ToneIcon tone={tone} />}
       <span>{value}</span>
     </span>
   </div>
 );
+
+const QUALIF: Record<string, { label: string; tone: "success" | "warning" | "neutral" | "danger" }> = {
+  qualifie: { label: "Qualifié", tone: "success" },
+  a_verifier: { label: "À vérifier", tone: "warning" },
+  a_reorienter: { label: "À réorienter", tone: "neutral" },
+  non_qualifie: { label: "Non qualifié", tone: "danger" },
+};
 
 export function LeadDetailSheet({
   lead, appt, open, onClose, onUpdateNotes, onToggleContacted,
@@ -111,337 +129,220 @@ export function LeadDetailSheet({
   const isLouer = lead.type_recherche === "Louer";
   const isAcheter = lead.type_recherche === "Acheter";
 
+  const qualif = lead.statut_qualification ? QUALIF[lead.statut_qualification] : null;
+  const origine = [
+    ["Source", src.label],
+    ["Source brute", lead.source],
+    ["Formulaire", lead.formulaire],
+    ["UTM Source", lead.utm_source],
+    ["UTM Medium", lead.utm_medium],
+    ["UTM Campaign", lead.utm_campaign],
+    ["UTM Content", lead.utm_content],
+    ["UTM Term", lead.utm_term],
+  ].filter(([, v]) => !!v) as [string, string][];
+
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[480px] overflow-y-auto p-0 max-md:!inset-x-0 max-md:!inset-y-auto max-md:!bottom-0 max-md:!top-auto max-md:!h-[92vh] max-md:!w-full max-md:!max-w-full max-md:rounded-t-2xl max-md:border-t max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=open]:slide-in-from-bottom"
+        className={cn(
+          DETAIL_SHEET,
+          "sm:max-w-[480px] max-md:!inset-x-0 max-md:!inset-y-auto max-md:!bottom-0 max-md:!top-auto max-md:!h-[92dvh] max-md:!w-full max-md:!max-w-full max-md:rounded-t-3xl max-md:border-t max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=open]:slide-in-from-bottom",
+        )}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-br from-primary/15 to-primary/5 p-6 border-b">
-          <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-bold flex items-center justify-center text-lg flex-shrink-0">
-              {initials(lead)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <SheetHeader className="space-y-1 text-left">
-                <SheetTitle className="text-lg truncate">{fullName(lead)}</SheetTitle>
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="outline" className={cn("text-[10px]", src.badgeClass)}>{src.label}</Badge>
-                  {lead.type_recherche && <Badge variant="secondary" className="text-[10px]">{lead.type_recherche}</Badge>}
-                  {lead.contacted ? (
-                    <Badge className="text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30">Contacté</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="text-[10px]">Non contacté</Badge>
-                  )}
-                </div>
-              </SheetHeader>
-            </div>
+        <DetailHeader
+          titleAs={SheetTitle}
+          descriptionAs={SheetDescription}
+          className="pt-5 sm:pt-6"
+          eyebrow={
+            <span className="inline-flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                {initials(lead)}
+              </span>
+              Prospect
+            </span>
+          }
+          title={fullName(lead)}
+          subtitle={lead.created_at ? `Reçu le ${dateTimeCH(lead.created_at, { day: "numeric", month: "long", year: "numeric" })}` : undefined}
+          badge={
+            <>
+              <Badge variant="outline" className={cn("rounded-full text-xs", src.badgeClass)}>{src.label}</Badge>
+              {lead.type_recherche && <DashBadge tone="muted">{lead.type_recherche}</DashBadge>}
+              {lead.contacted ? <DashBadge tone="success">Contacté</DashBadge> : <DashBadge tone="warning">Non contacté</DashBadge>}
+            </>
+          }
+        />
+
+        <DetailBody>
+          {/* Contact */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" asChild className="col-span-2 min-h-11 justify-start gap-2">
+              <a href={`mailto:${lead.email}`}>
+                <Mail className="h-4 w-4 text-primary" />
+                <span className="truncate">{lead.email}</span>
+              </a>
+            </Button>
+            {lead.telephone && (
+              <>
+                <Button variant="outline" asChild className="min-h-11 gap-2">
+                  <a href={`tel:${lead.telephone}`}>
+                    <Phone className="h-4 w-4 text-primary" />
+                    Appeler
+                  </a>
+                </Button>
+                <Button variant="outline" asChild className="min-h-11 gap-2">
+                  <a href={`https://wa.me/${lead.telephone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noreferrer">
+                    <MessageSquare className="h-4 w-4 text-emerald-500" />
+                    WhatsApp
+                  </a>
+                </Button>
+              </>
+            )}
           </div>
-        </div>
 
-        <div className="p-6 space-y-6">
-          {/* Contact actions */}
-          <section>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contact</h4>
-            <div className="grid grid-cols-1 gap-2">
-              <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
-                <a href={`mailto:${lead.email}`}>
-                  <Mail className="h-4 w-4 text-primary" />
-                  <span className="truncate">{lead.email}</span>
-                </a>
-              </Button>
-              {lead.telephone && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
-                    <a href={`tel:${lead.telephone}`}>
-                      <Phone className="h-4 w-4 text-primary" />
-                      <span className="truncate">Appeler</span>
-                    </a>
-                  </Button>
-                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
-                    <a
-                      href={`https://wa.me/${lead.telephone.replace(/[^0-9]/g, "")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      <MessageSquare className="h-4 w-4 text-emerald-500" />
-                      <span className="truncate">WhatsApp</span>
-                    </a>
-                  </Button>
-                </div>
-              )}
-              {(lead.localite || lead.budget) && (
-                <div className="text-xs text-muted-foreground flex flex-wrap gap-3 pt-1">
-                  {lead.localite && <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{lead.localite}</span>}
-                  {lead.budget && <span className="inline-flex items-center gap-1"><Wallet className="h-3 w-3" />{lead.budget}</span>}
-                </div>
-              )}
-            </div>
-          </section>
+          <KeyFacts
+            className="sm:grid-cols-2"
+            items={[
+              lead.localite ? { label: "Région", value: lead.localite, icon: MapPin } : null,
+              lead.budget ? { label: isAcheter ? "Budget achat" : "Budget mensuel", value: lead.budget, icon: Wallet } : null,
+              lead.type_bien ? { label: "Type de bien", value: lead.type_bien } : null,
+            ]}
+          />
 
-          {/* RDV téléphonique */}
+          {/* RDV au bureau */}
           {appt && (
-            <section>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Rendez-vous au bureau</h4>
-              <div className={cn(
-                "rounded-lg p-3 border",
-                appt.status === "confirme"
-                  ? "bg-emerald-500/10 border-emerald-500/30"
-                  : "bg-amber-500/10 border-amber-500/30"
-              )}>
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <Calendar className="h-4 w-4" />
-                  {format(new Date(appt.slot_start), "EEEE d MMMM yyyy à HH'h'mm", { locale: fr })}
-                </div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  Statut : {appt.status === "confirme" ? "Confirmé" : "En attente"}
-                </div>
-                {appt.status === "en_attente" && (
-                  <Button
-                    size="sm"
-                    className="w-full mt-3 gap-2"
-                    onClick={() => onConfirmAppt(appt.id)}
-                    disabled={confirmingApptId === appt.id}
-                  >
-                    {confirmingApptId === appt.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
-                    Confirmer + envoyer .ics
-                  </Button>
-                )}
-              </div>
-            </section>
+            <DetailSection
+              title="Rendez-vous au bureau"
+              icon={Calendar}
+              action={<DashBadge tone={appt.status === "confirme" ? "success" : "warning"}>{appt.status === "confirme" ? "Confirmé" : "En attente"}</DashBadge>}
+            >
+              <p className="text-[15px] font-semibold first-letter:uppercase text-foreground">{dateTimeCH(appt.slot_start)}</p>
+              {appt.status === "en_attente" && (
+                <Button
+                  className="mt-3 min-h-11 w-full gap-2"
+                  onClick={() => onConfirmAppt(appt.id)}
+                  disabled={confirmingApptId === appt.id}
+                >
+                  {confirmingApptId === appt.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                  Confirmer + envoyer .ics
+                </Button>
+              )}
+            </DetailSection>
           )}
 
-          {/* Fiche prospect — Préqualification automatique (location /rendez-vous) */}
+          {/* Fiche prospect — préqualification automatique */}
           {lead.statut_qualification && (
-            <section>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-                <ShieldCheck className="h-3 w-3" /> Fiche prospect
-              </h4>
-              <div
-                className={cn(
-                  "rounded-md border p-3 text-xs space-y-2",
-                  lead.statut_qualification === 'qualifie' && 'border-emerald-500/40 bg-emerald-500/5',
-                  lead.statut_qualification === 'a_verifier' && 'border-amber-500/40 bg-amber-500/5',
-                  lead.statut_qualification === 'a_reorienter' && 'border-sky-500/40 bg-sky-500/5',
-                  lead.statut_qualification === 'non_qualifie' && 'border-rose-500/40 bg-rose-500/5',
-                )}
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge
-                    className={cn(
-                      'gap-1 border',
-                      lead.statut_qualification === 'qualifie' && 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/40',
-                      lead.statut_qualification === 'a_verifier' && 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40',
-                      lead.statut_qualification === 'a_reorienter' && 'bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/40',
-                      lead.statut_qualification === 'non_qualifie' && 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40',
-                    )}
-                  >
-                    {lead.statut_qualification === 'qualifie' && 'Qualifié'}
-                    {lead.statut_qualification === 'a_verifier' && 'À vérifier'}
-                    {lead.statut_qualification === 'a_reorienter' && 'À réorienter'}
-                    {lead.statut_qualification === 'non_qualifie' && 'Non qualifié'}
-                  </Badge>
-                  {lead.ratio_revenu_loyer != null && (
-                    <Badge variant="outline" className="gap-1">
-                      Ratio {lead.ratio_revenu_loyer}x
-                    </Badge>
-                  )}
-                  {lead.risque_niveau && (
-                    <Badge variant="outline" className="gap-1">
-                      Risque {lead.risque_niveau}
-                    </Badge>
-                  )}
-                  {lead.requires_manual_validation && (
-                    <Badge variant="destructive" className="gap-1">
-                      Validation manuelle requise
-                    </Badge>
-                  )}
-                </div>
-                {lead.resume_profil && (
-                  <p className="pt-2 border-t border-border/40 text-foreground/90 leading-relaxed">
-                    {lead.resume_profil}
-                  </p>
-                )}
-                {lead.motif_qualification && (
-                  <p className="text-muted-foreground"><strong className="text-foreground">Motif :</strong> {lead.motif_qualification}</p>
-                )}
-                {lead.recommandation_agent && (
-                  <p className="text-muted-foreground"><strong className="text-foreground">Recommandation :</strong> {lead.recommandation_agent}</p>
-                )}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-2 border-t border-border/40 text-[11px]">
-                  {lead.statut_suisse && <div><span className="text-muted-foreground">Statut CH :</span> {lead.statut_suisse}</div>}
-                  {lead.situation_pro && <div><span className="text-muted-foreground">Situation pro :</span> {lead.situation_pro}</div>}
-                  {lead.poursuites_statut && <div><span className="text-muted-foreground">Poursuites :</span> {lead.poursuites_statut}</div>}
-                  {lead.nb_pieces && <div><span className="text-muted-foreground">Logement :</span> {lead.nb_pieces}</div>}
-                  {lead.localite_recherche && <div><span className="text-muted-foreground">Localité :</span> {lead.localite_recherche}</div>}
-                  {lead.budget_max_chf != null && <div><span className="text-muted-foreground">Budget :</span> CHF {Number(lead.budget_max_chf).toLocaleString('fr-CH')}.-</div>}
-                  {lead.revenu_net_mensuel_chf != null && <div><span className="text-muted-foreground">Revenu net :</span> CHF {Number(lead.revenu_net_mensuel_chf).toLocaleString('fr-CH')}.-</div>}
-                </div>
+            <DetailSection title="Fiche prospect" icon={ShieldCheck}>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {qualif && <DashBadge tone={qualif.tone}>{qualif.label}</DashBadge>}
+                {lead.ratio_revenu_loyer != null && <DashBadge tone="neutral">Ratio {lead.ratio_revenu_loyer}x</DashBadge>}
+                {lead.risque_niveau && <DashBadge tone="neutral">Risque {lead.risque_niveau}</DashBadge>}
+                {lead.requires_manual_validation && <DashBadge tone="danger">Validation manuelle requise</DashBadge>}
               </div>
-            </section>
+              {lead.resume_profil && <DetailText className="mt-3">{lead.resume_profil}</DetailText>}
+              <DetailRows className="mt-2">
+                <DetailRow label="Motif" value={lead.motif_qualification} />
+                <DetailRow label="Recommandation" value={lead.recommandation_agent} />
+                <DetailRow label="Statut CH" value={lead.statut_suisse} />
+                <DetailRow label="Situation pro" value={lead.situation_pro} />
+                <DetailRow label="Poursuites" value={lead.poursuites_statut} />
+                <DetailRow label="Logement" value={lead.nb_pieces} />
+                <DetailRow label="Localité" value={lead.localite_recherche} />
+                <DetailRow label="Budget" value={lead.budget_max_chf != null ? chfDetail(lead.budget_max_chf) : null} />
+                <DetailRow label="Revenu net" value={lead.revenu_net_mensuel_chf != null ? chfDetail(lead.revenu_net_mensuel_chf) : null} />
+              </DetailRows>
+            </DetailSection>
           )}
 
           {/* Réponses du formulaire */}
           {lead.type_recherche !== "Vendre" && (
-            <section>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-                <FileText className="h-3 w-3" /> Réponses du formulaire
-              </h4>
-              <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-2">
-                {/* Statut qualification */}
-                <div className="flex items-center gap-2 pb-2 border-b border-border/40">
-                  {lead.is_qualified === true ? (
-                    <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 gap-1"><ShieldCheck className="h-3 w-3" />Qualifié</Badge>
-                  ) : lead.is_qualified === false ? (
-                    <Badge variant="destructive" className="gap-1"><ShieldX className="h-3 w-3" />Non qualifié</Badge>
-                  ) : (
-                    <Badge variant="secondary" className="gap-1"><Circle className="h-3 w-3" />À évaluer</Badge>
-                  )}
-                </div>
-
-                {/* Recherche */}
+            <DetailSection
+              title="Réponses du formulaire"
+              icon={FileText}
+              action={
+                lead.is_qualified === true ? <DashBadge tone="success">Qualifié</DashBadge>
+                  : lead.is_qualified === false ? <DashBadge tone="danger">Non qualifié</DashBadge>
+                  : <DashBadge tone="muted">À évaluer</DashBadge>
+              }
+            >
+              <div className="divide-y divide-border/50">
                 {lead.type_recherche && <FormRow label="Type de recherche" value={lead.type_recherche} />}
-                {lead.type_bien && <FormRow label="Type de bien" value={lead.type_bien} />}
-                {lead.localite && (
-                  <FormRow label="Région" value={<span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{lead.localite}</span>} />
+
+                {isLouer && lead.statut_emploi && (
+                  <FormRow
+                    label="Statut professionnel"
+                    value={<span className="inline-flex items-center gap-1"><Briefcase className="h-3.5 w-3.5" />{formatStatutEmploi(lead.statut_emploi)}</span>}
+                    tone={lead.statut_emploi === "salarie" || lead.statut_emploi === "salarié" ? "ok" : "warn"}
+                  />
                 )}
-                {lead.budget && (
-                  <FormRow label={isAcheter ? "Budget achat" : "Budget mensuel"} value={<span className="inline-flex items-center gap-1"><Wallet className="h-3 w-3" />{lead.budget}</span>} />
+                {isLouer && lead.permis_nationalite && (
+                  <FormRow
+                    label="Permis / Nationalité"
+                    value={<span className="inline-flex items-center gap-1"><Globe className="h-3.5 w-3.5" />{formatPermis(lead.permis_nationalite)}</span>}
+                    tone={["B", "C", "Suisse"].includes(lead.permis_nationalite) ? "ok" : "warn"}
+                  />
+                )}
+                {isLouer && lead.poursuites !== null && (
+                  <FormRow label="Extrait de poursuites" value={lead.poursuites ? "Oui" : "Aucune"} tone={lead.poursuites ? "ko" : "ok"} />
+                )}
+                {isLouer && lead.a_garant !== null && (
+                  <FormRow label="Garant disponible" value={lead.a_garant ? "Oui" : "Non"} tone={lead.a_garant ? "ok" : "neutral"} />
                 )}
 
-                {/* Locataires */}
-                {isLouer && (lead.statut_emploi || lead.permis_nationalite || lead.poursuites !== null || lead.a_garant !== null) && (
-                  <div className="pt-2 border-t border-border/40 space-y-2">
-                    {lead.statut_emploi && (
-                      <FormRow
-                        label="Statut professionnel"
-                        value={<span className="inline-flex items-center gap-1"><Briefcase className="h-3 w-3" />{formatStatutEmploi(lead.statut_emploi)}</span>}
-                        tone={lead.statut_emploi === "salarie" || lead.statut_emploi === "salarié" ? "ok" : "warn"}
-                      />
-                    )}
-                    {lead.permis_nationalite && (
-                      <FormRow
-                        label="Permis / Nationalité"
-                        value={<span className="inline-flex items-center gap-1"><Globe className="h-3 w-3" />{formatPermis(lead.permis_nationalite)}</span>}
-                        tone={["B", "C", "Suisse"].includes(lead.permis_nationalite) ? "ok" : "warn"}
-                      />
-                    )}
-                    {lead.poursuites !== null && (
-                      <FormRow
-                        label="Extrait de poursuites"
-                        value={lead.poursuites ? "Oui" : "Aucune"}
-                        tone={lead.poursuites ? "ko" : "ok"}
-                      />
-                    )}
-                    {lead.a_garant !== null && (
-                      <FormRow
-                        label="Garant disponible"
-                        value={lead.a_garant ? "Oui" : "Non"}
-                        tone={lead.a_garant ? "ok" : "neutral"}
-                      />
-                    )}
-                  </div>
+                {isAcheter && lead.accord_bancaire !== null && (
+                  <FormRow label="Accord bancaire" value={lead.accord_bancaire ? "Oui" : "Non"} tone={lead.accord_bancaire ? "ok" : "warn"} />
                 )}
-
-                {/* Acheteurs */}
-                {isAcheter && (lead.accord_bancaire !== null || lead.apport_personnel) && (
-                  <div className="pt-2 border-t border-border/40 space-y-2">
-                    {lead.accord_bancaire !== null && (
-                      <FormRow
-                        label="Accord bancaire"
-                        value={lead.accord_bancaire ? "Oui" : "Non"}
-                        tone={lead.accord_bancaire ? "ok" : "warn"}
-                      />
-                    )}
-                    {lead.apport_personnel && (
-                      <FormRow
-                        label="Apport personnel"
-                        value={<span className="inline-flex items-center gap-1"><Award className="h-3 w-3" />{lead.apport_personnel}</span>}
-                      />
-                    )}
-                  </div>
+                {isAcheter && lead.apport_personnel && (
+                  <FormRow
+                    label="Apport personnel"
+                    value={<span className="inline-flex items-center gap-1"><Award className="h-3.5 w-3.5" />{lead.apport_personnel}</span>}
+                  />
                 )}
               </div>
-            </section>
+            </DetailSection>
           )}
 
-          {/* Origine */}
-          <section>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Origine</h4>
-            <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
-              {[
-                ["Source", src.label],
-                ["Source brute", lead.source],
-                ["Formulaire", lead.formulaire],
-                ["UTM Source", lead.utm_source],
-                ["UTM Medium", lead.utm_medium],
-                ["UTM Campaign", lead.utm_campaign],
-                ["UTM Content", lead.utm_content],
-                ["UTM Term", lead.utm_term],
-              ].filter(([, v]) => !!v).map(([k, v]) => (
-                <div key={k as string} className="grid grid-cols-[110px_1fr] gap-2">
-                  <span className="text-muted-foreground">{k}</span>
-                  <span className="font-medium break-all">{v}</span>
-                </div>
-              ))}
-              {lead.created_at && (
-                <div className="grid grid-cols-[110px_1fr] gap-2 pt-1 border-t border-border/40 mt-2">
-                  <span className="text-muted-foreground">Créé le</span>
-                  <span className="font-medium">{format(new Date(lead.created_at), "d MMM yyyy HH:mm", { locale: fr })}</span>
-                </div>
-              )}
-            </div>
-          </section>
-
-          <Separator />
-
-          {/* Actions */}
-          <section className="space-y-2">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Actions</h4>
-            {canInvite && (
-              <Button
-                className="w-full justify-start gap-2"
-                onClick={() => onInviteAsClient(lead)}
-                disabled={invitingLeadId === lead.id}
-              >
-                {invitingLeadId === lead.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-                Inviter comme client
-              </Button>
-            )}
-            {!lead.contacted && (
-              <Button variant="outline" className="w-full justify-start gap-2" onClick={() => onSendRelance(lead)}>
-                <Send className="h-4 w-4 text-primary" />
-                Envoyer email de relance
-              </Button>
-            )}
-            <Button variant="outline" className="w-full justify-start gap-2" onClick={() => onToggleContacted(lead)}>
-              {lead.contacted ? <Circle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4 text-emerald-500" />}
-              {lead.contacted ? "Marquer non contacté" : "Marquer contacté"}
-            </Button>
-          </section>
-
           {/* Notes */}
-          <section>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-              <FileText className="h-3 w-3" /> Notes
-              {notes !== savedNotes && <span className="text-[10px] text-muted-foreground/60 italic ml-auto">enregistrement…</span>}
-            </h4>
+          <DetailSection
+            title="Notes"
+            icon={FileText}
+            action={notes !== savedNotes ? <span className="text-xs italic text-muted-foreground">Enregistrement…</span> : undefined}
+          >
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Ajouter des notes de suivi (sauvegarde automatique)…"
               rows={4}
+              className="text-[15px]"
             />
-          </section>
+          </DetailSection>
 
-          <Separator />
+          {/* Origine */}
+          {(origine.length > 0 || lead.created_at) && (
+            <DetailSection title="Origine">
+              <div className="divide-y divide-border/50">
+                {origine.map(([k, v]) => (
+                  <div key={k} className="flex min-h-[40px] items-start justify-between gap-4 py-2">
+                    <span className="text-sm text-muted-foreground">{k}</span>
+                    <span className="break-all text-right text-sm font-medium text-foreground">{v}</span>
+                  </div>
+                ))}
+                {lead.created_at && (
+                  <div className="flex min-h-[40px] items-start justify-between gap-4 py-2">
+                    <span className="text-sm text-muted-foreground">Créé le</span>
+                    <span className="text-right text-sm font-medium text-foreground">
+                      {dateTimeCH(lead.created_at, { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </DetailSection>
+          )}
 
-          {/* Danger */}
-          <section>
+          <div className="flex justify-center">
             <Button
               variant="ghost"
-              className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="min-h-11 gap-2 text-destructive hover:text-destructive"
               onClick={() => {
                 if (confirm("Supprimer définitivement ce lead ?")) {
                   onDelete(lead);
@@ -452,8 +353,31 @@ export function LeadDetailSheet({
               <Trash2 className="h-4 w-4" />
               Supprimer ce lead
             </Button>
-          </section>
-        </div>
+          </div>
+        </DetailBody>
+
+        <DetailActions className="sm:[&>*]:flex-[1_1_auto]">
+          {!lead.contacted && (
+            <Button variant="outline" className="gap-2" onClick={() => onSendRelance(lead)}>
+              <Send className="h-4 w-4 text-primary" />
+              Envoyer email de relance
+            </Button>
+          )}
+          <Button variant={canInvite ? "outline" : "default"} className="gap-2" onClick={() => onToggleContacted(lead)}>
+            {lead.contacted ? <Circle className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
+            {lead.contacted ? "Marquer non contacté" : "Marquer contacté"}
+          </Button>
+          {canInvite && (
+            <Button
+              className="gap-2"
+              onClick={() => onInviteAsClient(lead)}
+              disabled={invitingLeadId === lead.id}
+            >
+              {invitingLeadId === lead.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+              Inviter comme client
+            </Button>
+          )}
+        </DetailActions>
       </SheetContent>
     </Sheet>
   );

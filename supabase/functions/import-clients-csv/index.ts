@@ -1,4 +1,4 @@
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailCode, emailDetails, emailList, emailNotice, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
@@ -71,107 +71,48 @@ interface ImportResult {
 
 // Generate welcome email for newly created accounts (with password)
 function generateCreationEmailHtml(prenom: string, nom: string, email: string, password: string, appUrl: string): string {
-  return renderCorporateEmail({ title: 'Bienvenue chez Immo-Rama', category: 'VOTRE COMPTE', bodyHtml: `
-              <p style="margin: 0 0 20px; color: #333; font-size: 16px; line-height: 1.6;">
-                Bonjour <strong>${prenom} ${nom}</strong>,
-              </p>
-              <p style="margin: 0 0 30px; color: #666; font-size: 15px; line-height: 1.6;">
-                Votre compte client a été créé avec succès sur la plateforme Immo-Rama.
-              </p>
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4ed; border-radius: 8px; padding: 24px; margin-bottom: 30px;">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 16px; color: #333; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                      Vos identifiants de connexion
-                    </p>
-                    <table role="presentation" style="width: 100%; border-collapse: collapse;">
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <span style="color: #666; font-size: 14px;">📧 Email :</span>
-                        </td>
-                        <td style="padding: 8px 0;">
-                          <strong style="color: #333; font-size: 14px;">${email}</strong>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <span style="color: #666; font-size: 14px;">🔐 Mot de passe :</span>
-                        </td>
-                        <td style="padding: 8px 0;">
-                          <code style="background-color: white; padding: 4px 8px; border-radius: 4px; color: #205a43; font-size: 15px; font-weight: 600;">${password}</code>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                <tr>
-                  <td align="center">
-                    <a href="${appUrl}/login" style="display: inline-block; background: #205a43; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; ">
-                      Se connecter maintenant →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 16px; margin-bottom: 20px;">
-                <tr>
-                  <td>
-                    <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.5;">
-                      <strong>Important :</strong> Pour votre sécurité, nous vous recommandons de changer votre mot de passe dès votre première connexion.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
-                Besoin d'aide ? N'hésitez pas à contacter votre agent ou notre support.
-              </p>
-            ` });
+  const fullName = `${prenom ?? ''} ${nom ?? ''}`.trim();
+  return renderCorporateEmail({
+    title: 'Bienvenue chez Immo-Rama',
+    preview: 'Votre compte client a été créé : voici vos identifiants de connexion.',
+    category: 'VOTRE COMPTE',
+    bodyHtml:
+      emailParagraph(fullName ? `Bonjour <strong>${escapeEmailHtml(fullName)}</strong>,` : 'Bonjour,') +
+      emailParagraph('Votre compte client a été créé avec succès sur la plateforme Immo-Rama.') +
+      emailDetails([
+        ['Email', email],
+        { label: 'Mot de passe', html: emailCode(password) },
+      ], 'Vos identifiants de connexion') +
+      emailButton('Se connecter maintenant →', `${appUrl}/login`) +
+      emailNotice('<strong>Important :</strong> Pour votre sécurité, nous vous recommandons de changer votre mot de passe dès votre première connexion.', 'warning') +
+      emailParagraph("Besoin d'aide ? N'hésitez pas à contacter votre agent ou notre support.", true),
+  });
 }
 
 // Generate activation email for accounts that were activated (without password)
 function generateActivationEmailHtml(prenom: string, nom: string, appUrl: string): string {
-  return renderCorporateEmail({ title: 'Votre compte est activé !', category: 'VOTRE COMPTE', bodyHtml: `
-              <p style="margin: 0 0 20px; color: #333; font-size: 16px; line-height: 1.6;">
-                Bonjour <strong>${prenom} ${nom}</strong>,
-              </p>
-              <p style="margin: 0 0 20px; color: #666; font-size: 15px; line-height: 1.6;">
-                Excellente nouvelle ! Nous avons bien reçu votre mandat de recherche et votre acompte a été comptabilisé.
-              </p>
-              <p style="margin: 0 0 30px; color: #666; font-size: 15px; line-height: 1.6;">
-                <strong style="color: #205a43;">Votre compte Immo-Rama est maintenant pleinement activé</strong> et vous pouvez accéder à toutes les fonctionnalités de votre espace client.
-              </p>
-
-              <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4ed; border-radius: 8px; padding: 24px; margin-bottom: 30px; border: 1px solid #bbf7d0;">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 16px; color: #205a43; font-size: 14px; font-weight: 600;">
-                      ✅ Ce que vous pouvez faire maintenant :
-                    </p>
-                    <ul style="margin: 0; padding-left: 20px; color: #205a43; font-size: 14px; line-height: 1.8;">
-                      <li style="margin-bottom:8px;">Consulter les offres de biens qui correspondent à vos critères</li>
-                      <li style="margin-bottom:8px;">Planifier des visites avec votre agent</li>
-                      <li style="margin-bottom:8px;">Gérer vos documents et votre dossier</li>
-                      <li style="margin-bottom:8px;">Échanger avec votre agent via la messagerie</li>
-                    </ul>
-                  </td>
-                </tr>
-              </table>
-
-              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                <tr>
-                  <td align="center">
-                    <a href="${appUrl}/login" style="display: inline-block; background: #205a43; color: white; text-decoration: none; padding: 14px 32px; border-radius: 6px; font-size: 16px; font-weight: 600; ">
-                      Accéder à mon espace client →
-                    </a>
-                  </td>
-                </tr>
-              </table>
-
-              <p style="margin: 0; color: #666; font-size: 14px; line-height: 1.6;">
-                Votre agent va bientôt vous contacter pour commencer votre recherche. En attendant, n'hésitez pas à compléter votre dossier si ce n'est pas déjà fait.
-              </p>
-            ` });
+  const fullName = `${prenom ?? ''} ${nom ?? ''}`.trim();
+  return renderCorporateEmail({
+    title: 'Votre compte est activé !',
+    preview: 'Votre compte Immo-Rama est maintenant pleinement activé.',
+    category: 'VOTRE COMPTE',
+    bodyHtml:
+      emailParagraph(fullName ? `Bonjour <strong>${escapeEmailHtml(fullName)}</strong>,` : 'Bonjour,') +
+      emailParagraph('Excellente nouvelle ! Nous avons bien reçu votre mandat de recherche et votre acompte a été comptabilisé.') +
+      emailParagraph('<strong>Votre compte Immo-Rama est maintenant pleinement activé</strong> et vous pouvez accéder à toutes les fonctionnalités de votre espace client.') +
+      emailNotice(
+        emailList([
+          'Consulter les offres de biens qui correspondent à vos critères',
+          'Planifier des visites avec votre agent',
+          'Gérer vos documents et votre dossier',
+          'Échanger avec votre agent via la messagerie',
+        ]).replace('margin:0 0 18px', 'margin:6px 0 0'),
+        'info',
+        'Ce que vous pouvez faire maintenant',
+      ) +
+      emailButton('Accéder à mon espace client →', `${appUrl}/login`) +
+      emailParagraph("Votre agent va bientôt vous contacter pour commencer votre recherche. En attendant, n'hésitez pas à compléter votre dossier si ce n'est pas déjà fait.", true),
+  });
 }
 
 serve(async (req) => {
@@ -231,7 +172,7 @@ serve(async (req) => {
 
     // Initialize Resend
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'), "import-clients-csv");
-    const appUrl = Deno.env.get('VITE_SUPABASE_URL')?.replace('.supabase.co', '.lovable.app').replace('https://', 'https://app-') || 'https://ydljsdscdnqrqnjvqela.lovable.app';
+    const appUrl = 'https://logisorama.ch';
 
     // Process each client
     for (const clientData of clients) {
@@ -388,7 +329,7 @@ serve(async (req) => {
               );
 
               await resend.emails.send({
-                from: 'Immo-Rama <onboarding@resend.dev>',
+                from: 'Logisorama <support@logisorama.ch>',
                 to: [clientData.user.email],
                 subject: '🎉 Votre compte Immo-Rama est maintenant activé !',
                 html: emailHtml,
@@ -452,7 +393,7 @@ serve(async (req) => {
               );
 
               await resend.emails.send({
-                from: 'Immo-Rama <onboarding@resend.dev>',
+                from: 'Logisorama <support@logisorama.ch>',
                 to: [clientData.user.email],
                 subject: 'Bienvenue chez Immo-Rama - Vos identifiants de connexion',
                 html: emailHtml,

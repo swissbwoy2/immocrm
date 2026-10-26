@@ -1,8 +1,8 @@
-import { Trophy, Medal, Award, TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Trophy, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { nombreSuisse } from './statsFormat';
 
 interface LeaderboardEntry {
   id: string;
@@ -22,12 +22,7 @@ interface LeaderboardProps {
   showRankChange?: boolean;
 }
 
-const rankIcons = [
-  { icon: Trophy, color: 'text-yellow-500', bg: 'bg-yellow-500/10' },
-  { icon: Medal, color: 'text-gray-400', bg: 'bg-gray-400/10' },
-  { icon: Award, color: 'text-amber-600', bg: 'bg-amber-600/10' },
-];
-
+/** Classement sobre : rang, nom (+ sous-texte), barre proportionnelle, valeur. */
 export function Leaderboard({
   title,
   entries,
@@ -37,22 +32,26 @@ export function Leaderboard({
   showRankChange = true,
 }: LeaderboardProps) {
   const sortedEntries = [...entries].sort((a, b) => b.value - a.value).slice(0, maxEntries);
+  const maxValue = Math.max(...sortedEntries.map((e) => e.value), 0);
 
   return (
-    <Card className="group transition-all duration-300 hover:shadow-lg hover:-translate-y-1 border-primary/10 hover:border-primary/30">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-medium flex items-center gap-2">
-          <Trophy className="h-5 w-5 text-yellow-500 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12" />
-          <span className="transition-transform duration-300 group-hover:scale-[1.02] origin-left">{title}</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
+    <div className={`${DASH_CARD} flex h-full flex-col p-4 md:p-5`}>
+      <div className="mb-3 flex min-w-0 items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Trophy className="h-[18px] w-[18px]" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="truncate text-base font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">sur la période</p>
+        </div>
+      </div>
+
+      <ol className="divide-y divide-border/60">
         {sortedEntries.map((entry, index) => {
           const rank = index + 1;
-          const rankInfo = rankIcons[index] || null;
           const isHighlighted = entry.id === highlightId;
-          const isTopRank = index === 0;
-          
+          const width = maxValue > 0 ? Math.max((entry.value / maxValue) * 100, 2) : 0;
+
           let rankChange: 'up' | 'down' | 'same' | null = null;
           if (showRankChange && entry.previousRank !== undefined) {
             if (entry.previousRank > rank) rankChange = 'up';
@@ -61,73 +60,64 @@ export function Leaderboard({
           }
 
           return (
-            <div
+            <li
               key={entry.id}
               className={cn(
-                "flex items-center gap-3 p-3 rounded-lg transition-all duration-200",
-                "hover:bg-muted/50 hover:translate-x-1",
-                isHighlighted && "bg-primary/10 border border-primary/30",
-                isTopRank && !isHighlighted && "bg-yellow-500/5"
+                'flex items-center gap-3 py-2.5',
+                isHighlighted && '-mx-2 rounded-xl bg-primary/[0.06] px-2'
               )}
-              style={{ animationDelay: `${index * 50}ms` }}
             >
-              {/* Rank */}
-              <div className={cn(
-                "flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold",
-                rankInfo ? rankInfo.bg : "bg-muted"
+              {/* Rang */}
+              <span className={cn(
+                'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold tabular-nums',
+                rank === 1 ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
               )}>
-                {rankInfo ? (
-                  <rankInfo.icon className={cn("h-4 w-4", rankInfo.color)} />
-                ) : (
-                  <span className="text-muted-foreground">{rank}</span>
-                )}
-              </div>
+                {rank}
+              </span>
 
-              {/* Avatar */}
-              <Avatar className="h-9 w-9">
-                <AvatarFallback className="text-xs">
-                  {entry.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-
-              {/* Name and subtitle */}
-              <div className="flex-1 min-w-0">
-                <p className={cn(
-                  "font-medium text-sm truncate",
-                  isHighlighted && "text-primary"
-                )}>
-                  {entry.name}
-                  {isHighlighted && <Badge variant="outline" className="ml-2 text-xs">Vous</Badge>}
-                </p>
+              {/* Nom, sous-texte, barre */}
+              <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 items-center gap-2">
+                  <p className={cn('truncate text-sm font-medium text-foreground', isHighlighted && 'text-primary')}>
+                    {entry.name}
+                  </p>
+                  {isHighlighted && <Badge variant="outline" className="shrink-0 rounded-full text-xs">Vous</Badge>}
+                </div>
                 {entry.subtitle && (
-                  <p className="text-xs text-muted-foreground truncate">{entry.subtitle}</p>
+                  <p className="truncate text-xs text-muted-foreground">{entry.subtitle}</p>
                 )}
+                <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className={cn('h-full rounded-full', rank === 1 ? 'bg-primary' : 'bg-primary/50')}
+                    style={{ width: `${width}%` }}
+                  />
+                </div>
               </div>
 
-              {/* Value */}
-              <div className="text-right">
-                <p className="font-bold text-sm">{entry.value.toLocaleString()}</p>
+              {/* Valeur */}
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-semibold tabular-nums text-foreground">{nombreSuisse(entry.value)}</p>
                 <p className="text-xs text-muted-foreground">{valueLabel}</p>
               </div>
 
-              {/* Rank change indicator */}
+              {/* Évolution du rang */}
               {rankChange && (
-                <div className="w-6">
-                  {rankChange === 'up' && <TrendingUp className="h-4 w-4 text-green-500" />}
-                  {rankChange === 'down' && <TrendingDown className="h-4 w-4 text-red-500" />}
+                <div className="w-5 shrink-0">
+                  {rankChange === 'up' && <TrendingUp className="h-4 w-4 text-emerald-600" />}
+                  {rankChange === 'down' && <TrendingDown className="h-4 w-4 text-destructive" />}
                   {rankChange === 'same' && <Minus className="h-4 w-4 text-muted-foreground" />}
                 </div>
               )}
-            </div>
+            </li>
           );
         })}
+      </ol>
 
-        {entries.length === 0 && (
-          <p className="text-center text-muted-foreground py-4">
-            Aucune donnée disponible
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      {entries.length === 0 && (
+        <p className="py-6 text-center text-sm text-muted-foreground">
+          Aucune donnée disponible
+        </p>
+      )}
+    </div>
   );
 }

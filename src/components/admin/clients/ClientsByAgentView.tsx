@@ -14,6 +14,7 @@ import {
 import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { cn } from "@/lib/utils";
 import { formatSwissShortDate } from "@/lib/dateUtils";
+import { isClientActif, useUsersAvecCreditsMandat } from "@/lib/activeClients";
 
 type ClientAgent = {
   client_id: string;
@@ -79,6 +80,7 @@ export function ClientsByAgentView({
   clientAgents,
 }: ClientsByAgentViewProps) {
   const navigate = useNavigate();
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
 
   const [selectedAgent, setSelectedAgent] = useState<"all" | string>("all");
   const [responsibilityFilter, setResponsibilityFilter] =
@@ -268,9 +270,15 @@ export function ClientsByAgentView({
   }, [assignments, agentsById, clientById]);
 
   // ---------- KPI ----------
+  // Définition unique : statut 'actif' ET crédits de mandat > 0 (cf. src/lib/activeClients.ts)
   const uniqueClientCount = useMemo(
-    () => new Set(clients.map((c) => c.id)).size,
-    [clients],
+    () =>
+      new Set(
+        clients
+          .filter((c) => isClientActif(c as any, usersAvecCreditsMandat))
+          .map((c) => c.id),
+      ).size,
+    [clients, usersAvecCreditsMandat],
   );
 
   const activeAgentsCount = useMemo(
@@ -461,11 +469,11 @@ export function ClientsByAgentView({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        Clients actifs = clients uniques. Assignations principales et co-assignations = relations agent-client.
+        Clients actifs = statut actif avec crédits de mandat. Assignations principales et co-assignations = relations agent-client.
       </p>
 
       {/* Filtres */}
-      <div className="rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-4 md:p-5 space-y-4">
+      <div className="rounded-2xl bg-card border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)] p-4 md:p-5 space-y-4">
         <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -640,7 +648,7 @@ export function ClientsByAgentView({
               <div
                 key={bucket.agentId}
                 className={cn(
-                  "rounded-2xl border bg-card/80 backdrop-blur-xl p-4 md:p-5",
+                  "rounded-2xl border bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)] p-4 md:p-5",
                   bucket.isUnknown
                     ? "border-dashed border-muted-foreground/30"
                     : "border-border/50",

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -208,6 +208,75 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      agences_immobilieres: {
+        Row: {
+          adresse_postale: string | null
+          annonces_vues: Json
+          created_at: string
+          date_collecte: string | null
+          dernier_resultat: string | null
+          derniere_visite_at: string | null
+          email: string | null
+          id: string
+          nom_agence: string
+          notes: string | null
+          npa: string | null
+          page_achat_url: string | null
+          page_location_url: string | null
+          region_uspi: string
+          site_statut: string
+          site_web: string | null
+          source_uspi: string | null
+          telephone: string | null
+          updated_at: string
+          ville: string | null
+        }
+        Insert: {
+          adresse_postale?: string | null
+          annonces_vues?: Json
+          created_at?: string
+          date_collecte?: string | null
+          dernier_resultat?: string | null
+          derniere_visite_at?: string | null
+          email?: string | null
+          id?: string
+          nom_agence: string
+          notes?: string | null
+          npa?: string | null
+          page_achat_url?: string | null
+          page_location_url?: string | null
+          region_uspi: string
+          site_statut?: string
+          site_web?: string | null
+          source_uspi?: string | null
+          telephone?: string | null
+          updated_at?: string
+          ville?: string | null
+        }
+        Update: {
+          adresse_postale?: string | null
+          annonces_vues?: Json
+          created_at?: string
+          date_collecte?: string | null
+          dernier_resultat?: string | null
+          derniere_visite_at?: string | null
+          email?: string | null
+          id?: string
+          nom_agence?: string
+          notes?: string | null
+          npa?: string | null
+          page_achat_url?: string | null
+          page_location_url?: string | null
+          region_uspi?: string
+          site_statut?: string
+          site_web?: string | null
+          source_uspi?: string | null
+          telephone?: string | null
+          updated_at?: string
+          ville?: string | null
+        }
+        Relationships: []
       }
       agent_badges: {
         Row: {
@@ -2133,6 +2202,933 @@ export type Database = {
           },
         ]
       }
+      backup_20261019_c_ids: {
+        Row: {
+          client_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019_clients: {
+        Row: {
+          abaninja_client_uuid: string | null
+          abaninja_invoice_id: string | null
+          abaninja_invoice_ref: string | null
+          adresse: string | null
+          agent_id: string | null
+          anciennete_mois: number | null
+          animaux: boolean | null
+          anonymise_at: string | null
+          anonymise_motif: string | null
+          apport_personnel: number | null
+          autres_credits: boolean | null
+          budget_max: number | null
+          cancellation_reason: string | null
+          cancellation_requested_at: string | null
+          charges_extraordinaires: boolean | null
+          charges_mensuelles: number | null
+          commission_split: number | null
+          contact_gerance: string | null
+          created_at: string | null
+          curatelle: boolean | null
+          date_ajout: string | null
+          date_changement_statut: string | null
+          date_engagement: string | null
+          date_naissance: string | null
+          decouverte_agence: string | null
+          demande_mandat_id: string | null
+          depuis_le: string | null
+          derniere_relance_at: string | null
+          employeur: string | null
+          etat_avancement: string | null
+          etat_civil: string | null
+          extrait_poursuites_ai_confidence: number | null
+          extrait_poursuites_date_emission: string | null
+          extrait_poursuites_document_id: string | null
+          extrait_poursuites_extraction_method: string | null
+          extrait_poursuites_last_reminder_at: string | null
+          garanties: string | null
+          gerance_actuelle: string | null
+          id: string | null
+          instrument_musique: boolean | null
+          journey_type: string | null
+          loyer_actuel: number | null
+          mandat_date_signature: string | null
+          mandat_pdf_url: string | null
+          mandat_renewal_count: number | null
+          mandat_signature_data: string | null
+          mandate_official_end_date: string | null
+          mandate_pause_days: number | null
+          mandate_paused_at: string | null
+          montant_charges_extra: number | null
+          motif_changement: string | null
+          nationalite: string | null
+          nombre_occupants: number | null
+          note_agent: string | null
+          numero_plaques: string | null
+          payslip_last_reminder_at: string | null
+          pieces: number | null
+          pieces_actuel: number | null
+          poursuites: boolean | null
+          priorite: string | null
+          profession: string | null
+          refund_eligible: boolean | null
+          refund_processed_at: string | null
+          refund_requested_at: string | null
+          refund_status: string | null
+          region_recherche: string | null
+          relance_count: number | null
+          residence: string | null
+          revenus_mensuels: number | null
+          secteur_activite: string | null
+          situation_familiale: string | null
+          situation_financiere: string | null
+          souhaits_particuliers: string | null
+          source_revenus: string | null
+          statut: string | null
+          type_bien: string | null
+          type_contrat: string | null
+          type_permis: string | null
+          type_recherche: string | null
+          updated_at: string | null
+          user_id: string | null
+          utilisation_logement: string | null
+          vehicules: boolean | null
+        }
+        Insert: {
+          abaninja_client_uuid?: string | null
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_ref?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          anciennete_mois?: number | null
+          animaux?: boolean | null
+          anonymise_at?: string | null
+          anonymise_motif?: string | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          budget_max?: number | null
+          cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
+          charges_extraordinaires?: boolean | null
+          charges_mensuelles?: number | null
+          commission_split?: number | null
+          contact_gerance?: string | null
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_ajout?: string | null
+          date_changement_statut?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          decouverte_agence?: string | null
+          demande_mandat_id?: string | null
+          depuis_le?: string | null
+          derniere_relance_at?: string | null
+          employeur?: string | null
+          etat_avancement?: string | null
+          etat_civil?: string | null
+          extrait_poursuites_ai_confidence?: number | null
+          extrait_poursuites_date_emission?: string | null
+          extrait_poursuites_document_id?: string | null
+          extrait_poursuites_extraction_method?: string | null
+          extrait_poursuites_last_reminder_at?: string | null
+          garanties?: string | null
+          gerance_actuelle?: string | null
+          id?: string | null
+          instrument_musique?: boolean | null
+          journey_type?: string | null
+          loyer_actuel?: number | null
+          mandat_date_signature?: string | null
+          mandat_pdf_url?: string | null
+          mandat_renewal_count?: number | null
+          mandat_signature_data?: string | null
+          mandate_official_end_date?: string | null
+          mandate_pause_days?: number | null
+          mandate_paused_at?: string | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nombre_occupants?: number | null
+          note_agent?: string | null
+          numero_plaques?: string | null
+          payslip_last_reminder_at?: string | null
+          pieces?: number | null
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
+          priorite?: string | null
+          profession?: string | null
+          refund_eligible?: boolean | null
+          refund_processed_at?: string | null
+          refund_requested_at?: string | null
+          refund_status?: string | null
+          region_recherche?: string | null
+          relance_count?: number | null
+          residence?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          situation_financiere?: string | null
+          souhaits_particuliers?: string | null
+          source_revenus?: string | null
+          statut?: string | null
+          type_bien?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          type_recherche?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
+        }
+        Update: {
+          abaninja_client_uuid?: string | null
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_ref?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          anciennete_mois?: number | null
+          animaux?: boolean | null
+          anonymise_at?: string | null
+          anonymise_motif?: string | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          budget_max?: number | null
+          cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
+          charges_extraordinaires?: boolean | null
+          charges_mensuelles?: number | null
+          commission_split?: number | null
+          contact_gerance?: string | null
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_ajout?: string | null
+          date_changement_statut?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          decouverte_agence?: string | null
+          demande_mandat_id?: string | null
+          depuis_le?: string | null
+          derniere_relance_at?: string | null
+          employeur?: string | null
+          etat_avancement?: string | null
+          etat_civil?: string | null
+          extrait_poursuites_ai_confidence?: number | null
+          extrait_poursuites_date_emission?: string | null
+          extrait_poursuites_document_id?: string | null
+          extrait_poursuites_extraction_method?: string | null
+          extrait_poursuites_last_reminder_at?: string | null
+          garanties?: string | null
+          gerance_actuelle?: string | null
+          id?: string | null
+          instrument_musique?: boolean | null
+          journey_type?: string | null
+          loyer_actuel?: number | null
+          mandat_date_signature?: string | null
+          mandat_pdf_url?: string | null
+          mandat_renewal_count?: number | null
+          mandat_signature_data?: string | null
+          mandate_official_end_date?: string | null
+          mandate_pause_days?: number | null
+          mandate_paused_at?: string | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nombre_occupants?: number | null
+          note_agent?: string | null
+          numero_plaques?: string | null
+          payslip_last_reminder_at?: string | null
+          pieces?: number | null
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
+          priorite?: string | null
+          profession?: string | null
+          refund_eligible?: boolean | null
+          refund_processed_at?: string | null
+          refund_requested_at?: string | null
+          refund_status?: string | null
+          region_recherche?: string | null
+          relance_count?: number | null
+          residence?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          situation_financiere?: string | null
+          souhaits_particuliers?: string | null
+          source_revenus?: string | null
+          statut?: string | null
+          type_bien?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          type_recherche?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
+        }
+        Relationships: []
+      }
+      backup_20261019_documents: {
+        Row: {
+          candidate_id: string | null
+          candidature_id: string | null
+          client_id: string | null
+          commentaire_admin: string | null
+          created_at: string | null
+          date_upload: string | null
+          id: string | null
+          nom: string | null
+          offre_id: string | null
+          purchase_category: string | null
+          purchase_project_id: string | null
+          statut: string | null
+          taille: number | null
+          type: string | null
+          type_document: string | null
+          url: string | null
+          user_id: string | null
+          validated_at: string | null
+        }
+        Insert: {
+          candidate_id?: string | null
+          candidature_id?: string | null
+          client_id?: string | null
+          commentaire_admin?: string | null
+          created_at?: string | null
+          date_upload?: string | null
+          id?: string | null
+          nom?: string | null
+          offre_id?: string | null
+          purchase_category?: string | null
+          purchase_project_id?: string | null
+          statut?: string | null
+          taille?: number | null
+          type?: string | null
+          type_document?: string | null
+          url?: string | null
+          user_id?: string | null
+          validated_at?: string | null
+        }
+        Update: {
+          candidate_id?: string | null
+          candidature_id?: string | null
+          client_id?: string | null
+          commentaire_admin?: string | null
+          created_at?: string | null
+          date_upload?: string | null
+          id?: string | null
+          nom?: string | null
+          offre_id?: string | null
+          purchase_category?: string | null
+          purchase_project_id?: string | null
+          statut?: string | null
+          taille?: number | null
+          type?: string | null
+          type_document?: string | null
+          url?: string | null
+          user_id?: string | null
+          validated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019_offres: {
+        Row: {
+          action_notified_at: string | null
+          adresse: string | null
+          agent_id: string | null
+          annee_construction: number | null
+          classe_energetique: string | null
+          client_id: string | null
+          code_immeuble: string | null
+          commentaires: string | null
+          concierge_nom: string | null
+          concierge_tel: string | null
+          contact_annonceur: string | null
+          contact_gerance: string | null
+          contact_visite: string | null
+          created_at: string | null
+          date_envoi: string | null
+          description: string | null
+          description_marketing: string | null
+          disponibilite: string | null
+          envoi_auto: boolean | null
+          equipements: string[] | null
+          etage: string | null
+          geocoded_at: string | null
+          id: string | null
+          images_extracted_at: string | null
+          interesse_notified_at: string | null
+          latitude: number | null
+          lien_annonce: string | null
+          locataire_nom: string | null
+          locataire_tel: string | null
+          longitude: number | null
+          medias_galerie: Json | null
+          missing_info: string | null
+          needs_agent_action: boolean | null
+          orientation: string | null
+          pieces: number | null
+          postulation_demandee_at: string | null
+          prix: number | null
+          statut: string | null
+          surface: number | null
+          titre: string | null
+          type_bien: string | null
+          type_chauffage: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_notified_at?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          annee_construction?: number | null
+          classe_energetique?: string | null
+          client_id?: string | null
+          code_immeuble?: string | null
+          commentaires?: string | null
+          concierge_nom?: string | null
+          concierge_tel?: string | null
+          contact_annonceur?: string | null
+          contact_gerance?: string | null
+          contact_visite?: string | null
+          created_at?: string | null
+          date_envoi?: string | null
+          description?: string | null
+          description_marketing?: string | null
+          disponibilite?: string | null
+          envoi_auto?: boolean | null
+          equipements?: string[] | null
+          etage?: string | null
+          geocoded_at?: string | null
+          id?: string | null
+          images_extracted_at?: string | null
+          interesse_notified_at?: string | null
+          latitude?: number | null
+          lien_annonce?: string | null
+          locataire_nom?: string | null
+          locataire_tel?: string | null
+          longitude?: number | null
+          medias_galerie?: Json | null
+          missing_info?: string | null
+          needs_agent_action?: boolean | null
+          orientation?: string | null
+          pieces?: number | null
+          postulation_demandee_at?: string | null
+          prix?: number | null
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          type_chauffage?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_notified_at?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          annee_construction?: number | null
+          classe_energetique?: string | null
+          client_id?: string | null
+          code_immeuble?: string | null
+          commentaires?: string | null
+          concierge_nom?: string | null
+          concierge_tel?: string | null
+          contact_annonceur?: string | null
+          contact_gerance?: string | null
+          contact_visite?: string | null
+          created_at?: string | null
+          date_envoi?: string | null
+          description?: string | null
+          description_marketing?: string | null
+          disponibilite?: string | null
+          envoi_auto?: boolean | null
+          equipements?: string[] | null
+          etage?: string | null
+          geocoded_at?: string | null
+          id?: string | null
+          images_extracted_at?: string | null
+          interesse_notified_at?: string | null
+          latitude?: number | null
+          lien_annonce?: string | null
+          locataire_nom?: string | null
+          locataire_tel?: string | null
+          longitude?: number | null
+          medias_galerie?: Json | null
+          missing_info?: string | null
+          needs_agent_action?: boolean | null
+          orientation?: string | null
+          pieces?: number | null
+          postulation_demandee_at?: string | null
+          prix?: number | null
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          type_chauffage?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019_user_roles: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019b_c_ids: {
+        Row: {
+          client_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019b_clients: {
+        Row: {
+          abaninja_client_uuid: string | null
+          abaninja_invoice_id: string | null
+          abaninja_invoice_ref: string | null
+          adresse: string | null
+          agent_id: string | null
+          anciennete_mois: number | null
+          animaux: boolean | null
+          anonymise_at: string | null
+          anonymise_motif: string | null
+          apport_personnel: number | null
+          autres_credits: boolean | null
+          budget_max: number | null
+          cancellation_reason: string | null
+          cancellation_requested_at: string | null
+          charges_extraordinaires: boolean | null
+          charges_mensuelles: number | null
+          commission_split: number | null
+          contact_gerance: string | null
+          created_at: string | null
+          curatelle: boolean | null
+          date_ajout: string | null
+          date_changement_statut: string | null
+          date_engagement: string | null
+          date_naissance: string | null
+          decouverte_agence: string | null
+          demande_mandat_id: string | null
+          depuis_le: string | null
+          derniere_relance_at: string | null
+          employeur: string | null
+          etat_avancement: string | null
+          etat_civil: string | null
+          extrait_poursuites_ai_confidence: number | null
+          extrait_poursuites_date_emission: string | null
+          extrait_poursuites_document_id: string | null
+          extrait_poursuites_extraction_method: string | null
+          extrait_poursuites_last_reminder_at: string | null
+          garanties: string | null
+          gerance_actuelle: string | null
+          id: string | null
+          instrument_musique: boolean | null
+          journey_type: string | null
+          loyer_actuel: number | null
+          mandat_date_signature: string | null
+          mandat_pdf_url: string | null
+          mandat_renewal_count: number | null
+          mandat_signature_data: string | null
+          mandate_official_end_date: string | null
+          mandate_pause_days: number | null
+          mandate_paused_at: string | null
+          montant_charges_extra: number | null
+          motif_changement: string | null
+          nationalite: string | null
+          nombre_occupants: number | null
+          note_agent: string | null
+          numero_plaques: string | null
+          payslip_last_reminder_at: string | null
+          pieces: number | null
+          pieces_actuel: number | null
+          poursuites: boolean | null
+          priorite: string | null
+          profession: string | null
+          refund_eligible: boolean | null
+          refund_processed_at: string | null
+          refund_requested_at: string | null
+          refund_status: string | null
+          region_recherche: string | null
+          relance_count: number | null
+          residence: string | null
+          revenus_mensuels: number | null
+          secteur_activite: string | null
+          situation_familiale: string | null
+          situation_financiere: string | null
+          souhaits_particuliers: string | null
+          source_revenus: string | null
+          statut: string | null
+          type_bien: string | null
+          type_contrat: string | null
+          type_permis: string | null
+          type_recherche: string | null
+          updated_at: string | null
+          user_id: string | null
+          utilisation_logement: string | null
+          vehicules: boolean | null
+        }
+        Insert: {
+          abaninja_client_uuid?: string | null
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_ref?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          anciennete_mois?: number | null
+          animaux?: boolean | null
+          anonymise_at?: string | null
+          anonymise_motif?: string | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          budget_max?: number | null
+          cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
+          charges_extraordinaires?: boolean | null
+          charges_mensuelles?: number | null
+          commission_split?: number | null
+          contact_gerance?: string | null
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_ajout?: string | null
+          date_changement_statut?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          decouverte_agence?: string | null
+          demande_mandat_id?: string | null
+          depuis_le?: string | null
+          derniere_relance_at?: string | null
+          employeur?: string | null
+          etat_avancement?: string | null
+          etat_civil?: string | null
+          extrait_poursuites_ai_confidence?: number | null
+          extrait_poursuites_date_emission?: string | null
+          extrait_poursuites_document_id?: string | null
+          extrait_poursuites_extraction_method?: string | null
+          extrait_poursuites_last_reminder_at?: string | null
+          garanties?: string | null
+          gerance_actuelle?: string | null
+          id?: string | null
+          instrument_musique?: boolean | null
+          journey_type?: string | null
+          loyer_actuel?: number | null
+          mandat_date_signature?: string | null
+          mandat_pdf_url?: string | null
+          mandat_renewal_count?: number | null
+          mandat_signature_data?: string | null
+          mandate_official_end_date?: string | null
+          mandate_pause_days?: number | null
+          mandate_paused_at?: string | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nombre_occupants?: number | null
+          note_agent?: string | null
+          numero_plaques?: string | null
+          payslip_last_reminder_at?: string | null
+          pieces?: number | null
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
+          priorite?: string | null
+          profession?: string | null
+          refund_eligible?: boolean | null
+          refund_processed_at?: string | null
+          refund_requested_at?: string | null
+          refund_status?: string | null
+          region_recherche?: string | null
+          relance_count?: number | null
+          residence?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          situation_financiere?: string | null
+          souhaits_particuliers?: string | null
+          source_revenus?: string | null
+          statut?: string | null
+          type_bien?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          type_recherche?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
+        }
+        Update: {
+          abaninja_client_uuid?: string | null
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_ref?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          anciennete_mois?: number | null
+          animaux?: boolean | null
+          anonymise_at?: string | null
+          anonymise_motif?: string | null
+          apport_personnel?: number | null
+          autres_credits?: boolean | null
+          budget_max?: number | null
+          cancellation_reason?: string | null
+          cancellation_requested_at?: string | null
+          charges_extraordinaires?: boolean | null
+          charges_mensuelles?: number | null
+          commission_split?: number | null
+          contact_gerance?: string | null
+          created_at?: string | null
+          curatelle?: boolean | null
+          date_ajout?: string | null
+          date_changement_statut?: string | null
+          date_engagement?: string | null
+          date_naissance?: string | null
+          decouverte_agence?: string | null
+          demande_mandat_id?: string | null
+          depuis_le?: string | null
+          derniere_relance_at?: string | null
+          employeur?: string | null
+          etat_avancement?: string | null
+          etat_civil?: string | null
+          extrait_poursuites_ai_confidence?: number | null
+          extrait_poursuites_date_emission?: string | null
+          extrait_poursuites_document_id?: string | null
+          extrait_poursuites_extraction_method?: string | null
+          extrait_poursuites_last_reminder_at?: string | null
+          garanties?: string | null
+          gerance_actuelle?: string | null
+          id?: string | null
+          instrument_musique?: boolean | null
+          journey_type?: string | null
+          loyer_actuel?: number | null
+          mandat_date_signature?: string | null
+          mandat_pdf_url?: string | null
+          mandat_renewal_count?: number | null
+          mandat_signature_data?: string | null
+          mandate_official_end_date?: string | null
+          mandate_pause_days?: number | null
+          mandate_paused_at?: string | null
+          montant_charges_extra?: number | null
+          motif_changement?: string | null
+          nationalite?: string | null
+          nombre_occupants?: number | null
+          note_agent?: string | null
+          numero_plaques?: string | null
+          payslip_last_reminder_at?: string | null
+          pieces?: number | null
+          pieces_actuel?: number | null
+          poursuites?: boolean | null
+          priorite?: string | null
+          profession?: string | null
+          refund_eligible?: boolean | null
+          refund_processed_at?: string | null
+          refund_requested_at?: string | null
+          refund_status?: string | null
+          region_recherche?: string | null
+          relance_count?: number | null
+          residence?: string | null
+          revenus_mensuels?: number | null
+          secteur_activite?: string | null
+          situation_familiale?: string | null
+          situation_financiere?: string | null
+          souhaits_particuliers?: string | null
+          source_revenus?: string | null
+          statut?: string | null
+          type_bien?: string | null
+          type_contrat?: string | null
+          type_permis?: string | null
+          type_recherche?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          utilisation_logement?: string | null
+          vehicules?: boolean | null
+        }
+        Relationships: []
+      }
+      backup_20261019b_offres: {
+        Row: {
+          action_notified_at: string | null
+          adresse: string | null
+          agent_id: string | null
+          annee_construction: number | null
+          classe_energetique: string | null
+          client_id: string | null
+          code_immeuble: string | null
+          commentaires: string | null
+          concierge_nom: string | null
+          concierge_tel: string | null
+          contact_annonceur: string | null
+          contact_gerance: string | null
+          contact_visite: string | null
+          created_at: string | null
+          date_envoi: string | null
+          description: string | null
+          description_marketing: string | null
+          disponibilite: string | null
+          envoi_auto: boolean | null
+          equipements: string[] | null
+          etage: string | null
+          geocoded_at: string | null
+          id: string | null
+          images_extracted_at: string | null
+          interesse_notified_at: string | null
+          latitude: number | null
+          lien_annonce: string | null
+          locataire_nom: string | null
+          locataire_tel: string | null
+          longitude: number | null
+          medias_galerie: Json | null
+          missing_info: string | null
+          needs_agent_action: boolean | null
+          orientation: string | null
+          pieces: number | null
+          postulation_demandee_at: string | null
+          prix: number | null
+          statut: string | null
+          surface: number | null
+          titre: string | null
+          type_bien: string | null
+          type_chauffage: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          action_notified_at?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          annee_construction?: number | null
+          classe_energetique?: string | null
+          client_id?: string | null
+          code_immeuble?: string | null
+          commentaires?: string | null
+          concierge_nom?: string | null
+          concierge_tel?: string | null
+          contact_annonceur?: string | null
+          contact_gerance?: string | null
+          contact_visite?: string | null
+          created_at?: string | null
+          date_envoi?: string | null
+          description?: string | null
+          description_marketing?: string | null
+          disponibilite?: string | null
+          envoi_auto?: boolean | null
+          equipements?: string[] | null
+          etage?: string | null
+          geocoded_at?: string | null
+          id?: string | null
+          images_extracted_at?: string | null
+          interesse_notified_at?: string | null
+          latitude?: number | null
+          lien_annonce?: string | null
+          locataire_nom?: string | null
+          locataire_tel?: string | null
+          longitude?: number | null
+          medias_galerie?: Json | null
+          missing_info?: string | null
+          needs_agent_action?: boolean | null
+          orientation?: string | null
+          pieces?: number | null
+          postulation_demandee_at?: string | null
+          prix?: number | null
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          type_chauffage?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          action_notified_at?: string | null
+          adresse?: string | null
+          agent_id?: string | null
+          annee_construction?: number | null
+          classe_energetique?: string | null
+          client_id?: string | null
+          code_immeuble?: string | null
+          commentaires?: string | null
+          concierge_nom?: string | null
+          concierge_tel?: string | null
+          contact_annonceur?: string | null
+          contact_gerance?: string | null
+          contact_visite?: string | null
+          created_at?: string | null
+          date_envoi?: string | null
+          description?: string | null
+          description_marketing?: string | null
+          disponibilite?: string | null
+          envoi_auto?: boolean | null
+          equipements?: string[] | null
+          etage?: string | null
+          geocoded_at?: string | null
+          id?: string | null
+          images_extracted_at?: string | null
+          interesse_notified_at?: string | null
+          latitude?: number | null
+          lien_annonce?: string | null
+          locataire_nom?: string | null
+          locataire_tel?: string | null
+          longitude?: number | null
+          medias_galerie?: Json | null
+          missing_info?: string | null
+          needs_agent_action?: boolean | null
+          orientation?: string | null
+          pieces?: number | null
+          postulation_demandee_at?: string | null
+          prix?: number | null
+          statut?: string | null
+          surface?: number | null
+          titre?: string | null
+          type_bien?: string | null
+          type_chauffage?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      backup_20261019b_user_roles: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          role?: Database["public"]["Enums"]["app_role"] | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       baux: {
         Row: {
           ancien_locataire_charges: number | null
@@ -3009,6 +4005,48 @@ export type Database = {
           },
         ]
       }
+      charges_agence: {
+        Row: {
+          categorie: string
+          created_at: string
+          created_by: string | null
+          date_debut: string
+          date_fin: string | null
+          id: string
+          libelle: string
+          montant: number
+          notes: string | null
+          recurrence: string
+          updated_at: string
+        }
+        Insert: {
+          categorie?: string
+          created_at?: string
+          created_by?: string | null
+          date_debut?: string
+          date_fin?: string | null
+          id?: string
+          libelle: string
+          montant: number
+          notes?: string | null
+          recurrence?: string
+          updated_at?: string
+        }
+        Update: {
+          categorie?: string
+          created_at?: string
+          created_by?: string | null
+          date_debut?: string
+          date_fin?: string | null
+          id?: string
+          libelle?: string
+          montant?: number
+          notes?: string | null
+          recurrence?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_agents: {
         Row: {
           agent_id: string
@@ -3425,6 +4463,9 @@ export type Database = {
           souhaits_particuliers: string | null
           source_revenus: string | null
           statut: string | null
+          steeve_email_verifie: string | null
+          steeve_email_verifie_le: string | null
+          steeve_email_verifie_par: string | null
           type_bien: string | null
           type_contrat: string | null
           type_permis: string | null
@@ -3510,6 +4551,9 @@ export type Database = {
           souhaits_particuliers?: string | null
           source_revenus?: string | null
           statut?: string | null
+          steeve_email_verifie?: string | null
+          steeve_email_verifie_le?: string | null
+          steeve_email_verifie_par?: string | null
           type_bien?: string | null
           type_contrat?: string | null
           type_permis?: string | null
@@ -3595,6 +4639,9 @@ export type Database = {
           souhaits_particuliers?: string | null
           source_revenus?: string | null
           statut?: string | null
+          steeve_email_verifie?: string | null
+          steeve_email_verifie_le?: string | null
+          steeve_email_verifie_par?: string | null
           type_bien?: string | null
           type_contrat?: string | null
           type_permis?: string | null
@@ -3979,6 +5026,77 @@ export type Database = {
           },
         ]
       }
+      contacts_annonceurs: {
+        Row: {
+          adresse: string | null
+          annonceur: string | null
+          annonceur_email: string | null
+          canal: string
+          client_id: string | null
+          created_at: string
+          envoye_le: string
+          id: string
+          lien_annonce: string | null
+          offre_id: string | null
+          portail: string | null
+          reference: string | null
+          relance_le: string | null
+          reponse_le: string | null
+          reponse_resume: string | null
+          routine: string | null
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          adresse?: string | null
+          annonceur?: string | null
+          annonceur_email?: string | null
+          canal?: string
+          client_id?: string | null
+          created_at?: string
+          envoye_le?: string
+          id?: string
+          lien_annonce?: string | null
+          offre_id?: string | null
+          portail?: string | null
+          reference?: string | null
+          relance_le?: string | null
+          reponse_le?: string | null
+          reponse_resume?: string | null
+          routine?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          adresse?: string | null
+          annonceur?: string | null
+          annonceur_email?: string | null
+          canal?: string
+          client_id?: string | null
+          created_at?: string
+          envoye_le?: string
+          id?: string
+          lien_annonce?: string | null
+          offre_id?: string | null
+          portail?: string | null
+          reference?: string | null
+          relance_le?: string | null
+          reponse_le?: string | null
+          reponse_resume?: string | null
+          routine?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contacts_annonceurs_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_agents: {
         Row: {
           agent_id: string
@@ -4008,6 +5126,30 @@ export type Database = {
           },
         ]
       }
+      conversation_fusions_journal: {
+        Row: {
+          ancienne_conversation: string
+          fusionne_le: string
+          id: number
+          message_id: string
+          nouvelle_conversation: string
+        }
+        Insert: {
+          ancienne_conversation: string
+          fusionne_le?: string
+          id?: number
+          message_id: string
+          nouvelle_conversation: string
+        }
+        Update: {
+          ancienne_conversation?: string
+          fusionne_le?: string
+          id?: number
+          message_id?: string
+          nouvelle_conversation?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           admin_user_id: string | null
@@ -4018,10 +5160,17 @@ export type Database = {
           client_name: string | null
           conversation_type: string | null
           created_at: string | null
+          fusionnee_dans: string | null
+          handled_by: string
+          handled_by_user: string | null
+          handled_since: string | null
           id: string
           is_archived: boolean | null
+          last_client_message_at: string | null
           last_message_at: string | null
           status: string | null
+          steeve_state: string
+          steeve_summary: Json | null
           subject: string | null
         }
         Insert: {
@@ -4033,10 +5182,17 @@ export type Database = {
           client_name?: string | null
           conversation_type?: string | null
           created_at?: string | null
+          fusionnee_dans?: string | null
+          handled_by?: string
+          handled_by_user?: string | null
+          handled_since?: string | null
           id?: string
           is_archived?: boolean | null
+          last_client_message_at?: string | null
           last_message_at?: string | null
           status?: string | null
+          steeve_state?: string
+          steeve_summary?: Json | null
           subject?: string | null
         }
         Update: {
@@ -4048,13 +5204,28 @@ export type Database = {
           client_name?: string | null
           conversation_type?: string | null
           created_at?: string | null
+          fusionnee_dans?: string | null
+          handled_by?: string
+          handled_by_user?: string | null
+          handled_since?: string | null
           id?: string
           is_archived?: boolean | null
+          last_client_message_at?: string | null
           last_message_at?: string | null
           status?: string | null
+          steeve_state?: string
+          steeve_summary?: Json | null
           subject?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "conversations_fusionnee_dans_fkey"
+            columns: ["fusionnee_dans"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversations_annonces: {
         Row: {
@@ -5824,6 +6995,72 @@ export type Database = {
         }
         Relationships: []
       }
+      garanties_loyer: {
+        Row: {
+          candidature_id: string | null
+          client_id: string | null
+          created_at: string
+          date_entree: string | null
+          envoyee_le: string | null
+          fournisseur: string
+          id: string
+          loyer_net: number | null
+          montant_garantie: number | null
+          motif: string | null
+          offre_id: string | null
+          reference: string | null
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          candidature_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          date_entree?: string | null
+          envoyee_le?: string | null
+          fournisseur?: string
+          id?: string
+          loyer_net?: number | null
+          montant_garantie?: number | null
+          motif?: string | null
+          offre_id?: string | null
+          reference?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          candidature_id?: string | null
+          client_id?: string | null
+          created_at?: string
+          date_entree?: string | null
+          envoyee_le?: string | null
+          fournisseur?: string
+          id?: string
+          loyer_net?: number | null
+          montant_garantie?: number | null
+          motif?: string | null
+          offre_id?: string | null
+          reference?: string | null
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "garanties_loyer_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "garanties_loyer_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       google_calendar_tokens: {
         Row: {
           access_token: string | null
@@ -7173,6 +8410,359 @@ export type Database = {
           },
         ]
       }
+      mail_folders: {
+        Row: {
+          backfill_done: boolean
+          created_at: string
+          delimiter: string | null
+          id: string
+          last_sync_at: string | null
+          last_uid: number
+          mailbox_id: string
+          min_uid: number | null
+          name: string
+          path: string
+          present_on_server: boolean
+          role: string
+          selectable: boolean
+          total_count: number
+          uidnext: number | null
+          uidvalidity: number | null
+          unseen_count: number
+          updated_at: string
+        }
+        Insert: {
+          backfill_done?: boolean
+          created_at?: string
+          delimiter?: string | null
+          id?: string
+          last_sync_at?: string | null
+          last_uid?: number
+          mailbox_id: string
+          min_uid?: number | null
+          name: string
+          path: string
+          present_on_server?: boolean
+          role?: string
+          selectable?: boolean
+          total_count?: number
+          uidnext?: number | null
+          uidvalidity?: number | null
+          unseen_count?: number
+          updated_at?: string
+        }
+        Update: {
+          backfill_done?: boolean
+          created_at?: string
+          delimiter?: string | null
+          id?: string
+          last_sync_at?: string | null
+          last_uid?: number
+          mailbox_id?: string
+          min_uid?: number | null
+          name?: string
+          path?: string
+          present_on_server?: boolean
+          role?: string
+          selectable?: boolean
+          total_count?: number
+          uidnext?: number | null
+          uidvalidity?: number | null
+          unseen_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_folders_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_messages: {
+        Row: {
+          attachments: Json
+          bcc_list: Json
+          body_html: string | null
+          body_text: string | null
+          body_truncated: boolean
+          cc_list: Json
+          created_at: string
+          deleted_on_server: boolean
+          folder_id: string
+          from_email: string | null
+          from_name: string | null
+          has_attachments: boolean
+          id: string
+          in_reply_to: string | null
+          internal_date: string | null
+          is_answered: boolean
+          is_draft: boolean
+          is_flagged: boolean
+          is_seen: boolean
+          mailbox_id: string
+          message_id: string | null
+          references_header: string | null
+          reply_to: Json
+          sent_at: string | null
+          size_bytes: number | null
+          snippet: string | null
+          subject: string | null
+          to_list: Json
+          uid: number
+          uidvalidity: number
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json
+          bcc_list?: Json
+          body_html?: string | null
+          body_text?: string | null
+          body_truncated?: boolean
+          cc_list?: Json
+          created_at?: string
+          deleted_on_server?: boolean
+          folder_id: string
+          from_email?: string | null
+          from_name?: string | null
+          has_attachments?: boolean
+          id?: string
+          in_reply_to?: string | null
+          internal_date?: string | null
+          is_answered?: boolean
+          is_draft?: boolean
+          is_flagged?: boolean
+          is_seen?: boolean
+          mailbox_id: string
+          message_id?: string | null
+          references_header?: string | null
+          reply_to?: Json
+          sent_at?: string | null
+          size_bytes?: number | null
+          snippet?: string | null
+          subject?: string | null
+          to_list?: Json
+          uid: number
+          uidvalidity: number
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json
+          bcc_list?: Json
+          body_html?: string | null
+          body_text?: string | null
+          body_truncated?: boolean
+          cc_list?: Json
+          created_at?: string
+          deleted_on_server?: boolean
+          folder_id?: string
+          from_email?: string | null
+          from_name?: string | null
+          has_attachments?: boolean
+          id?: string
+          in_reply_to?: string | null
+          internal_date?: string | null
+          is_answered?: boolean
+          is_draft?: boolean
+          is_flagged?: boolean
+          is_seen?: boolean
+          mailbox_id?: string
+          message_id?: string | null
+          references_header?: string | null
+          reply_to?: Json
+          sent_at?: string | null
+          size_bytes?: number | null
+          snippet?: string | null
+          subject?: string | null
+          to_list?: Json
+          uid?: number
+          uidvalidity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_messages_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "mail_folders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_messages_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mail_outbox: {
+        Row: {
+          attachments: Json
+          bcc_list: Json
+          cc_list: Json
+          created_at: string
+          created_by: string | null
+          draft_message_id: string | null
+          error: string | null
+          id: string
+          kind: string
+          mailbox_id: string
+          reply_to_message_id: string | null
+          sent_at: string | null
+          sent_message_id: string | null
+          smtp_reply: string | null
+          source: string
+          statut: string
+          subject: string | null
+          to_list: Json
+          updated_at: string
+        }
+        Insert: {
+          attachments?: Json
+          bcc_list?: Json
+          cc_list?: Json
+          created_at?: string
+          created_by?: string | null
+          draft_message_id?: string | null
+          error?: string | null
+          id?: string
+          kind?: string
+          mailbox_id: string
+          reply_to_message_id?: string | null
+          sent_at?: string | null
+          sent_message_id?: string | null
+          smtp_reply?: string | null
+          source?: string
+          statut?: string
+          subject?: string | null
+          to_list?: Json
+          updated_at?: string
+        }
+        Update: {
+          attachments?: Json
+          bcc_list?: Json
+          cc_list?: Json
+          created_at?: string
+          created_by?: string | null
+          draft_message_id?: string | null
+          error?: string | null
+          id?: string
+          kind?: string
+          mailbox_id?: string
+          reply_to_message_id?: string | null
+          sent_at?: string | null
+          sent_message_id?: string | null
+          smtp_reply?: string | null
+          source?: string
+          statut?: string
+          subject?: string | null
+          to_list?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mail_outbox_draft_message_id_fkey"
+            columns: ["draft_message_id"]
+            isOneToOne: false
+            referencedRelation: "mail_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_outbox_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mail_outbox_reply_to_message_id_fkey"
+            columns: ["reply_to_message_id"]
+            isOneToOne: false
+            referencedRelation: "mail_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mailbox_emails: {
+        Row: {
+          addrs: string[]
+          auth_pass: boolean
+          auth_server: string | null
+          auth_verified: boolean
+          body_text: string | null
+          cc_emails: string | null
+          created_at: string
+          from_email: string | null
+          from_name: string | null
+          id: string
+          mailbox: string
+          mailbox_id: string
+          message_key: string | null
+          norm_top: string | null
+          received_at: string | null
+          subject: string | null
+          to_emails: string | null
+          top_text: string | null
+          uid: number
+          uid_validity: number
+        }
+        Insert: {
+          addrs?: string[]
+          auth_pass?: boolean
+          auth_server?: string | null
+          auth_verified?: boolean
+          body_text?: string | null
+          cc_emails?: string | null
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          mailbox: string
+          mailbox_id: string
+          message_key?: string | null
+          norm_top?: string | null
+          received_at?: string | null
+          subject?: string | null
+          to_emails?: string | null
+          top_text?: string | null
+          uid: number
+          uid_validity: number
+        }
+        Update: {
+          addrs?: string[]
+          auth_pass?: boolean
+          auth_server?: string | null
+          auth_verified?: boolean
+          body_text?: string | null
+          cc_emails?: string | null
+          created_at?: string
+          from_email?: string | null
+          from_name?: string | null
+          id?: string
+          mailbox?: string
+          mailbox_id?: string
+          message_key?: string | null
+          norm_top?: string | null
+          received_at?: string | null
+          subject?: string | null
+          to_emails?: string | null
+          top_text?: string | null
+          uid?: number
+          uid_validity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mailbox_emails_mailbox_id_fkey"
+            columns: ["mailbox_id"]
+            isOneToOne: false
+            referencedRelation: "shared_mailboxes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mandate_audit_logs: {
         Row: {
           actor_id: string | null
@@ -7823,10 +9413,12 @@ export type Database = {
           attachment_thumbnail_url: string | null
           attachment_type: string | null
           attachment_url: string | null
+          client_msg_id: string | null
           content: string | null
           conversation_id: string
           created_at: string | null
           id: string
+          masque_messagerie: boolean
           offre_id: string | null
           payload: Json | null
           read: boolean | null
@@ -7839,10 +9431,12 @@ export type Database = {
           attachment_thumbnail_url?: string | null
           attachment_type?: string | null
           attachment_url?: string | null
+          client_msg_id?: string | null
           content?: string | null
           conversation_id: string
           created_at?: string | null
           id?: string
+          masque_messagerie?: boolean
           offre_id?: string | null
           payload?: Json | null
           read?: boolean | null
@@ -7855,10 +9449,12 @@ export type Database = {
           attachment_thumbnail_url?: string | null
           attachment_type?: string | null
           attachment_url?: string | null
+          client_msg_id?: string | null
           content?: string | null
           conversation_id?: string
           created_at?: string | null
           id?: string
+          masque_messagerie?: boolean
           offre_id?: string | null
           payload?: Json | null
           read?: boolean | null
@@ -9360,6 +10956,237 @@ export type Database = {
           },
         ]
       }
+      postulation_jobs: {
+        Row: {
+          ai_result: Json | null
+          attempt_count: number
+          candidature_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          locked_at: string | null
+          max_attempts: number
+          next_attempt_at: string
+          offre_id: string
+          openai_response_id: string | null
+          priority: string | null
+          processed_at: string | null
+          requested_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_result?: Json | null
+          attempt_count?: number
+          candidature_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          locked_at?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          offre_id: string
+          openai_response_id?: string | null
+          priority?: string | null
+          processed_at?: string | null
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_result?: Json | null
+          attempt_count?: number
+          candidature_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          locked_at?: string | null
+          max_attempts?: number
+          next_attempt_at?: string
+          offre_id?: string
+          openai_response_id?: string | null
+          priority?: string | null
+          processed_at?: string | null
+          requested_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postulation_jobs_candidature_id_fkey"
+            columns: ["candidature_id"]
+            isOneToOne: false
+            referencedRelation: "candidatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postulation_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postulation_jobs_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      postulation_liens: {
+        Row: {
+          actif: boolean
+          annonce_id: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          note: string | null
+          token: string
+          utilisations: number
+        }
+        Insert: {
+          actif?: boolean
+          annonce_id: string
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          id?: string
+          note?: string | null
+          token: string
+          utilisations?: number
+        }
+        Update: {
+          actif?: boolean
+          annonce_id?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          note?: string | null
+          token?: string
+          utilisations?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postulation_liens_annonce_id_fkey"
+            columns: ["annonce_id"]
+            isOneToOne: false
+            referencedRelation: "annonces_publiques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      postulations_preparees: {
+        Row: {
+          adresse_bien: string | null
+          brouillon_ref: string | null
+          canal: string
+          candidature_id: string | null
+          client_email: string | null
+          client_id: string | null
+          client_nom: string | null
+          controle_resultat: Json | null
+          created_at: string
+          destinataire_email: string | null
+          envoye_le: string | null
+          formulaire_location_ok: boolean | null
+          id: string
+          motif_blocage: string | null
+          objet: string | null
+          offre_id: string | null
+          pieces: Json
+          preuve_envoi: string | null
+          rapport: string | null
+          reference_bien: string | null
+          regie_nom: string | null
+          source: string
+          statut: string
+          updated_at: string
+          valide_le: string | null
+          valide_par: string | null
+        }
+        Insert: {
+          adresse_bien?: string | null
+          brouillon_ref?: string | null
+          canal?: string
+          candidature_id?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_nom?: string | null
+          controle_resultat?: Json | null
+          created_at?: string
+          destinataire_email?: string | null
+          envoye_le?: string | null
+          formulaire_location_ok?: boolean | null
+          id?: string
+          motif_blocage?: string | null
+          objet?: string | null
+          offre_id?: string | null
+          pieces?: Json
+          preuve_envoi?: string | null
+          rapport?: string | null
+          reference_bien?: string | null
+          regie_nom?: string | null
+          source?: string
+          statut?: string
+          updated_at?: string
+          valide_le?: string | null
+          valide_par?: string | null
+        }
+        Update: {
+          adresse_bien?: string | null
+          brouillon_ref?: string | null
+          canal?: string
+          candidature_id?: string | null
+          client_email?: string | null
+          client_id?: string | null
+          client_nom?: string | null
+          controle_resultat?: Json | null
+          created_at?: string
+          destinataire_email?: string | null
+          envoye_le?: string | null
+          formulaire_location_ok?: boolean | null
+          id?: string
+          motif_blocage?: string | null
+          objet?: string | null
+          offre_id?: string | null
+          pieces?: Json
+          preuve_envoi?: string | null
+          rapport?: string | null
+          reference_bien?: string | null
+          regie_nom?: string | null
+          source?: string
+          statut?: string
+          updated_at?: string
+          valide_le?: string | null
+          valide_par?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "postulations_preparees_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "postulations_preparees_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           actif: boolean | null
@@ -9373,6 +11200,7 @@ export type Database = {
           last_seen_at: string | null
           nom: string
           notifications_email: boolean | null
+          notifications_push: boolean
           parcours_type: string | null
           prenom: string
           telephone: string | null
@@ -9395,6 +11223,7 @@ export type Database = {
           last_seen_at?: string | null
           nom: string
           notifications_email?: boolean | null
+          notifications_push?: boolean
           parcours_type?: string | null
           prenom: string
           telephone?: string | null
@@ -9417,6 +11246,7 @@ export type Database = {
           last_seen_at?: string | null
           nom?: string
           notifications_email?: boolean | null
+          notifications_push?: boolean
           parcours_type?: string | null
           prenom?: string
           telephone?: string | null
@@ -10035,6 +11865,7 @@ export type Database = {
           id: string
           montant_offre: number | null
           notes: string | null
+          offre_id: string | null
           project_id: string
           property_id: string | null
           statut: string | null
@@ -10050,6 +11881,7 @@ export type Database = {
           id?: string
           montant_offre?: number | null
           notes?: string | null
+          offre_id?: string | null
           project_id: string
           property_id?: string | null
           statut?: string | null
@@ -10065,12 +11897,20 @@ export type Database = {
           id?: string
           montant_offre?: number | null
           notes?: string | null
+          offre_id?: string | null
           project_id?: string
           property_id?: string | null
           statut?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_negotiations_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_negotiations_project_id_fkey"
             columns: ["project_id"]
@@ -10286,6 +12126,7 @@ export type Database = {
           lng: number | null
           notes: string | null
           npa: string | null
+          offre_id: string | null
           pieces: number | null
           prix: number | null
           prochaine_action: string | null
@@ -10310,6 +12151,7 @@ export type Database = {
           lng?: number | null
           notes?: string | null
           npa?: string | null
+          offre_id?: string | null
           pieces?: number | null
           prix?: number | null
           prochaine_action?: string | null
@@ -10334,6 +12176,7 @@ export type Database = {
           lng?: number | null
           notes?: string | null
           npa?: string | null
+          offre_id?: string | null
           pieces?: number | null
           prix?: number | null
           prochaine_action?: string | null
@@ -10348,6 +12191,13 @@ export type Database = {
           ville?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "purchase_selected_properties_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "purchase_selected_properties_project_id_fkey"
             columns: ["project_id"]
@@ -10463,6 +12313,90 @@ export type Database = {
           notif_visites?: boolean
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      push_registration_log: {
+        Row: {
+          created_at: string
+          detail: string | null
+          etape: string
+          id: number
+          platform: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          etape: string
+          id?: number
+          platform?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          etape?: string
+          id?: number
+          platform?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rc_quote_requests: {
+        Row: {
+          birth_date: string
+          consent_at: string
+          consent_version: string
+          created_at: string
+          current_address: string
+          email: string
+          first_name: string
+          id: string
+          insured_people: number
+          last_name: string
+          nationality: string
+          phone: string
+          request_key: string
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          birth_date: string
+          consent_at?: string
+          consent_version?: string
+          created_at?: string
+          current_address: string
+          email: string
+          first_name: string
+          id?: string
+          insured_people: number
+          last_name: string
+          nationality: string
+          phone: string
+          request_key: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          birth_date?: string
+          consent_at?: string
+          consent_version?: string
+          created_at?: string
+          current_address?: string
+          email?: string
+          first_name?: string
+          id?: string
+          insured_people?: number
+          last_name?: string
+          nationality?: string
+          phone?: string
+          request_key?: string
+          status?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -11269,6 +13203,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      remboursements: {
+        Row: {
+          client_id: string | null
+          client_nom: string
+          created_at: string
+          created_by: string | null
+          date_remboursement: string
+          demande_mandat_id: string | null
+          id: string
+          montant: number
+          moyen: string | null
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_id?: string | null
+          client_nom: string
+          created_at?: string
+          created_by?: string | null
+          date_remboursement?: string
+          demande_mandat_id?: string | null
+          id?: string
+          montant: number
+          moyen?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string | null
+          client_nom?: string
+          created_at?: string
+          created_by?: string | null
+          date_remboursement?: string
+          demande_mandat_id?: string | null
+          id?: string
+          montant?: number
+          moyen?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       renouvellements_mandat: {
         Row: {
@@ -12902,6 +14878,159 @@ export type Database = {
           },
         ]
       }
+      reprise_postuler_sans_visite_20261015: {
+        Row: {
+          ancien_statut: string | null
+          client_id: string | null
+          offre_id: string | null
+          repris_le: string | null
+        }
+        Insert: {
+          ancien_statut?: string | null
+          client_id?: string | null
+          offre_id?: string | null
+          repris_le?: string | null
+        }
+        Update: {
+          ancien_statut?: string | null
+          client_id?: string | null
+          offre_id?: string | null
+          repris_le?: string | null
+        }
+        Relationships: []
+      }
+      routine_config: {
+        Row: {
+          cle: string
+          description: string | null
+          updated_at: string
+          valeur: string
+        }
+        Insert: {
+          cle: string
+          description?: string | null
+          updated_at?: string
+          valeur: string
+        }
+        Update: {
+          cle?: string
+          description?: string | null
+          updated_at?: string
+          valeur?: string
+        }
+        Relationships: []
+      }
+      routine_lecons: {
+        Row: {
+          categorie: string
+          confirmations: number
+          contradictions: number
+          created_at: string
+          dernier_usage: string | null
+          gain_estime: string | null
+          id: string
+          lecon: string
+          preuve: string | null
+          routine: string
+          statut: string
+          updated_at: string
+        }
+        Insert: {
+          categorie: string
+          confirmations?: number
+          contradictions?: number
+          created_at?: string
+          dernier_usage?: string | null
+          gain_estime?: string | null
+          id?: string
+          lecon: string
+          preuve?: string | null
+          routine?: string
+          statut?: string
+          updated_at?: string
+        }
+        Update: {
+          categorie?: string
+          confirmations?: number
+          contradictions?: number
+          created_at?: string
+          dernier_usage?: string | null
+          gain_estime?: string | null
+          id?: string
+          lecon?: string
+          preuve?: string | null
+          routine?: string
+          statut?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      routine_runs: {
+        Row: {
+          annonces_lues: number | null
+          annonces_retenues: number | null
+          contacts: number | null
+          duree_s: number | null
+          ended_at: string | null
+          erreurs: Json
+          etapes: Json
+          id: string
+          lecons_appliquees: string[]
+          notes: string | null
+          offres_creees: number | null
+          routine: string
+          started_at: string
+        }
+        Insert: {
+          annonces_lues?: number | null
+          annonces_retenues?: number | null
+          contacts?: number | null
+          duree_s?: number | null
+          ended_at?: string | null
+          erreurs?: Json
+          etapes?: Json
+          id?: string
+          lecons_appliquees?: string[]
+          notes?: string | null
+          offres_creees?: number | null
+          routine: string
+          started_at?: string
+        }
+        Update: {
+          annonces_lues?: number | null
+          annonces_retenues?: number | null
+          contacts?: number | null
+          duree_s?: number | null
+          ended_at?: string | null
+          erreurs?: Json
+          etapes?: Json
+          id?: string
+          lecons_appliquees?: string[]
+          notes?: string | null
+          offres_creees?: number | null
+          routine?: string
+          started_at?: string
+        }
+        Relationships: []
+      }
+      routine_secrets: {
+        Row: {
+          created_at: string
+          nom: string
+          valeur: string
+        }
+        Insert: {
+          created_at?: string
+          nom: string
+          valeur: string
+        }
+        Update: {
+          created_at?: string
+          nom?: string
+          valeur?: string
+        }
+        Relationships: []
+      }
       search_missions: {
         Row: {
           ai_agent_id: string
@@ -13078,6 +15207,78 @@ export type Database = {
           },
         ]
       }
+      shared_mailboxes: {
+        Row: {
+          address: string
+          created_at: string
+          display_name: string | null
+          full_sync_at: string | null
+          full_sync_error: string | null
+          id: string
+          imap_host: string
+          imap_port: number
+          is_active: boolean
+          label: string | null
+          last_attempt_at: string | null
+          last_error: string | null
+          last_sync_at: string | null
+          last_uid: number | null
+          pending_count: number | null
+          secret_id: string | null
+          signature_html: string | null
+          smtp_port: number
+          trusted_authserv: string
+          uid_validity: number | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          display_name?: string | null
+          full_sync_at?: string | null
+          full_sync_error?: string | null
+          id?: string
+          imap_host?: string
+          imap_port?: number
+          is_active?: boolean
+          label?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_sync_at?: string | null
+          last_uid?: number | null
+          pending_count?: number | null
+          secret_id?: string | null
+          signature_html?: string | null
+          smtp_port?: number
+          trusted_authserv?: string
+          uid_validity?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          display_name?: string | null
+          full_sync_at?: string | null
+          full_sync_error?: string | null
+          id?: string
+          imap_host?: string
+          imap_port?: number
+          is_active?: boolean
+          label?: string | null
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_sync_at?: string | null
+          last_uid?: number | null
+          pending_count?: number | null
+          secret_id?: string | null
+          signature_html?: string | null
+          smtp_port?: number
+          trusted_authserv?: string
+          uid_validity?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       signalements_annonces: {
         Row: {
           action_prise: string | null
@@ -13227,6 +15428,427 @@ export type Database = {
           rate_limit_per_hour?: number | null
         }
         Relationships: []
+      }
+      steeve_actions: {
+        Row: {
+          canal: string | null
+          cancelled_by: string | null
+          client_id: string | null
+          controles: Json
+          corps: string | null
+          created_at: string
+          derniere_activite: string
+          destinataire: string | null
+          echeance: string | null
+          etape: string | null
+          etapes: Json
+          executed_at: string | null
+          id: string
+          idempotency_key: string | null
+          kind: string
+          mailbox: string | null
+          message_id: string | null
+          motif: string | null
+          note: string | null
+          objet: string | null
+          offre_id: string | null
+          pieces: Json
+          preuve: string | null
+          requested_by: string | null
+          responsable: string
+          source: string
+          statut: string
+          statut_avant: string | null
+          tentatives: number
+          updated_at: string
+          verrou_jeton: string | null
+          verrou_jusqu: string | null
+          verrou_par: string | null
+          version_regles: string | null
+        }
+        Insert: {
+          canal?: string | null
+          cancelled_by?: string | null
+          client_id?: string | null
+          controles?: Json
+          corps?: string | null
+          created_at?: string
+          derniere_activite?: string
+          destinataire?: string | null
+          echeance?: string | null
+          etape?: string | null
+          etapes?: Json
+          executed_at?: string | null
+          id?: string
+          idempotency_key?: string | null
+          kind: string
+          mailbox?: string | null
+          message_id?: string | null
+          motif?: string | null
+          note?: string | null
+          objet?: string | null
+          offre_id?: string | null
+          pieces?: Json
+          preuve?: string | null
+          requested_by?: string | null
+          responsable?: string
+          source?: string
+          statut?: string
+          statut_avant?: string | null
+          tentatives?: number
+          updated_at?: string
+          verrou_jeton?: string | null
+          verrou_jusqu?: string | null
+          verrou_par?: string | null
+          version_regles?: string | null
+        }
+        Update: {
+          canal?: string | null
+          cancelled_by?: string | null
+          client_id?: string | null
+          controles?: Json
+          corps?: string | null
+          created_at?: string
+          derniere_activite?: string
+          destinataire?: string | null
+          echeance?: string | null
+          etape?: string | null
+          etapes?: Json
+          executed_at?: string | null
+          id?: string
+          idempotency_key?: string | null
+          kind?: string
+          mailbox?: string | null
+          message_id?: string | null
+          motif?: string | null
+          note?: string | null
+          objet?: string | null
+          offre_id?: string | null
+          pieces?: Json
+          preuve?: string | null
+          requested_by?: string | null
+          responsable?: string
+          source?: string
+          statut?: string
+          statut_avant?: string | null
+          tentatives?: number
+          updated_at?: string
+          verrou_jeton?: string | null
+          verrou_jusqu?: string | null
+          verrou_par?: string | null
+          version_regles?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steeve_actions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steeve_actions_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steeve_admin_usage: {
+        Row: {
+          cache_read_tokens: number
+          cache_write_tokens: number
+          cost_usd: number
+          created_at: string
+          error: string | null
+          id: string
+          input_tokens: number
+          model: string | null
+          output_tokens: number
+          status: string
+          tools_used: string[]
+          user_id: string
+        }
+        Insert: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          status?: string
+          tools_used?: string[]
+          user_id: string
+        }
+        Update: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          status?: string
+          tools_used?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      steeve_partner_usage: {
+        Row: {
+          cache_read_tokens: number
+          cache_write_tokens: number
+          cost_usd: number
+          created_at: string
+          error: string | null
+          id: string
+          input_tokens: number
+          model: string | null
+          output_tokens: number
+          role: string
+          status: string
+          tools_used: string[]
+          user_id: string
+        }
+        Insert: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          role: string
+          status?: string
+          tools_used?: string[]
+          user_id: string
+        }
+        Update: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          role?: string
+          status?: string
+          tools_used?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      steeve_proposals: {
+        Row: {
+          body: string
+          candidature_id: string | null
+          client_id: string
+          conversation_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          kind: string
+          offre_id: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          body: string
+          candidature_id?: string | null
+          client_id: string
+          conversation_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          kind: string
+          offre_id?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          body?: string
+          candidature_id?: string | null
+          client_id?: string
+          conversation_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          kind?: string
+          offre_id?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steeve_proposals_candidature_id_fkey"
+            columns: ["candidature_id"]
+            isOneToOne: false
+            referencedRelation: "candidatures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steeve_proposals_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steeve_proposals_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "steeve_proposals_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      steeve_public_usage: {
+        Row: {
+          cache_read_tokens: number
+          cache_write_tokens: number
+          cost_usd: number
+          created_at: string
+          error: string | null
+          id: string
+          input_tokens: number
+          ip_hash: string
+          model: string | null
+          output_tokens: number
+          session_hash: string
+          status: string
+        }
+        Insert: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_tokens?: number
+          ip_hash: string
+          model?: string | null
+          output_tokens?: number
+          session_hash: string
+          status?: string
+        }
+        Update: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_tokens?: number
+          ip_hash?: string
+          model?: string | null
+          output_tokens?: number
+          session_hash?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      steeve_runs: {
+        Row: {
+          cache_read_tokens: number
+          cache_write_tokens: number
+          calls: number
+          client_id: string | null
+          conversation_id: string
+          cost_usd: number
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          input_tokens: number
+          kind: string
+          model: string | null
+          output_tokens: number
+          reason: string | null
+          reply_message_id: string | null
+          started_at: string | null
+          status: string
+          tools_used: string[]
+          trigger_message_id: string | null
+          web_searches: number
+        }
+        Insert: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          calls?: number
+          client_id?: string | null
+          conversation_id: string
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          input_tokens?: number
+          kind?: string
+          model?: string | null
+          output_tokens?: number
+          reason?: string | null
+          reply_message_id?: string | null
+          started_at?: string | null
+          status?: string
+          tools_used?: string[]
+          trigger_message_id?: string | null
+          web_searches?: number
+        }
+        Update: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          calls?: number
+          client_id?: string | null
+          conversation_id?: string
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          input_tokens?: number
+          kind?: string
+          model?: string | null
+          output_tokens?: number
+          reason?: string | null
+          reply_message_id?: string | null
+          started_at?: string | null
+          status?: string
+          tools_used?: string[]
+          trigger_message_id?: string | null
+          web_searches?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steeve_runs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stories: {
         Row: {
@@ -14832,11 +17454,202 @@ export type Database = {
         }
         Returns: undefined
       }
+      achat_cocher_etape: {
+        Args: { p_project_id: string; p_statut?: string; p_step_key: string }
+        Returns: undefined
+      }
+      achat_enregistrer_souhait_offre: {
+        Args: { p_commentaire?: string; p_montant?: number; p_offre_id: string }
+        Returns: string
+      }
+      achat_notifier_client: {
+        Args: {
+          p_lien?: string
+          p_message: string
+          p_meta?: Json
+          p_project_id: string
+          p_titre: string
+        }
+        Returns: undefined
+      }
+      achat_ouvrir_negociation: {
+        Args: { p_offre_id: string }
+        Returns: string
+      }
       activate_agent_on_login: { Args: never; Returns: undefined }
       activate_apporteur_on_login: { Args: never; Returns: undefined }
       activate_candidat_searches: { Args: never; Returns: undefined }
       activate_closeur_on_login: { Args: never; Returns: undefined }
       activate_coursier_on_login: { Args: never; Returns: undefined }
+      admin_copilot_activations: { Args: { p_limit?: number }; Returns: Json }
+      admin_copilot_agents: { Args: never; Returns: Json }
+      admin_copilot_blocages: { Args: { p_days?: number }; Returns: Json }
+      admin_copilot_client: { Args: { p_query: string }; Returns: Json }
+      admin_copilot_emails: {
+        Args: {
+          p_boite?: string
+          p_inclure_envoyes?: boolean
+          p_jours?: number
+          p_limite?: number
+          p_recherche?: string
+        }
+        Returns: Json
+      }
+      admin_copilot_kpi: { Args: never; Returns: Json }
+      admin_copilot_offres: {
+        Args: {
+          p_client?: string
+          p_client_id?: string
+          p_clients_actifs?: boolean
+          p_etape?: string
+          p_jours?: number
+          p_limite?: number
+          p_statut?: string
+          p_suivi_auto?: boolean
+        }
+        Returns: Json
+      }
+      admin_copilot_postulations: {
+        Args: {
+          p_client?: string
+          p_client_id?: string
+          p_etat?: string
+          p_limite?: number
+        }
+        Returns: Json
+      }
+      admin_copilot_visites: {
+        Args: {
+          p_client?: string
+          p_client_id?: string
+          p_jours?: number
+          p_limite?: number
+          p_periode?: string
+        }
+        Returns: Json
+      }
+      admin_delete_shared_mailbox: {
+        Args: { p_id: string }
+        Returns: undefined
+      }
+      admin_list_shared_mailboxes: {
+        Args: never
+        Returns: {
+          address: string
+          emails_count: number
+          has_password: boolean
+          id: string
+          imap_host: string
+          imap_port: number
+          is_active: boolean
+          label: string
+          last_attempt_at: string
+          last_error: string
+          last_sync_at: string
+          pending_count: number
+          verified_count: number
+        }[]
+      }
+      admin_mail_box_profile: {
+        Args: { p_display_name: string; p_id: string; p_signature_html: string }
+        Returns: undefined
+      }
+      admin_mail_boxes: {
+        Args: never
+        Returns: {
+          address: string
+          display_name: string
+          drafts_count: number
+          full_sync_at: string
+          full_sync_error: string
+          has_password: boolean
+          id: string
+          inbox_unseen: number
+          is_active: boolean
+          label: string
+          signature_html: string
+        }[]
+      }
+      admin_mailbox_auth_servers: {
+        Args: never
+        Returns: {
+          address: string
+          auth_server: string
+          emails: number
+          favorables: number
+          mailbox_id: string
+          trusted: boolean
+        }[]
+      }
+      admin_save_shared_mailbox: {
+        Args: {
+          p_address: string
+          p_id: string
+          p_imap_host: string
+          p_imap_port: number
+          p_is_active: boolean
+          p_label: string
+          p_password?: string
+        }
+        Returns: string
+      }
+      admin_set_mailbox_trusted_server: {
+        Args: { p_mailbox_id: string; p_server: string; p_trusted: boolean }
+        Returns: string
+      }
+      admin_set_rc_quote_status: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
+      admin_set_steeve_autonomie: { Args: { p_mode: string }; Returns: Json }
+      admin_set_steeve_settings: { Args: { p_settings: Json }; Returns: Json }
+      admin_steeve_clients: {
+        Args: { p_query?: string }
+        Returns: {
+          client_id: string
+          email: string
+          email_verifie: boolean
+          has_conversation: boolean
+          in_pilot: boolean
+          nom: string
+          prenom: string
+          statut: string
+        }[]
+      }
+      admin_steeve_journal: {
+        Args: { p_limit?: number }
+        Returns: {
+          calls: number
+          client_id: string
+          client_nom: string
+          conversation_id: string
+          cost_usd: number
+          created_at: string
+          error: string
+          kind: string
+          reason: string
+          run_id: string
+          status: string
+        }[]
+      }
+      admin_steeve_operateur: {
+        Args: { p_limit?: number; p_statut?: string }
+        Returns: Json
+      }
+      admin_steeve_overview: { Args: never; Returns: Json }
+      admin_steeve_recherche_offres: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
+      admin_steeve_tache_controle: {
+        Args: {
+          p_action: string
+          p_id: string
+          p_note?: string
+          p_responsable?: string
+        }
+        Returns: Json
+      }
       annonceur_has_published_annonce: {
         Args: { _annonceur_id: string }
         Returns: boolean
@@ -14852,6 +17665,10 @@ export type Database = {
       }
       can_agent_create_conversation: {
         Args: { _agent_id: string; _client_id: string }
+        Returns: boolean
+      }
+      can_manage_conversation: {
+        Args: { p_conversation_id: string }
         Returns: boolean
       }
       can_read_offer_attachment: { Args: { _name: string }; Returns: boolean }
@@ -14895,6 +17712,36 @@ export type Database = {
         Args: { check_email: string }
         Returns: boolean
       }
+      claim_postulation_jobs: {
+        Args: { p_job_id?: string; p_limit?: number }
+        Returns: {
+          ai_result: Json | null
+          attempt_count: number
+          candidature_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          locked_at: string | null
+          max_attempts: number
+          next_attempt_at: string
+          offre_id: string
+          openai_response_id: string | null
+          priority: string | null
+          processed_at: string | null
+          requested_by: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "postulation_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      client_est_acheteur: { Args: { p_client_id: string }; Returns: boolean }
       communication_apply_receipt: {
         Args: { p_event_id: string }
         Returns: undefined
@@ -14951,6 +17798,30 @@ export type Database = {
         }
         Returns: boolean
       }
+      conversation_fusionner_client: {
+        Args: { p_client_id: string }
+        Returns: number
+      }
+      conversation_give_back: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
+      conversation_rattacher_agents: {
+        Args: { p_cible: string; p_source: string }
+        Returns: undefined
+      }
+      conversation_take_over: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
+      conversation_unique_client: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
+      copy_candidat_garant_to_client: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       create_approval_request: {
         Args: {
           p_ai_agent_id?: string
@@ -14982,6 +17853,11 @@ export type Database = {
       }
       decrement_mandat_coins_daily: { Args: never; Returns: number }
       ensure_annonceur_profile: { Args: never; Returns: string }
+      est_conseiller_projet_achat: {
+        Args: { p_project_id: string }
+        Returns: boolean
+      }
+      est_personnel: { Args: never; Returns: boolean }
       generate_parrainage_code: { Args: never; Returns: string }
       generer_documents_candidature: {
         Args: { p_candidature_id: string; p_valeurs?: Json }
@@ -15108,6 +17984,10 @@ export type Database = {
           type_bien: string
         }[]
       }
+      get_steeve_public_settings: { Args: never; Returns: Json }
+      get_steeve_settings:
+        | { Args: never; Returns: Json }
+        | { Args: { p_conversation_id: string }; Returns: Json }
       google_create_candidat_account: { Args: never; Returns: undefined }
       has_access_to_immeuble: {
         Args: { _immeuble_id: string }
@@ -15265,6 +18145,10 @@ export type Database = {
         Returns: string
       }
       mark_inactive_users_offline: { Args: never; Returns: number }
+      message_est_automatique: {
+        Args: { p_content: string; p_payload: Json; p_sender_type: string }
+        Returns: boolean
+      }
       newsletter_cancel: { Args: { p_id: string }; Returns: undefined }
       newsletter_claim: {
         Args: never
@@ -15430,6 +18314,12 @@ export type Database = {
         Returns: undefined
       }
       newsletter_normalize: { Args: { v: string }; Returns: string }
+      newsletter_rc_audience: {
+        Args: never
+        Returns: {
+          contact_id: string
+        }[]
+      }
       newsletter_record_optouts: {
         Args: { p_emails: string[] }
         Returns: undefined
@@ -15468,6 +18358,29 @@ export type Database = {
           _type: string
         }
         Returns: undefined
+      }
+      offre_groupe_cle: {
+        Args: { p_adresse: string; p_lien: string }
+        Returns: string
+      }
+      offres_auto_groupes: {
+        Args: {
+          p_client_ids?: string[]
+          p_date_from?: string
+          p_date_to?: string
+          p_limit?: number
+          p_manual?: boolean
+          p_offset?: number
+          p_statut?: string
+        }
+        Returns: {
+          besoin_action: boolean
+          derniere_creation: string
+          groupe_cle: string
+          nb_clients: number
+          offres: Json
+          total: number
+        }[]
       }
       ouvrir_conversation_annonce: {
         Args: { p_annonce_id: string }
@@ -15519,6 +18432,16 @@ export type Database = {
         }
         Returns: Json
       }
+      postulation_lien_consommer: {
+        Args: {
+          p_nom?: string
+          p_prenom?: string
+          p_telephone?: string
+          p_token: string
+        }
+        Returns: Json
+      }
+      postulation_lien_info: { Args: { p_token: string }; Returns: Json }
       purge_old_data: { Args: never; Returns: Json }
       push_offre: {
         Args: {
@@ -15537,6 +18460,10 @@ export type Database = {
         }
         Returns: string
       }
+      rapport_postulation: {
+        Args: { p_cle: string; p_rapport: Json }
+        Returns: string
+      }
       record_signature_checkpoint: {
         Args: {
           p_checkpoint_key: string
@@ -15545,6 +18472,7 @@ export type Database = {
         }
         Returns: string
       }
+      relances_regie_quotidiennes: { Args: never; Returns: number }
       renouveler_mandat_coins: { Args: never; Returns: undefined }
       renovation_agent_can_access_immeuble: {
         Args: { _immeuble_id: string }
@@ -15604,6 +18532,37 @@ export type Database = {
       renovation_user_can_view_project_internal: {
         Args: { _project_id: string }
         Returns: boolean
+      }
+      request_postulation: { Args: { p_offre_id: string }; Returns: Json }
+      request_rc_quote: {
+        Args: {
+          p_birth_date: string
+          p_consent: boolean
+          p_current_address: string
+          p_email: string
+          p_first_name: string
+          p_insured_people: number
+          p_last_name: string
+          p_nationality: string
+          p_phone: string
+          p_request_key: string
+        }
+        Returns: string
+      }
+      request_rc_quote_guest: {
+        Args: {
+          p_birth_date: string
+          p_consent: boolean
+          p_current_address: string
+          p_email: string
+          p_first_name: string
+          p_insured_people: number
+          p_last_name: string
+          p_nationality: string
+          p_phone: string
+          p_request_key: string
+        }
+        Returns: string
       }
       resilier_mandat: { Args: never; Returns: undefined }
       search_annonces_radius: {
@@ -15724,6 +18683,52 @@ export type Database = {
         }
       }
       set_user_offline: { Args: never; Returns: undefined }
+      shared_mailbox_credentials: { Args: { p_id: string }; Returns: string }
+      staff_cancel_steeve_action: { Args: { p_id: string }; Returns: Json }
+      staff_decide_steeve_proposal: {
+        Args: { p_id: string; p_note?: string; p_status: string }
+        Returns: Json
+      }
+      staff_list_steeve_proposals: {
+        Args: { p_limit?: number; p_status?: string }
+        Returns: {
+          bien: string
+          body: string
+          client_id: string
+          client_nom: string
+          contact_regie: string
+          conversation_id: string
+          created_at: string
+          decided_at: string
+          decided_by_nom: string
+          decision_note: string
+          id: string
+          kind: string
+          status: string
+          title: string
+        }[]
+      }
+      staff_request_steeve_task: {
+        Args: { p_kind: string; p_note?: string; p_offre_id: string }
+        Returns: Json
+      }
+      staff_request_steeve_task_by_address: {
+        Args: {
+          p_bien: string
+          p_client: string
+          p_kind: string
+          p_note?: string
+        }
+        Returns: Json
+      }
+      staff_steeve_dossier_etat: {
+        Args: { p_bien: string; p_client: string }
+        Returns: Json
+      }
+      staff_steeve_reprendre_dossier: {
+        Args: { p_offre_id: string }
+        Returns: Json
+      }
       staff_update_candidature_location: {
         Args: { _action: string; _date?: string; _id: string; _motif?: string }
         Returns: undefined
@@ -15732,13 +18737,277 @@ export type Database = {
         Args: { p_candidature_id: string; p_motif?: string; p_retenu: boolean }
         Returns: string
       }
+      staff_verify_client_email: {
+        Args: { p_client_id: string; p_verified?: boolean }
+        Returns: string
+      }
       start_candidat_trial: { Args: never; Returns: string }
+      steeve_admin_admit: { Args: { p_user_id: string }; Returns: Json }
+      steeve_admin_clients_vises: {
+        Args: { p_client: string; p_client_id: string }
+        Returns: {
+          client: string
+          client_id: string
+          statut: string
+        }[]
+      }
+      steeve_admin_conv_for: { Args: { p_user: string }; Returns: string }
+      steeve_admin_conversation: { Args: never; Returns: string }
+      steeve_admin_ecrire: {
+        Args: {
+          p_client_id?: string
+          p_conversation_id?: string
+          p_message: string
+          p_user_id?: string
+        }
+        Returns: Json
+      }
+      steeve_admin_personnes: { Args: { p_nom: string }; Returns: Json }
+      steeve_annonceur_apercu: { Args: never; Returns: Json }
+      steeve_apply_acceptation: {
+        Args: { p_bail: boolean; p_client_id: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_apply_annulation: {
+        Args: { p_client_id: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_apply_lien: {
+        Args: { p_client_id: string; p_lien: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_apply_refus: {
+        Args: { p_client_id: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_apply_retrait: { Args: { p_offre_id: string }; Returns: undefined }
+      steeve_apply_visite: {
+        Args: {
+          p_client_id: string
+          p_date: string
+          p_fin: string
+          p_offre_id: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      steeve_apporteur_apercu: { Args: never; Returns: Json }
+      steeve_claim_run: { Args: { p_run_id: string }; Returns: Json }
+      steeve_client_actif: { Args: { p_client_id: string }; Returns: boolean }
+      steeve_client_criteres: {
+        Args: { p_changes: Json; p_client_id: string }
+        Returns: Json
+      }
+      steeve_client_demande_visite: {
+        Args: { p_client_id: string; p_note?: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_client_emails: {
+        Args: { p_client_id: string; p_days?: number; p_limit?: number }
+        Returns: Json
+      }
+      steeve_client_offres_match: {
+        Args: { p_client_id: string; p_ref: string }
+        Returns: Json
+      }
+      steeve_client_reponse_offre: {
+        Args: { p_client_id: string; p_offre_id: string; p_reponse: string }
+        Returns: Json
+      }
+      steeve_client_servi: { Args: { p_client_id: string }; Returns: boolean }
+      steeve_compte_rendu_client: {
+        Args: { p_client_id: string; p_now?: string }
+        Returns: string
+      }
+      steeve_demande_recherche_offres: {
+        Args: { p_client_id: string; p_note?: string; p_source: string }
+        Returns: Json
+      }
+      steeve_dossier_deja_envoye: {
+        Args: { p_client_id: string; p_offre_id: string }
+        Returns: boolean
+      }
+      steeve_dossier_etat: { Args: { p_offre_id: string }; Returns: Json }
+      steeve_dossier_offres: { Args: { p_days?: number }; Returns: Json }
+      steeve_email_top: { Args: { t: string }; Returns: string }
+      steeve_emails_regie: { Args: { p_offre_id: string }; Returns: string[] }
+      steeve_enabled_for_conversation: {
+        Args: { p_conversation_id: string }
+        Returns: boolean
+      }
+      steeve_envoyer_point_clients: {
+        Args: { p_cle: string; p_client_id?: string; p_dry_run?: boolean }
+        Returns: Json
+      }
+      steeve_executant_autorise: { Args: never; Returns: boolean }
+      steeve_flag_offre: {
+        Args: { p_note: string; p_offre_id: string }
+        Returns: undefined
+      }
+      steeve_fmt_chf: { Args: { p: number }; Returns: string }
+      steeve_fmt_pieces: { Args: { p: number }; Returns: string }
+      steeve_formulaire_recu: {
+        Args: { p_canal: string; p_client_id: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_mail_candidates: { Args: { p_limit?: number }; Returns: Json }
+      steeve_mail_context: { Args: never; Returns: Json }
+      steeve_norm: { Args: { t: string }; Returns: string }
+      steeve_operator_mode: {
+        Args: { p_mailbox_ready?: boolean }
+        Returns: Json
+      }
+      steeve_partner_admit: {
+        Args: { p_role?: string; p_user_id: string }
+        Returns: Json
+      }
+      steeve_partner_contact: {
+        Args: { p_message: string; p_role?: string; p_sujet: string }
+        Returns: Json
+      }
+      steeve_partner_role: { Args: { p_user_id: string }; Returns: string }
+      steeve_pending_client_questions: {
+        Args: { p_min_hours?: number }
+        Returns: {
+          agent_user: string
+          client_id: string
+          client_user: string
+          conversation_id: string
+          depuis: string
+          extrait: string
+        }[]
+      }
+      steeve_pending_proposals_count: { Args: never; Returns: number }
+      steeve_person_name: { Args: { p_user_id: string }; Returns: string }
+      steeve_post_admin: {
+        Args: {
+          p_cle: string
+          p_payload?: Json
+          p_text: string
+          p_user: string
+        }
+        Returns: string
+      }
+      steeve_presentation_client: {
+        Args: { p_client_id: string }
+        Returns: string
+      }
+      steeve_proprio_apercu: { Args: never; Returns: Json }
+      steeve_public_admit: {
+        Args: { p_ip_hash: string; p_session_hash: string }
+        Returns: Json
+      }
+      steeve_public_search: { Args: { p_criteria: Json }; Returns: Json }
+      steeve_qr_candidates: {
+        Args: { p_limit?: number; p_offre_id?: string }
+        Returns: Json
+      }
+      steeve_record_dossier_envoye: {
+        Args: {
+          p_client_id: string
+          p_destinataire: string
+          p_objet: string
+          p_offre_id: string
+          p_preuve: string
+          p_regie?: string
+        }
+        Returns: Json
+      }
+      steeve_redact: { Args: { t: string }; Returns: string }
+      steeve_registre_offres: { Args: { p_offre_ids: string[] }; Returns: Json }
+      steeve_relance_candidates: {
+        Args: { p_limit?: number; p_offre_id?: string }
+        Returns: Json
+      }
+      steeve_request_postulation: {
+        Args: { p_client_id: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_requeue_latest: {
+        Args: { p_after: string; p_conversation_id: string }
+        Returns: string
+      }
+      steeve_requeue_postulations: { Args: never; Returns: number }
+      steeve_reveiller: { Args: { p_task_id: string }; Returns: undefined }
+      steeve_routine_signaler: {
+        Args: {
+          p_etape: string
+          p_note?: string
+          p_offre_id: string
+          p_routine?: string
+        }
+        Returns: Json
+      }
+      steeve_scheduler_tick: { Args: never; Returns: Json }
+      steeve_set_note: {
+        Args: { p_note: string; p_offre_id: string }
+        Returns: undefined
+      }
+      steeve_spend: { Args: { p_client_id: string }; Returns: Json }
+      steeve_staff_can_handle: {
+        Args: { p_client_id: string }
+        Returns: boolean
+      }
+      steeve_tache_creer: {
+        Args: {
+          p_by?: string
+          p_canal: string
+          p_client_id: string
+          p_kind: string
+          p_note?: string
+          p_offre_id: string
+          p_responsable?: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      steeve_tache_etape: {
+        Args: {
+          p_detail?: string
+          p_etape: string
+          p_fait?: boolean
+          p_id: string
+          p_jeton: string
+          p_message_id?: string
+        }
+        Returns: boolean
+      }
+      steeve_tache_evt: { Args: { p_etapes: Json; p_evt: Json }; Returns: Json }
+      steeve_tache_renouveler: {
+        Args: { p_id: string; p_jeton: string; p_ttl_s?: number }
+        Returns: boolean
+      }
+      steeve_tache_reserver: {
+        Args: { p_executant: string; p_id: string; p_ttl_s?: number }
+        Returns: Json
+      }
+      steeve_tache_reserver_suivante: {
+        Args: { p_executant: string; p_kinds?: string[]; p_ttl_s?: number }
+        Returns: Json
+      }
+      steeve_tache_terminer: {
+        Args: {
+          p_id: string
+          p_jeton: string
+          p_motif?: string
+          p_note?: string
+          p_preuve?: string
+          p_statut: string
+        }
+        Returns: boolean
+      }
       track_email_click: {
         Args: { _log_id: string; _url: string }
         Returns: undefined
       }
       track_email_open: { Args: { _log_id: string }; Returns: undefined }
+      try_parse_uuid: { Args: { p: string }; Returns: string }
       update_user_presence: { Args: never; Returns: undefined }
+      visite_est_reelle: { Args: { p_visite_id: string }; Returns: boolean }
+      visite_permet_postuler: {
+        Args: { p_visite_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       agent_share_status: "pending" | "accepted" | "declined" | "revoked"

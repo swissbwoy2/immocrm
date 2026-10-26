@@ -17,6 +17,7 @@ import { useDraftManager, initialFormData } from "@/hooks/useDraftManager";
 import { DraftManagerDialog } from "@/components/DraftManagerDialog";
 import { ClientMultiSelect } from "@/components/ClientMultiSelect";
 import { buildOffreMessage, formatDateVisite } from "@/lib/offreMessage";
+import { formatZurichDateTime, zurichDateTimeToIso, zurichInputToIso } from "@/lib/dateZurich";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { isMandatCancelled, isMandatCancelledError, MANDAT_CANCELLED_OFFER_MESSAGE } from '@/lib/mandatCancellation';
@@ -347,16 +348,16 @@ const EnvoyerOffre = () => {
           const dateStr = formData.datesVisite[i];
           if (!dateStr) continue;
           
-          // Convert local datetime to ISO string with timezone
-          const localDate = new Date(dateStr);
-          const isoWithTimezone = localDate.toISOString();
+          // Champ datetime-local saisi en heure suisse → instant ISO (UTC)
+          const isoWithTimezone = zurichInputToIso(dateStr);
+          if (!isoWithTimezone) continue;
           
           // Calculate end date if end time is provided
           let endDate: string | null = null;
           const endTime = formData.datesVisiteFin[i];
           if (endTime) {
             const dateOnly = dateStr.split('T')[0]; // Extract date part
-            endDate = new Date(`${dateOnly}T${endTime}`).toISOString();
+            endDate = zurichDateTimeToIso(dateOnly, endTime);
           }
           
           await supabase
@@ -581,10 +582,11 @@ const EnvoyerOffre = () => {
               </div>
 
               <div>
-                <Label>Commentaires</Label>
+                <Label>Note de suivi (visible par le client)</Label>
                 <Textarea 
                   value={formData.commentaires} 
                   onChange={(e) => setFormData({ ...formData, commentaires: e.target.value })} 
+                  placeholder="Ex. Visite du 20.10.2026 passée : annonceur recontacté pour une nouvelle date, en attente."
                   rows={3}
                 />
               </div>
@@ -700,7 +702,7 @@ const EnvoyerOffre = () => {
                 </div>
 
                 <h2 className="text-xl font-bold text-center">
-                  🏠 Nouvelle Offre pour Votre Recherche d'Appartement
+                  {Number(formData.prix) >= 50000 ? "🏠 Nouvelle offre — un bien à vendre pour votre projet d'achat" : "🏠 Nouvelle Offre pour Votre Recherche d'Appartement"}
                 </h2>
 
                 {selectedClientIds.length === 1 && selectedClients[0] && (
@@ -737,14 +739,7 @@ const EnvoyerOffre = () => {
                     <p className="font-semibold text-sm">Dates de visite proposées :</p>
                     <ul className="list-disc list-inside text-sm mt-1">
                       {formData.datesVisite.filter(d => d).map((date, i) => (
-                        <li key={i}>{new Date(date).toLocaleString('fr-FR', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric', 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}</li>
+                        <li key={i}>{formatZurichDateTime(date)}</li>
                       ))}
                     </ul>
                   </div>

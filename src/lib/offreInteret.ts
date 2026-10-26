@@ -32,32 +32,32 @@ export function getInteretState(statutOffre?: string | null): InteretState {
   if (INTERESSE_STATUTS.has(s)) {
     return {
       key: 'interesse',
-      label: 'Intéressé ✅',
+      label: 'Intéressé',
       short: 'Confirmée',
-      className: 'bg-emerald-500/15 text-emerald-700 border border-emerald-500/30',
+      className: 'bg-emerald-500/10 text-emerald-700 border-transparent dark:text-emerald-400',
     };
   }
   if (s === 'refusee') {
     return {
       key: 'refuse',
-      label: 'Refusé ❌',
+      label: 'Refusé',
       short: 'Refusée',
-      className: 'bg-red-500/15 text-red-700 border border-red-500/30',
+      className: 'bg-destructive/10 text-destructive border-transparent',
     };
   }
   if (ATTENTE_STATUTS.has(s)) {
     return {
       key: 'attente',
-      label: 'En attente ⏳',
+      label: 'En attente',
       short: 'À confirmer',
-      className: 'bg-amber-500/15 text-amber-700 border border-amber-500/30',
+      className: 'bg-amber-500/10 text-amber-700 border-transparent dark:text-amber-400',
     };
   }
   return {
     key: 'inconnu',
     label: 'Intérêt inconnu',
     short: 'Inconnu',
-    className: 'bg-muted text-muted-foreground border border-border',
+    className: 'bg-muted text-muted-foreground border-transparent',
   };
 }
 

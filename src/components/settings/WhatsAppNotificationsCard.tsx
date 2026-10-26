@@ -8,6 +8,7 @@ import { MessageCircle, ShieldCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { DASH_CARD } from "@/components/client/dashboard/DashPrimitives";
 
 interface Prefs {
   whatsapp_enabled: boolean;
@@ -119,18 +120,20 @@ export function WhatsAppNotificationsCard() {
   if (loading) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageCircle className="h-5 w-5 text-primary" />
+    <Card className={DASH_CARD}>
+      <CardHeader className="p-4 pb-0 md:p-5 md:pb-0">
+        <CardTitle className="flex items-center gap-3 text-base font-semibold">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <MessageCircle className="h-[18px] w-[18px]" />
+          </span>
           Notifications WhatsApp
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-sm">
           Recevez les informations importantes liées à votre recherche de logement directement sur WhatsApp.
           Vous pouvez désactiver ces notifications à tout moment.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-5 p-4 pt-4 md:p-5 md:pt-4">
         <div className="space-y-2">
           <Label htmlFor="wa-phone">Numéro WhatsApp</Label>
           <Input
@@ -141,9 +144,9 @@ export function WhatsAppNotificationsCard() {
           />
         </div>
 
-        <div className="flex items-center justify-between rounded-lg border p-4">
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 p-4">
           <div className="space-y-0.5">
-            <Label className="text-base">Activer les notifications WhatsApp</Label>
+            <Label className="text-sm font-medium">Activer les notifications WhatsApp</Label>
             <p className="text-sm text-muted-foreground">
               J'accepte de recevoir des notifications importantes (offres, visites, dossier, messages agent).
             </p>
@@ -152,7 +155,7 @@ export function WhatsAppNotificationsCard() {
         </div>
 
         {optIn && (
-          <div className="space-y-3 rounded-lg border p-4">
+          <div className="space-y-3 rounded-xl border border-border/70 p-4">
             <p className="text-sm font-medium">Catégories de notifications</p>
             {[
               { k: "offer_alerts_enabled", label: "Nouvelles offres immobilières" },
@@ -161,7 +164,7 @@ export function WhatsAppNotificationsCard() {
               { k: "document_alerts_enabled", label: "Documents manquants ou expirés" },
               { k: "candidature_updates_enabled", label: "Suivi de candidature" },
             ].map((row) => (
-              <div key={row.k} className="flex items-center justify-between">
+              <div key={row.k} className="flex items-center justify-between gap-4">
                 <Label className="text-sm">{row.label}</Label>
                 <Switch
                   checked={(prefs as any)[row.k]}
@@ -172,7 +175,7 @@ export function WhatsAppNotificationsCard() {
           </div>
         )}
 
-        <div className="flex items-start gap-2 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
+        <div className="flex items-start gap-2 rounded-xl bg-muted/60 p-3 text-xs text-muted-foreground">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             Aucune donnée sensible (pièces d'identité, fiches de salaire, etc.) n'est envoyée par WhatsApp.
@@ -181,7 +184,7 @@ export function WhatsAppNotificationsCard() {
         </div>
 
         <div className="flex justify-end">
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving} className="rounded-full">
             {saving ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </div>

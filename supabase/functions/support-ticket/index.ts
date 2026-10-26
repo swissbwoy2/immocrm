@@ -1,6 +1,6 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("support-ticket");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailDetails, emailNotice, emailParagraph } from '../_shared/email-shell.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -79,7 +79,14 @@ serve(async (req) => {
       const who = await profileName(user.id);
       await notifyAdmins("Nouveau ticket support", `${who.name} — ${sujet}`, "/admin/support");
       await sendMail(SUPPORT_INBOX, `[Ticket ${cat}] ${sujet}`,
-        `<h3>Nouveau ticket support</h3><p><b>De :</b> ${esc(who.name)} (${esc(who.email)})</p><p><b>Catégorie :</b> ${esc(cat)}</p><p><b>Sujet :</b> ${esc(sujet)}</p><p>${esc(message).replace(/\n/g, "<br>")}</p><p><a href="${SITE}/admin/support">Ouvrir dans le tableau de bord</a></p>`);
+        emailParagraph("Nouveau ticket support.") +
+        emailDetails([
+          { label: "De", html: `${esc(who.name)}${who.email ? `<br>${esc(who.email)}` : ""}` },
+          ["Catégorie", cat],
+          ["Sujet", sujet],
+        ]) +
+        emailNotice(esc(message).replace(/\n/g, "<br>"), "neutral", "Message") +
+        emailButton("Ouvrir dans le tableau de bord", `${SITE}/admin/support`));
       return json({ ok: true, ticket_id: t.id });
     }
 
@@ -101,7 +108,9 @@ serve(async (req) => {
         await notifyAdmins("Réponse client — ticket", ticket.sujet, "/admin/support");
         const who = await profileName(user.id);
         await sendMail(SUPPORT_INBOX, `[Ticket] Réponse — ${ticket.sujet}`,
-          `<p><b>${esc(who.name)}</b> a répondu :</p><p>${esc(message).replace(/\n/g, "<br>")}</p><p><a href="${SITE}/admin/support">Ouvrir</a></p>`);
+          emailParagraph(`<strong>${esc(who.name)}</strong> a répondu :`) +
+          emailNotice(esc(message).replace(/\n/g, "<br>"), "neutral") +
+          emailButton("Ouvrir", `${SITE}/admin/support`));
         if (ticket.statut === "resolu" || ticket.statut === "cloture")
           await admin.from("support_tickets").update({ statut: "en_cours", closed_at: null }).eq("id", ticketId);
       } else {

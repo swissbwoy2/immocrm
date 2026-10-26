@@ -6,12 +6,15 @@ import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
+import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 
 interface SolvabilityAlertProps {
   result: SolvabilityResult;
   onAddCandidate?: () => void;
   compact?: boolean;
   className?: string;
+  /** 'client' : rendu sobre des tableaux de bord client (DASH_CARD). 'default' : rendu historique (fiches admin/agent). */
+  appearance?: 'default' | 'client';
 }
 
 const CANDIDATE_TYPE_LABELS: Record<string, string> = {
@@ -22,7 +25,7 @@ const CANDIDATE_TYPE_LABELS: Record<string, string> = {
   occupant: 'Occupant',
 };
 
-export function SolvabilityAlert({ result, onAddCandidate, compact = false, className }: SolvabilityAlertProps) {
+export function SolvabilityAlert({ result, onAddCandidate, compact = false, className, appearance = 'default' }: SolvabilityAlertProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const { 
     isSolvable, 
@@ -50,6 +53,271 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
   const solvabilityPercentage = budgetDemande > 0 
     ? Math.min(Math.round((budgetPossible / budgetDemande) * 100), 100)
     : 100;
+
+  // Rendu « client » (espace client, style DASH_CARD sobre). Le rendu par défaut ci-dessous reste inchangé.
+  if (appearance === 'client') {
+    const barCls = solvabilityPercentage >= 100 ? 'bg-emerald-500' : solvabilityPercentage >= 80 ? 'bg-amber-500' : 'bg-destructive';
+    const pctCls = solvabilityPercentage >= 100 ? 'text-emerald-600' : solvabilityPercentage >= 80 ? 'text-amber-600' : 'text-destructive';
+    const possibleCls = budgetPossible >= budgetDemande ? 'text-emerald-600' : 'text-destructive';
+
+    if (compact) {
+      if (isSolvable && problems.length === 0) {
+        return (
+          <div className={cn(DASH_CARD, 'flex items-center gap-3 p-4', className)}>
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+              <CheckCircle className="h-5 w-5" />
+            </span>
+            <p className="font-semibold text-foreground">Dossier solvable</p>
+            {hasValidGarant && (
+              <span className="ml-auto"><DashBadge tone="success">Garant valide</DashBadge></span>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+          <div className={cn(DASH_CARD, className)}>
+            <CollapsibleTrigger asChild>
+              <div className="cursor-pointer p-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-foreground">Dossier non solvable</p>
+                      {criticalProblems.length > 0 && (
+                        <DashBadge tone="danger">
+                          {criticalProblems.length} bloquant{criticalProblems.length > 1 ? 's' : ''}
+                        </DashBadge>
+                      )}
+                      <div className="ml-auto">
+                        {isExpanded ? (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+                      <div>
+                        <span className="text-muted-foreground">Demandé:</span>
+                        <span className="ml-1 font-medium text-foreground">{budgetDemande.toLocaleString()} CHF</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Possible:</span>
+                        <span className={cn('ml-1 font-medium', possibleCls)}>
+                          {budgetPossible.toLocaleString()} CHF
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleTrigger>
+
+            <CollapsibleContent className="space-y-3 px-4 pb-4">
+              <div className="rounded-xl bg-muted/40 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">Solutions</span>
+                </div>
+                <div className="space-y-2">
+                  {criticalProblems.map((problem, index) => (
+                    <div key={index} className="rounded-lg bg-background p-2 text-xs">
+                      <p className="mb-1 font-medium text-destructive">{problem.message}</p>
+                      <p className="text-muted-foreground">{problem.solution}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {onAddCandidate && (
+                <Button size="sm" className="w-full rounded-full" onClick={onAddCandidate}>
+                  <UserPlus className="mr-1 h-3 w-3" />
+                  Ajouter un candidat
+                </Button>
+              )}
+            </CollapsibleContent>
+          </div>
+        </Collapsible>
+      );
+    }
+
+    // Montants au format suisse « CHF 2'400 ».
+    const chf = (n: number) => `CHF ${Math.round(n || 0).toLocaleString('de-CH').replace(/[’\u2019]/g, "'")}`;
+    const usage = budgetPossible > 0 ? Math.round((budgetDemande / budgetPossible) * 100) : budgetDemande > 0 ? 999 : 0;
+    const marge = budgetPossible - budgetDemande;
+    const usageTone = usage <= 100 ? 'ok' : usage <= 110 ? 'warn' : 'ko';
+    const usageBar = usageTone === 'ok' ? 'bg-emerald-500' : usageTone === 'warn' ? 'bg-amber-500' : 'bg-destructive';
+    const usageTxt = usageTone === 'ok' ? 'text-emerald-700 dark:text-emerald-400' : usageTone === 'warn' ? 'text-amber-700 dark:text-amber-400' : 'text-destructive';
+    const autresRevenus = Math.max(0, (totalRevenus || 0) - (clientRevenus || 0));
+    const verdict = budgetDemande <= 0
+      ? 'Indiquez votre budget pour vérifier votre solvabilité.'
+      : marge >= 0
+        ? `Votre budget de ${chf(budgetDemande)} est couvert${marge > 0 ? ` · marge de ${chf(marge)}` : ''}.`
+        : `Votre budget dépasse votre capacité de ${chf(-marge)} par mois.`;
+
+    return (
+      <div className={cn(DASH_CARD, 'p-4 md:p-5', className)}>
+        {/* En-tête : verdict en une phrase */}
+        <div className="flex items-start gap-3">
+          <span className={cn(
+            'flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
+            isSolvable ? 'bg-emerald-500/10 text-emerald-600' : 'bg-destructive/10 text-destructive'
+          )}>
+            {isSolvable ? <CheckCircle className="h-5 w-5" /> : <AlertTriangle className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <h3 className="text-[17px] font-semibold leading-tight text-foreground">
+                {isSolvable ? 'Dossier solvable' : 'Dossier non solvable'}
+              </h3>
+              {isSolvable
+                ? (hasValidGarant || solvabilitySource === 'garant') && <DashBadge tone="success">Via garant</DashBadge>
+                : criticalProblems.length > 0 && <DashBadge tone="danger">{criticalProblems.length} bloquant{criticalProblems.length > 1 ? 's' : ''}</DashBadge>}
+            </div>
+            <p className="mt-1 text-sm leading-snug text-muted-foreground">{verdict}</p>
+          </div>
+        </div>
+
+        {/* Chiffre clé : loyer maximum vs budget */}
+        <div className="imr-lg-glass mt-4 rounded-[20px] p-4">
+          <div className="flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-muted-foreground">Loyer maximum conseillé</p>
+              <p className={cn('mt-0.5 text-[26px] font-semibold leading-none tracking-tight tabular-nums', isSolvable ? 'text-emerald-700 dark:text-emerald-400' : 'text-foreground')}>
+                {chf(budgetPossible)}<span className="ml-1 text-sm font-medium text-muted-foreground">/mois</span>
+              </p>
+            </div>
+            {budgetDemande > 0 && (
+              <div className="shrink-0 text-right">
+                <p className="text-xs font-medium text-muted-foreground">Votre budget</p>
+                <p className="mt-0.5 text-lg font-semibold leading-none tabular-nums text-foreground">{chf(budgetDemande)}</p>
+              </div>
+            )}
+          </div>
+          {budgetDemande > 0 && (
+            <>
+              <div className="relative mt-4 h-2.5 overflow-hidden rounded-full bg-black/[0.06] dark:bg-white/10" role="meter" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(usage, 100)} aria-label="Part de votre capacité utilisée par votre budget">
+                <div className={cn('h-full rounded-full transition-all duration-700', usageBar)} style={{ width: `${Math.min(usage, 100)}%` }} />
+              </div>
+              <p className={cn('mt-2 text-xs font-medium', usageTxt)}>
+                {usage <= 100 ? `Votre budget utilise ${usage} % de votre capacité` : `Votre budget représente ${usage > 300 ? 'plus de 300' : usage} % de votre capacité`}
+              </p>
+            </>
+          )}
+        </div>
+
+        {/* Revenus pris en compte */}
+        <dl className="mt-3 divide-y divide-black/[0.06] dark:divide-white/10">
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="flex items-center gap-2 text-sm text-muted-foreground"><TrendingUp className="h-4 w-4 shrink-0" />Revenus pris en compte</dt>
+            <dd className="text-sm font-semibold tabular-nums text-foreground">{chf(totalRevenus)}<span className="font-normal text-muted-foreground"> /mois</span></dd>
+          </div>
+          <div className="flex items-center justify-between gap-3 py-2.5">
+            <dt className="flex items-center gap-2 text-sm text-muted-foreground"><Wallet className="h-4 w-4 shrink-0" />Vos revenus</dt>
+            <dd className="text-sm font-semibold tabular-nums text-foreground">{chf(clientRevenus)}</dd>
+          </div>
+          {autresRevenus > 0 && (
+            <div className="flex items-center justify-between gap-3 py-2.5">
+              <dt className="flex items-center gap-2 text-sm text-muted-foreground"><Shield className="h-4 w-4 shrink-0" />Garant / colocataires</dt>
+              <dd className="text-sm font-semibold tabular-nums text-foreground">{chf(autresRevenus)}</dd>
+            </div>
+          )}
+        </dl>
+
+        {/* Statut du permis client */}
+        {!clientHasStableStatus && (
+          <div className="mt-3 flex items-start gap-3 rounded-2xl bg-amber-500/10 p-3">
+            <FileWarning className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Permis non stable détecté</p>
+              <p className="text-sm text-muted-foreground">Un garant avec permis B/C ou nationalité suisse est nécessaire.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Garant valide */}
+        {hasValidGarant && garantInfo && (
+          <div className="mt-3 flex items-start gap-3 rounded-2xl bg-emerald-500/10 p-3">
+            <Shield className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Garant valide : {garantInfo.nom}</p>
+              <p className="text-sm text-muted-foreground">
+                Revenus {chf(garantInfo.revenus)} → loyer max {chf(garantInfo.maxLoyer)}/mois{garantInfo.permis && ` · permis ${garantInfo.permis}`}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Ce qu'il faut faire */}
+        {problems.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-semibold text-foreground">À faire pour débloquer ({problems.length})</p>
+            {[...criticalProblems, ...warningProblems].map((problem, index) => {
+              const critical = problem.type === 'critical';
+              return (
+                <div key={index} className={cn('rounded-2xl p-3', critical ? 'bg-destructive/[0.07]' : 'bg-amber-500/10')}>
+                  <div className="flex items-start gap-3">
+                    <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold', critical ? 'bg-destructive text-destructive-foreground' : 'bg-amber-500 text-white')}>
+                      {index + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground">{problem.message}</p>
+                      <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
+                        <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                        <span>{problem.solution}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Candidats exclus */}
+        {excludedCandidates.length > 0 && (
+          <div className="mt-4 rounded-2xl bg-amber-500/10 p-3">
+            <p className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Ban className="h-4 w-4 text-amber-600" />
+              Revenus non comptabilisés ({excludedCandidates.length})
+            </p>
+            <div className="space-y-1.5">
+              {excludedCandidates.map((candidate, index) => (
+                <div key={index} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="font-medium text-foreground">{candidate.name} · {CANDIDATE_TYPE_LABELS[candidate.type] || candidate.type}</span>
+                  <DashBadge tone="warning">{candidate.reason}</DashBadge>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">Pour les compter : permis B, C ou nationalité suisse.</p>
+          </div>
+        )}
+
+        {!isSolvable && onAddCandidate && (
+          <Button onClick={onAddCandidate} className="mt-4 w-full sm:w-auto">
+            <UserPlus className="mr-2 h-4 w-4" />
+            Ajouter un garant ou un colocataire
+          </Button>
+        )}
+
+        {/* Règle de calcul (repliée) */}
+        <details className="group mt-3 rounded-2xl text-sm">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-muted-foreground [&::-webkit-details-marker]:hidden">
+            <Calculator className="h-4 w-4 shrink-0 text-primary" />
+            <span className="flex-1">Comment est-ce calculé ?</span>
+            <ChevronDown className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180" />
+          </summary>
+          <p className="pb-1 pl-6 text-muted-foreground">
+            Loyer maximum = revenus pris en compte ÷ 3. Seuls les revenus des personnes sans poursuites ni actes de défaut de biens, avec permis B, C ou nationalité suisse, sont comptés.
+          </p>
+        </details>
+      </div>
+    );
+  }
 
   // Affichage compact amélioré pour le dashboard
   if (compact) {
@@ -144,7 +412,7 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
             {onAddCandidate && (
               <Button 
                 size="sm" 
-                className="w-full bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300"
+                className="w-full"
                 onClick={onAddCandidate}
               >
                 <UserPlus className="w-3 h-3 mr-1" />
@@ -447,7 +715,7 @@ export function SolvabilityAlert({ result, onAddCandidate, compact = false, clas
           <Button 
             onClick={onAddCandidate} 
             size="lg"
-            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] transition-all duration-300 group/btn"
+            className="w-full group/btn"
           >
             <UserPlus className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
             Ajouter un candidat au dossier

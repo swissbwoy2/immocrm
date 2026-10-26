@@ -33,14 +33,9 @@ export function PremiumProprietaireDashboardHeader({
 
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-2xl p-6 md:p-8 mb-6",
-      "bg-gradient-to-br from-primary/10 via-primary/5 to-background",
-      "border border-primary/20",
+      "imr-lg-hero rounded-[28px] p-6 md:p-8 mb-6",
       className
     )}>
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
       
       <div className="relative z-10">
         {/* Greeting */}
@@ -56,7 +51,7 @@ export function PremiumProprietaireDashboardHeader({
 
           {/* Quick Stats */}
           <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-card border border-border/50 shadow-sm">
+            <div className="imr-lg-glass flex items-center gap-2 rounded-full px-4 py-2">
               <Building2 className="w-5 h-5 text-primary" />
               <span className="font-semibold">{immeubleCount}</span>
               <span className="text-sm text-muted-foreground">biens</span>
@@ -69,7 +64,7 @@ export function PremiumProprietaireDashboardHeader({
           {onMessagesClick && (
             <Button 
               variant="outline" 
-              className="bg-card hover:bg-primary hover:text-primary-foreground transition-all"
+              
               onClick={onMessagesClick}
             >
               <MessageSquare className="w-4 h-4 mr-2" />
@@ -85,7 +80,7 @@ export function PremiumProprietaireDashboardHeader({
           {onTicketsClick && (
             <Button 
               variant="outline"
-              className="bg-card hover:bg-primary hover:text-primary-foreground transition-all"
+              
               onClick={onTicketsClick}
             >
               <Wrench className="w-4 h-4 mr-2" />
@@ -101,7 +96,7 @@ export function PremiumProprietaireDashboardHeader({
           {onCalendarClick && (
             <Button 
               variant="outline"
-              className="bg-card hover:bg-primary hover:text-primary-foreground transition-all"
+              
               onClick={onCalendarClick}
             >
               <Calendar className="w-4 h-4 mr-2" />

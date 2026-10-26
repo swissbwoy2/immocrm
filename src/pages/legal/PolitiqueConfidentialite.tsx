@@ -14,6 +14,7 @@ const PRESTATAIRES: { nom: string; fonction: string; donnees: string }[] = [
   { nom: 'Google FCM', fonction: 'Notifications Android', donnees: 'Jeton push et contenu limité de notification' },
   { nom: 'Google Maps / Places', fonction: 'Cartographie, adresses, géocodage', donnees: 'Requêtes géographiques et données techniques' },
   { nom: 'Google / Gemini (si activé)', fonction: 'Fonctions IA', donnees: 'Données nécessaires à la fonction concernée' },
+  { nom: 'Anthropic (Claude)', fonction: 'Assistant Steeve (site public et messagerie client)', donnees: 'Messages échangés avec Steeve et informations du dossier nécessaires à la réponse' },
   { nom: 'Meta', fonction: 'Publicité / mesure', donnees: 'Identifiants et données marketing selon consentement/configuration' },
   { nom: 'Google Ads', fonction: 'Publicité / mesure', donnees: 'Identifiants et données marketing' },
   { nom: 'TikTok', fonction: 'Publicité / mesure', donnees: 'Identifiants et données marketing' },

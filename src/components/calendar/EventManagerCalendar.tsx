@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { addMonths, subMonths, addWeeks, subWeeks, addDays, subDays, startOfWeek, endOfWeek } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, List, Clock, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeCalendarColors } from './types';
 import { formatSwissDate } from '@/lib/dateUtils';
@@ -138,77 +137,81 @@ export function EventManagerCalendar({
     return 'Tous les événements';
   }, [view, currentDate]);
 
-  const ViewIcon = VIEW_ICONS[view];
-
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]">
       {/* Header */}
-      <div className="flex flex-col gap-3 p-4 border-b border-border bg-card">
+      <div className="flex flex-col gap-3 border-b border-border/70 bg-card p-3 sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 rounded-lg bg-primary/10 shrink-0">
-              <CalendarIcon className="h-5 w-5 text-primary" />
-            </div>
-            <h2 className="text-lg md:text-xl font-bold capitalize truncate">{periodLabel}</h2>
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <CalendarIcon className="h-[18px] w-[18px]" />
+            </span>
+            <h2 className="truncate text-base font-semibold capitalize text-foreground sm:text-lg">{periodLabel}</h2>
           </div>
+          {headerActions && <div className="flex flex-wrap items-center gap-2">{headerActions}</div>}
+        </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Navigation (hidden in list view) */}
-            {view !== 'list' && (
-              <div className="flex items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => handleNavigate('prev')}
-                  aria-label="Précédent"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9"
-                  onClick={() => handleNavigate('today')}
-                >
-                  Aujourd'hui
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => handleNavigate('next')}
-                  aria-label="Suivant"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Navigation (hidden in list view) */}
+          {view !== 'list' && (
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={() => handleNavigate('prev')}
+                aria-label="Précédent"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 rounded-full px-4"
+                onClick={() => handleNavigate('today')}
+              >
+                Aujourd'hui
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={() => handleNavigate('next')}
+                aria-label="Suivant"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
 
-            {/* View selector */}
-            <Select value={view} onValueChange={(v) => setView(v as ViewMode)}>
-              <SelectTrigger className="h-9 w-[120px]">
-                <div className="flex items-center gap-2">
-                  <ViewIcon className="h-4 w-4" />
-                  <SelectValue />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                {(['month', 'week', 'day', 'list'] as ViewMode[]).map((v) => {
-                  const Icon = VIEW_ICONS[v];
-                  return (
-                    <SelectItem key={v} value={v}>
-                      <div className="flex items-center gap-2">
-                        <Icon className="h-4 w-4" />
-                        {VIEW_LABELS[v]}
-                      </div>
-                    </SelectItem>
-                  );
-                })}
-              </SelectContent>
-            </Select>
-
-            {headerActions}
+          {/* View selector (pastilles) */}
+          <div
+            className="flex max-w-full gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            role="tablist"
+            aria-label="Affichage du calendrier"
+          >
+            {(['month', 'week', 'day', 'list'] as ViewMode[]).map((v) => {
+              const Icon = VIEW_ICONS[v];
+              const active = v === view;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setView(v)}
+                  className={cn(
+                    'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-medium transition-colors duration-150',
+                    active
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-border bg-background text-foreground hover:border-foreground/60',
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {VIEW_LABELS[v]}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -224,7 +227,7 @@ export function EventManagerCalendar({
       </div>
 
       {/* Body */}
-      <div className="p-3 md:p-4">
+      <div className="p-2 sm:p-3 md:p-4">
         {view === 'month' && (
           <MonthView
             currentDate={currentDate}
@@ -256,7 +259,7 @@ export function EventManagerCalendar({
 
       {/* Legend (only on month view, like the original) */}
       {view === 'month' && (
-        <div className="flex flex-wrap gap-3 px-4 py-3 border-t border-border bg-muted/20">
+        <div className="flex flex-wrap gap-x-3 gap-y-2 border-t border-border/70 px-4 py-3">
           {[
             { type: 'visite_proposee', label: 'Créneau proposé' },
             { type: 'visite', label: 'Visite confirmée' },
@@ -271,7 +274,7 @@ export function EventManagerCalendar({
             { type: 'reunion', label: 'Réunion' },
           ].map(({ type, label }) => (
             <div key={type} className="flex items-center gap-1.5">
-              <div className={cn('w-2.5 h-2.5 rounded', eventTypeCalendarColors[type])} />
+              <span className={cn('h-2.5 w-2.5 rounded-full', eventTypeCalendarColors[type])} />
               <span className="text-[11px] text-muted-foreground">{label}</span>
             </div>
           ))}

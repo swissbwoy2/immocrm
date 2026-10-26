@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { addDays, startOfWeek, isSameDay, isToday } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { NormalizedEvent } from './useEventManagerData';
+import { eventTypeChipColors, DEFAULT_EVENT_CHIP } from '../types';
 import { formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
 
 interface WeekViewProps {
@@ -26,7 +27,7 @@ export const WeekView = memo(function WeekView({
     <div className="w-full overflow-x-auto">
       <div className="min-w-[800px]">
         {/* Header row */}
-        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border">
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border/70">
           <div />
           {days.map((day) => {
             const isTodayDate = isToday(day);
@@ -35,16 +36,15 @@ export const WeekView = memo(function WeekView({
                 key={day.toISOString()}
                 onClick={() => onDateSelect(day)}
                 className={cn(
-                  'p-2 text-center hover:bg-muted/50 transition-colors border-l border-border',
-                  isTodayDate && 'bg-primary/5',
+                  'border-l border-border/50 p-2 text-center transition-colors hover:bg-muted/40',
                 )}
               >
-                <div className="text-xs uppercase text-muted-foreground">
+                <div className="text-xs font-medium capitalize text-muted-foreground">
                   {formatSwissDate(day, 'EEE')}
                 </div>
                 <div
                   className={cn(
-                    'text-lg font-semibold mt-0.5 inline-flex items-center justify-center w-8 h-8 rounded-full',
+                    'mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-full text-base font-semibold text-foreground',
                     isTodayDate && 'bg-primary text-primary-foreground',
                   )}
                 >
@@ -60,9 +60,9 @@ export const WeekView = memo(function WeekView({
           {HOURS.map((hour) => (
             <div
               key={hour}
-              className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border/50"
+              className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border/40 last:border-0"
             >
-              <div className="text-xs text-muted-foreground text-right pr-2 py-3 -mt-2">
+              <div className="-mt-2 py-3 pr-2 text-right text-[11px] tabular-nums text-muted-foreground">
                 {hour.toString().padStart(2, '0')}:00
               </div>
               {days.map((day) => {
@@ -74,16 +74,16 @@ export const WeekView = memo(function WeekView({
                 return (
                   <div
                     key={`${day.toISOString()}-${hour}`}
-                    className="border-l border-border/50 min-h-14 p-1 hover:bg-muted/30 transition-colors"
+                    className="min-h-14 border-l border-border/40 p-1 transition-colors hover:bg-muted/30"
                   >
                     {slotEvents.map((ev) => (
                       <button
                         key={ev.id}
                         onClick={() => onEventClick(ev)}
                         className={cn(
-                          'w-full text-left text-[11px] px-1.5 py-1 rounded text-white mb-1 truncate',
-                          'hover:opacity-90 transition-opacity',
-                          ev.colorClass,
+                          'mb-1 w-full truncate rounded-lg border px-1.5 py-1 text-left text-[11px]',
+                          'transition-opacity hover:opacity-80',
+                          eventTypeChipColors[ev.type] || DEFAULT_EVENT_CHIP,
                         )}
                         title={ev.title}
                       >

@@ -239,7 +239,7 @@ export function PublicAnnoncesMap({
         label: { text: label, color: '#ffffff', fontSize: '11px', fontWeight: '600' },
         icon: {
           path: 'M -22,-12 H 22 a 6,6 0 0 1 6,6 v 0 a 6,6 0 0 1 -6,6 H -22 a 6,6 0 0 1 -6,-6 v 0 a 6,6 0 0 1 6,-6 z',
-          fillColor: isHovered ? 'hsl(142, 72%, 29%)' : 'hsl(142, 65%, 38%)',
+          fillColor: isHovered ? 'hsl(158, 55%, 28%)' : 'hsl(158, 55%, 38%)',
           fillOpacity: 1,
           strokeColor: '#ffffff',
           strokeWeight: 2,
@@ -263,7 +263,12 @@ export function PublicAnnoncesMap({
       map.setZoom(14);
     } else if (annoncesWithCoords.length > 1) {
       const bounds = new google.maps.LatLngBounds();
-      annoncesWithCoords.forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
+      // Cadrage sur la Suisse romande : un point mal géocodé (France, Italie…) ne doit pas
+      // dézoomer toute la carte. Les marqueurs restent tous affichés.
+      const inRegion = annoncesWithCoords.filter(
+        ({ lat, lng }) => lat >= 45.7 && lat <= 47.9 && lng >= 5.8 && lng <= 10.6,
+      );
+      (inRegion.length > 1 ? inRegion : annoncesWithCoords).forEach(({ lat, lng }) => bounds.extend({ lat, lng }));
       // Clamp max zoom without breaking the fit
       map.setOptions({ maxZoom: 15 });
       map.fitBounds(bounds, 60);
@@ -302,20 +307,22 @@ export function PublicAnnoncesMap({
     );
   }
 
-  // No geocoded annonces - still show the map with search area
-  if (annoncesWithCoords.length === 0 && !searchCenter) {
-    return (
-      <div className="h-full w-full bg-muted flex items-center justify-center">
-        <div className="text-center text-muted-foreground p-4">
-          <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
-          <p className="font-medium">Aucune annonce géolocalisée</p>
-          <p className="text-sm mt-1">Les annonces n'ont pas de coordonnées GPS</p>
-        </div>
-      </div>
-    );
-  }
+  // La div de la carte est toujours montée : sinon, si les annonces arrivent après le
+  // chargement de Google Maps, la carte n'est jamais initialisée (carte grise vide).
+  const showNoCoords = annoncesWithCoords.length === 0 && !searchCenter;
 
   return (
-    <div ref={mapRef} className="h-full w-full" />
+    <div className="relative h-full w-full">
+      <div ref={mapRef} className="h-full w-full" />
+      {showNoCoords && (
+        <div className="absolute inset-0 bg-muted flex items-center justify-center">
+          <div className="text-center text-muted-foreground p-4">
+            <MapPin className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p className="font-medium">Aucune annonce géolocalisée</p>
+            <p className="text-sm mt-1">Les annonces n'ont pas de coordonnées GPS</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

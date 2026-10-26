@@ -21,17 +21,21 @@ import {
 import { AddToCalendarButton } from '@/components/calendar/AddToCalendarButton';
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
+import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitPersonRow, VisitSection, formatCHF, offrePhotoUrl } from '@/components/visites/VisitDetailParts';
+import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
+import { formatZurichDateTime, formatZurichDay } from '@/lib/dateZurich';
 import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
 import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
 import { AddressLink } from '@/components/AddressLink';
 import { supabase } from '@/integrations/supabase/client';
+import { getOrCreateClientConversation } from '@/lib/clientConversation';
+import { estClientAcheteur, estPrixDAchat } from '@/lib/achatOffreActions';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { useNotifications } from '@/hooks/useNotifications';
 import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
 import { cn } from '@/lib/utils';
-import { format, differenceInHours, differenceInDays, isToday, isThisWeek, isThisMonth, isThisYear, isFuture } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { differenceInHours, differenceInDays, isToday, isThisWeek, isThisMonth, isThisYear, isFuture } from 'date-fns';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -379,19 +383,16 @@ export default function AgentVisites() {
 
       if (eventError) throw eventError;
 
-      const { data: conv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('client_id', selectedVisite.client_id)
-        .eq('agent_id', agentId)
-        .maybeSingle();
+      // Fil unique du client (même si la conversation a été ouverte par un autre agent ou une routine).
+      const convConfirmId = selectedVisite.client_id ? await getOrCreateClientConversation(selectedVisite.client_id) : null;
+      const conv = convConfirmId ? { id: convConfirmId } : null;
 
       if (conv) {
         await supabase.from('messages').insert({
           conversation_id: conv.id,
           sender_id: user.id,
           sender_type: 'agent',
-          content: `✅ **Visite déléguée confirmée**\n\n📍 ${selectedVisite.adresse}\n📅 ${dateTime.toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' })}\n🕐 ${dateTime.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}\n\nJe me rends à la visite pour vous et vous ferai un retour détaillé.`
+          content: `✅ **Visite déléguée confirmée**\n\n📍 ${selectedVisite.adresse}\n📅 ${dateTime.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich', weekday: 'long', day: 'numeric', month: 'long' })}\n🕐 ${dateTime.toLocaleTimeString('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })}\n\nJe me rends à la visite pour vous et vous ferai un retour détaillé.`
         });
       }
 
@@ -418,12 +419,8 @@ export default function AgentVisites() {
 
       if (updateError) throw updateError;
 
-      const { data: conv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('client_id', visite.client_id)
-        .eq('agent_id', agentId)
-        .maybeSingle();
+      const convRefusId = visite.client_id ? await getOrCreateClientConversation(visite.client_id) : null;
+      const conv = convRefusId ? { id: convRefusId } : null;
 
       if (conv) {
         await supabase.from('messages').insert({
@@ -509,29 +506,31 @@ export default function AgentVisites() {
     }
 
     try {
+      // Acheteur : pas de candidature ; le compte-rendu ouvre la décision « faire une offre d'achat ».
+      // (un client peut aussi louer : seule une visite de bien à vendre suit le parcours achat)
+      const acheteur = estPrixDAchat(selectedVisite.offres?.prix) && await estClientAcheteur(selectedVisite.client_id);
       await supabase
         .from('visites')
         .update({
           statut: 'effectuee',
           feedback_agent: feedbackText,
           recommandation_agent: recommandation,
-          medias: feedbackMedias
+          medias: feedbackMedias,
+          ...(acheteur ? { compte_rendu_at: new Date().toISOString() } : {}),
         })
         .eq('id', selectedVisite.id);
 
       if (selectedVisite.offre_id) {
+        // Ne jamais faire reculer un bien déjà plus avancé (offre d'achat, candidature…).
         await supabase
           .from('offres')
           .update({ statut: 'visite_effectuee' })
-          .eq('id', selectedVisite.offre_id);
+          .eq('id', selectedVisite.offre_id)
+          .in('statut', ['envoyee', 'vue', 'interesse', 'visite_planifiee', 'visite_confirmee']);
       }
 
-      const { data: conv } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('client_id', selectedVisite.client_id)
-        .eq('agent_id', selectedVisite.agent_id)
-        .maybeSingle();
+      const convId = selectedVisite.client_id ? await getOrCreateClientConversation(selectedVisite.client_id) : null;
+      const conv = convId ? { id: convId } : null;
 
       if (conv) {
         const recommandationEmoji = {
@@ -546,7 +545,9 @@ export default function AgentVisites() {
           deconseille: 'Je ne recommande pas ce bien'
         }[recommandation];
 
-        const postulationMessage = recommandation === 'recommande' 
+        const postulationMessage = acheteur
+          ? `\n\n🏡 **Et maintenant ?**\nRetrouvez le compte-rendu dans « Biens proposés » : si ce bien vous plaît, cliquez sur « Je souhaite faire une offre » et je prépare l'offre d'achat avec vous.`
+          : recommandation === 'recommande' 
           ? `\n\n📝 **Prêt à postuler ?**\nSi ce bien vous intéresse, vous pouvez maintenant déposer votre candidature depuis la page "Offres Reçues". Cliquez sur "Demander l'aide de l'agent" pour que je postule pour vous.`
           : (recommandation === 'neutre' 
             ? `\n\n📝 **Vous souhaitez postuler ?**\nVous pouvez maintenant déposer votre candidature depuis la page "Offres Reçues" si ce bien vous intéresse malgré tout.`
@@ -556,7 +557,7 @@ export default function AgentVisites() {
           conversation_id: conv.id,
           sender_id: user!.id,
           sender_type: 'agent',
-          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n${selectedVisite.offres ? `💰 ${selectedVisite.offres.prix?.toLocaleString()} CHF/mois` : ''}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}${postulationMessage}`,
+          content: `🏠 **Retour de la visite déléguée**\n\n📍 ${selectedVisite.adresse}\n${selectedVisite.offres ? (acheteur ? `💰 CHF ${selectedVisite.offres.prix?.toLocaleString('fr-CH')} (prix de vente)` : `💰 ${selectedVisite.offres.prix?.toLocaleString()} CHF/mois`) : ''}\n\n${recommandationEmoji} **${recommandationText}**\n\n📝 Feedback:\n${feedbackText}${postulationMessage}`,
           payload: feedbackMedias.length > 0 ? { type: 'visite_feedback', visite_id: selectedVisite.id, medias: feedbackMedias } : null
         });
       }
@@ -886,7 +887,7 @@ export default function AgentVisites() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="w-4 h-4" />
               <span className="font-medium">
-                {format(visiteDate, "EEE dd MMM", { locale: fr })} à {format(visiteDate, "HH:mm")}
+                {formatZurichDateTime(visiteDate, { short: true })}
               </span>
             </div>
             
@@ -1097,7 +1098,7 @@ export default function AgentVisites() {
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4 pt-3 border-t border-border/50">
             <Clock className="w-4 h-4" />
             <span className="font-medium">
-              {format(visiteDate, "EEEE dd MMM 'à' HH:mm", { locale: fr })}
+              {formatZurichDateTime(visiteDate, { year: false })}
             </span>
           </div>
 
@@ -1505,7 +1506,7 @@ export default function AgentVisites() {
                       
                       <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                         <Clock className="w-4 h-4" />
-                        <span>{format(new Date(visite.date_visite), "dd MMM yyyy", { locale: fr })}</span>
+                        <span>{formatZurichDay(visite.date_visite, { weekday: false })}</span>
                         {visite.recommandation_agent && getRecommandationBadge(visite.recommandation_agent)}
                       </div>
 
@@ -1536,7 +1537,7 @@ export default function AgentVisites() {
         <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><MessageSquare className="h-4 w-4" /></span>
               Feedback de la visite déléguée
             </DialogTitle>
             <DialogDescription>
@@ -1546,7 +1547,7 @@ export default function AgentVisites() {
 
           {selectedVisite && (
             <div className="space-y-4">
-              <div className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+              <div className="p-4 bg-muted/40 rounded-xl border border-border/70">
                 <h4 className="font-semibold">{selectedVisite.adresse}</h4>
                 {selectedVisite.offres && (
                   <p className="text-sm text-muted-foreground mt-1">
@@ -1608,17 +1609,22 @@ export default function AgentVisites() {
                   <Image className="h-4 w-4" />
                   Photos / Vidéos de la visite
                 </Label>
-                <Input
-                  type="file"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={(e) => e.target.files && handleMediaUpload(e.target.files)}
-                  disabled={uploadingMedia}
-                />
+                <label className={`flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-border/70 bg-background/70 text-sm font-medium text-foreground backdrop-blur ${uploadingMedia ? 'pointer-events-none opacity-60' : ''}`}>
+                  <Upload className="h-4 w-4" />
+                  {uploadingMedia ? 'Envoi en cours…' : 'Ajouter photo / vidéo'}
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={(e) => e.target.files && handleMediaUpload(e.target.files)}
+                    disabled={uploadingMedia}
+                    className="sr-only"
+                  />
+                </label>
                 {feedbackMedias.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mt-2">
                     {feedbackMedias.map((media, idx) => (
-                      <div key={idx} className="relative group rounded-lg overflow-hidden border">
+                      <div key={idx} className="relative overflow-hidden rounded-2xl bg-muted">
                         {media.type.startsWith('image/') ? (
                           <img src={media.url} alt={media.name} className="w-full h-20 object-cover" />
                         ) : (
@@ -1629,7 +1635,8 @@ export default function AgentVisites() {
                         <Button
                           size="icon"
                           variant="destructive"
-                          className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1.5 right-1.5 h-8 w-8"
+                          aria-label="Retirer ce média"
                           onClick={() => removeMedia(idx)}
                         >
                           <X className="h-3 w-3" />
@@ -1656,188 +1663,164 @@ export default function AgentVisites() {
 
       {/* Detail Dialog */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0">
-          {/* Premium Header */}
-          <div className="relative bg-gradient-to-br from-primary/10 via-primary/5 to-accent/10 p-6 border-b border-border/50">
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-              <div className="absolute top-4 right-10 w-20 h-20 bg-primary/10 rounded-full blur-2xl animate-pulse" />
-            </div>
-            <DialogHeader className="relative">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="outline" className="text-xs">
-                  {selectedVisite?.est_deleguee ? 'Visite déléguée' : 'Visite'}
-                </Badge>
-                {selectedVisite?.statut && (
-                  <Badge variant={selectedVisite.statut === 'effectuee' ? 'default' : 'secondary'}>
-                    {selectedVisite.statut === 'effectuee' ? 'Effectuée' : 
-                     selectedVisite.statut === 'confirmee' ? 'Confirmée' : 'Planifiée'}
-                  </Badge>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
+          {selectedVisite ? (
+            <>
+              <VisitHero
+                TitleAs={DialogTitle}
+                date={selectedVisite.date_visite}
+                endDate={selectedVisite.date_visite_fin}
+                kicker={selectedVisite.est_deleguee ? 'Visite déléguée' : 'Visite'}
+                badges={
+                  selectedVisite.statut ? (
+                    <DashBadge tone={selectedVisite.statut === 'effectuee' ? 'success' : selectedVisite.statut === 'confirmee' ? 'success' : 'primary'}>
+                      {selectedVisite.statut === 'effectuee' ? 'Effectuée' : selectedVisite.statut === 'confirmee' ? 'Confirmée' : 'Planifiée'}
+                    </DashBadge>
+                  ) : undefined
+                }
+                address={selectedVisite.adresse}
+                photoUrl={offrePhotoUrl(selectedVisite.offres)}
+                title={selectedVisite.offres?.titre}
+              />
+
+              <VisitBody>
+                {selectedVisite.is_shared && (
+                  <div className="flex items-center gap-2 rounded-2xl bg-primary/10 px-3.5 py-3 text-sm text-foreground">
+                    <Users className="h-4 w-4 shrink-0 text-primary" />
+                    <span>Visite gérée par {selectedVisite.shared_by_name} (co-agent) — lecture seule</span>
+                  </div>
                 )}
-              </div>
-              <DialogTitle className="text-xl font-bold">
-                {selectedVisite?.adresse}
-              </DialogTitle>
-              {selectedVisite && (
-                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-2">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>{format(new Date(selectedVisite.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}</span>
-                  </div>
-                  <span>•</span>
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{format(new Date(selectedVisite.date_visite), "HH:mm")}</span>
-                  </div>
-                </div>
-              )}
-            </DialogHeader>
-          </div>
 
-          {selectedVisite && (
-            <div className="p-6 space-y-6">
-              {/* Client */}
-              {selectedVisite.client_profile && (
-                <div className="flex items-center gap-3 p-4 bg-muted/30 rounded-xl border border-border/50">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-primary-foreground font-bold">
-                    {selectedVisite.client_profile.prenom?.[0]}{selectedVisite.client_profile.nom?.[0]}
-                  </div>
-                  <div>
-                    <p className="font-semibold">
-                      {selectedVisite.est_deleguee ? 'Visite pour ' : ''}
-                      {selectedVisite.client_profile.prenom} {selectedVisite.client_profile.nom}
-                    </p>
-                    {selectedVisite.client_profile.email && (
-                      <p className="text-sm text-muted-foreground">{selectedVisite.client_profile.email}</p>
-                    )}
-                  </div>
-                </div>
-              )}
+                {/* Infos clés */}
+                {selectedVisite.offres && (
+                  <VisitInfoTiles
+                    items={[
+                      { icon: Home, label: 'Type', value: selectedVisite.offres.type_bien },
+                      { label: 'Pièces', value: selectedVisite.offres.pieces },
+                      { label: 'Surface', value: selectedVisite.offres.surface ? `${selectedVisite.offres.surface} m²` : undefined },
+                      { label: 'Étage', value: selectedVisite.offres.etage },
+                      { label: 'Loyer', value: selectedVisite.offres.prix ? formatCHF(selectedVisite.offres.prix, ' / mois') : undefined },
+                    ]}
+                  />
+                )}
 
-              {/* Property details */}
-              {selectedVisite.offres && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    <Home className="h-4 w-4 text-primary" />
-                    Détails du bien
-                  </h4>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 text-center">
-                      <div className="text-xl font-bold text-blue-600">{selectedVisite.offres.pieces}</div>
-                      <div className="text-xs text-muted-foreground">pièces</div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 text-center">
-                      <div className="text-xl font-bold text-green-600">{selectedVisite.offres.surface}m²</div>
-                      <div className="text-xs text-muted-foreground">surface</div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 text-center">
-                      <div className="text-xl font-bold text-primary">{selectedVisite.offres.prix?.toLocaleString('fr-CH')}</div>
-                      <div className="text-xs text-muted-foreground">CHF/mois</div>
-                    </div>
-                  </div>
-                </div>
-              )}
+                {/* Participant */}
+                {selectedVisite.client_profile && (
+                  <VisitSection icon={Users} title="Participants">
+                    <VisitPersonRow
+                      role={selectedVisite.est_deleguee ? 'Visite pour' : 'Client'}
+                      name={`${selectedVisite.client_profile.prenom || ''} ${selectedVisite.client_profile.nom || ''}`.trim() || 'Client'}
+                      sub={selectedVisite.client_profile.email || undefined}
+                    />
+                  </VisitSection>
+                )}
 
-              {/* Notes */}
-              {selectedVisite.notes && (
-                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                  <h4 className="text-sm font-semibold mb-2 text-amber-700 dark:text-amber-400">💬 Notes du client</h4>
-                  <p className="text-sm">{selectedVisite.notes}</p>
-                </div>
-              )}
+                {/* Notes */}
+                {selectedVisite.notes && (
+                  <VisitSection icon={MessageSquare} title="Notes du client">
+                    <VisitNote tone="warning">{selectedVisite.notes}</VisitNote>
+                  </VisitSection>
+                )}
 
-              {/* Feedback if done */}
-              {selectedVisite.statut === 'effectuee' && selectedVisite.feedback_agent && (
-                <div className="space-y-3">
-                  <h4 className="text-sm font-semibold flex items-center gap-2">
-                    📝 Mon feedback
-                    {selectedVisite.recommandation_agent && getRecommandationBadge(selectedVisite.recommandation_agent)}
-                  </h4>
-                  <div className="p-4 bg-muted/30 rounded-xl border border-border/50">
-                    <p className="text-sm whitespace-pre-wrap">{selectedVisite.feedback_agent}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                {/* Feedback if done */}
+                {selectedVisite.statut === 'effectuee' && selectedVisite.feedback_agent && (
+                  <VisitSection
+                    icon={CheckCircle}
+                    title="Mon feedback"
+                    action={selectedVisite.recommandation_agent ? getRecommandationBadge(selectedVisite.recommandation_agent) : undefined}
+                  >
+                    <VisitNote>{selectedVisite.feedback_agent}</VisitNote>
+                  </VisitSection>
+                )}
+              </VisitBody>
 
-          <DialogFooter className="p-4 bg-muted/30 border-t border-border/50 gap-2">
-            {selectedVisite && !selectedVisite?.is_shared && (
-              <VisitVideoShareButton visite={selectedVisite} variant="outline" size="sm" />
-            )}
-            {selectedVisite?.is_shared && (
-              <div className="flex-1 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-sm flex items-center gap-2">
-                <Users className="h-4 w-4 shrink-0" />
-                <span>Visite gérée par {selectedVisite.shared_by_name} (co-agent) — lecture seule</span>
-              </div>
-            )}
-            {!selectedVisite?.is_shared && selectedVisite?.est_deleguee && selectedVisite?.statut === 'planifiee' && (
-              <>
-                <Button 
-                  onClick={() => {
-                    handleAcceptDelegatedVisit();
-                    setDetailDialogOpen(false);
+              <VisitActionBar
+                primary={
+                  !selectedVisite.is_shared && selectedVisite.est_deleguee && selectedVisite.statut === 'planifiee' ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          handleRefuseDelegatedVisit(selectedVisite);
+                          setDetailDialogOpen(false);
+                        }}
+                        className="text-destructive"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Refuser
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          handleAcceptDelegatedVisit();
+                          setDetailDialogOpen(false);
+                        }}
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Accepter
+                      </Button>
+                    </>
+                  ) : !selectedVisite.is_shared && new Date(selectedVisite.date_visite) <= now && selectedVisite.statut !== 'effectuee' ? (
+                    <Button
+                      onClick={() => {
+                        handleMarquerEffectuee(selectedVisite);
+                        setDetailDialogOpen(false);
+                      }}
+                    >
+                      {selectedVisite.est_deleguee ? 'Donner mon feedback' : 'Marquer comme effectuée'}
+                    </Button>
+                  ) : undefined
+                }
+              >
+                {!selectedVisite.is_shared && (
+                  <VisitVideoShareButton visite={selectedVisite} variant="outline" size="sm" />
+                )}
+                {!selectedVisite.is_shared && selectedVisite.est_deleguee && selectedVisite.statut === 'planifiee' && new Date(selectedVisite.date_visite) <= now && selectedVisite.statut !== 'effectuee' && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      handleMarquerEffectuee(selectedVisite);
+                      setDetailDialogOpen(false);
+                    }}
+                  >
+                    Donner mon feedback
+                  </Button>
+                )}
+                <AddToCalendarButton
+                  event={{
+                    uid: selectedVisite.adresse && selectedVisite.date_visite ? buildStableVisiteUID(selectedVisite.adresse, selectedVisite.date_visite) : undefined,
+                    title: `Visite - ${selectedVisite.adresse}`,
+                    description: buildVisiteICSDescription({
+                      clients: `${selectedVisite.client_profile?.prenom || ''} ${selectedVisite.client_profile?.nom || ''}`.trim(),
+                      adresse: selectedVisite.adresse,
+                      prix: selectedVisite.offres?.prix ? `${selectedVisite.offres.prix} CHF/mois` : undefined,
+                      pieces: selectedVisite.offres?.pieces,
+                      surface: selectedVisite.offres?.surface,
+                      etage: selectedVisite.offres?.etage,
+                      notes: selectedVisite.notes,
+                      lien_annonce: selectedVisite.offres?.lien_annonce,
+                      description: selectedVisite.offres?.description,
+                    }),
+                    location: selectedVisite.adresse || '',
+                    startDate: new Date(selectedVisite.date_visite),
                   }}
-                  className="flex-1 bg-green-600 hover:bg-green-700"
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Accepter
-                </Button>
-                <Button 
+                  recipientEmail={selectedVisite.client_profile?.email}
+                  size="sm"
                   variant="outline"
-                  onClick={() => {
-                    handleRefuseDelegatedVisit(selectedVisite);
-                    setDetailDialogOpen(false);
-                  }}
-                  className="flex-1 text-red-600 border-red-500/30 hover:bg-red-500/10"
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Refuser
-                </Button>
-              </>
-            )}
-            {!selectedVisite?.is_shared && new Date(selectedVisite?.date_visite) <= now && selectedVisite?.statut !== 'effectuee' && (
-              <Button 
-                onClick={() => {
-                  handleMarquerEffectuee(selectedVisite);
-                  setDetailDialogOpen(false);
-                }}
-                className="flex-1"
-              >
-                {selectedVisite?.est_deleguee ? 'Donner mon feedback' : 'Marquer comme effectuée'}
-              </Button>
-            )}
-            <AddToCalendarButton
-              event={{
-                uid: selectedVisite?.adresse && selectedVisite?.date_visite ? buildStableVisiteUID(selectedVisite.adresse, selectedVisite.date_visite) : undefined,
-                title: `Visite - ${selectedVisite?.adresse}`,
-                description: buildVisiteICSDescription({
-                  clients: `${selectedVisite?.client_profile?.prenom || ''} ${selectedVisite?.client_profile?.nom || ''}`.trim(),
-                  adresse: selectedVisite?.adresse,
-                  prix: selectedVisite?.offres?.prix ? `${selectedVisite.offres.prix} CHF/mois` : undefined,
-                  pieces: selectedVisite?.offres?.pieces,
-                  surface: selectedVisite?.offres?.surface,
-                  etage: selectedVisite?.offres?.etage,
-                  notes: selectedVisite?.notes,
-                  lien_annonce: selectedVisite?.offres?.lien_annonce,
-                  description: selectedVisite?.offres?.description,
-                }),
-                location: selectedVisite?.adresse || '',
-                startDate: new Date(selectedVisite?.date_visite),
-              }}
-              recipientEmail={selectedVisite?.client_profile?.email}
-              size="sm"
-              variant="outline"
-            />
-            {!selectedVisite?.is_shared && (
-              <Button 
-                variant="destructive" 
-                size="icon"
-                onClick={() => handleDeleteVisite(selectedVisite?.id, true)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </DialogFooter>
+                />
+                {!selectedVisite.is_shared && (
+                  <Button
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive"
+                    onClick={() => handleDeleteVisite(selectedVisite.id, true)}
+                  >
+                    <Trash2 className="h-4 w-4" /> Supprimer
+                  </Button>
+                )}
+              </VisitActionBar>
+            </>
+          ) : (
+            <DialogTitle className="sr-only">Détails de la visite</DialogTitle>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -1846,7 +1829,7 @@ export default function AgentVisites() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600"><CheckCircle className="h-4 w-4" /></span>
               Confirmer la visite déléguée
             </DialogTitle>
             <DialogDescription>
@@ -1855,10 +1838,10 @@ export default function AgentVisites() {
           </DialogHeader>
           
           {selectedVisite && (
-            <div className="p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 rounded-xl border border-green-500/20">
+            <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
               <p className="font-semibold">{selectedVisite.adresse}</p>
               <p className="text-sm text-muted-foreground mt-1">
-                {format(new Date(selectedVisite.date_visite), "EEEE dd MMMM 'à' HH:mm", { locale: fr })}
+                {formatZurichDateTime(selectedVisite.date_visite, { year: false })}
               </p>
             </div>
           )}

@@ -1,25 +1,26 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
+import { CandidatProspectsList, fetchCandidatProspects, type CandidatProspect } from "@/components/admin/CandidatProspectsList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Mail, Phone, MapPin, Calendar, Users, Upload, Trash2, Pencil, Send, ArrowUpDown, Search, AlertTriangle, CheckCircle, Shield, ShieldCheck, UserX, ChevronRight, Sparkles, Filter, Home, Key, Wallet, UserPlus, Loader2, CheckSquare, X as XIcon } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Users, Upload, Trash2, Search, Send, AlertTriangle, ShieldCheck, UserX, Home, Key, UserPlus, Loader2, CheckSquare, X as XIcon, RefreshCw, MoreHorizontal, SlidersHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DASH_CARD, DashPage, DashPageHeader, DashFilterPills, DashEmptyState } from "@/components/client/dashboard/DashPrimitives";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { ClientListeCard, ClientListeTable, type ClientListeCtx } from "@/components/admin/clients-liste/ClientListeCard";
+import { construireVue, dansOnglet, nomComplet, MOTIFS, SITUATIONS, SEUIL_MANDAT_JOURS, SEUIL_INACTIF_JOURS, type ClientVue, type Motif, type Situation } from "@/components/admin/clients-liste/clientsListeModel";
 import { BulkActionsBar, STATUT_LABELS as BULK_STATUT_LABELS, type BulkStatut } from "@/components/admin/clients/BulkActionsBar";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { calculateDaysElapsed } from "@/utils/calculations";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { mandatElapsedFor } from '@/utils/mandatDates';
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { CSVImportDialog } from "@/components/CSVImportDialog";
-import { hasStableStatus } from "@/hooks/useSolvabilityCheck";
-import { CUMULATIVE_TYPES } from "@/hooks/useClientCandidates";
-import { PremiumPageHeader } from "@/components/premium/PremiumPageHeader";
 import { ClientsByAgentView } from "@/components/admin/clients/ClientsByAgentView";
-import { ClientCardReletter, type ReletterRequest, type ReletterCounts } from "@/components/admin/ClientCardReletter";
+import type { ReletterRequest, ReletterCounts } from "@/components/admin/ClientCardReletter";
 import { cn } from "@/lib/utils";
 import { isBuyerType, isPurchaseBuyer, normalizeTypeRecherche } from "@/lib/journey";
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from "@/lib/candidatCriteresMerge";
@@ -31,7 +32,6 @@ type ClientAgent = {
   created_at: string | null;
 };
 
-import { AnimatedCounter } from "@/components/AnimatedCounter";
 
 interface Client {
   id: string;
@@ -64,7 +64,7 @@ type PurchaseProjectLite = {
   statut: string | null;
 };
 
-type JourneyTab = 'all' | 'chercheurs' | 'acheteurs' | 'reloueurs' | 'mixtes';
+type JourneyTab = 'all' | 'chercheurs' | 'acheteurs' | 'reloueurs' | 'mixtes' | 'prospects';
 
 interface ClientCandidate {
   id: string;
@@ -91,7 +91,7 @@ interface Agent {
   profile: Profile;
 }
 
-type SortField = 'date' | 'name' | 'agent' | 'budget' | 'days';
+type SortField = 'urgence' | 'date' | 'name' | 'agent' | 'budget' | 'days';
 type SortOrder = 'asc' | 'desc';
 
 const Clients = () => {
@@ -112,7 +112,7 @@ const Clients = () => {
   const [selectedStatut, setSelectedStatut] = useState<string>('all');
   const [budgetMin, setBudgetMin] = useState<string>('');
   const [budgetMax, setBudgetMax] = useState<string>('');
-  const [sortField, setSortField] = useState<SortField>('date');
+  const [sortField, setSortField] = useState<SortField>('urgence');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
   const [loading, setLoading] = useState(true);
   const [showImportDialog, setShowImportDialog] = useState(false);
@@ -129,7 +129,19 @@ const Clients = () => {
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkStatutTarget, setBulkStatutTarget] = useState<BulkStatut | null>(null);
   const [displayCount, setDisplayCount] = useState(50);
-  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const cardRefs = useRef<Record<string, HTMLElement | null>>({});
+  // Cartes sur mobile / tablette, tableau dense sur PC (≥ 1024 px).
+  // Mesure immédiate de la largeur au premier rendu : pas de tableau affiché un instant sur mobile.
+  const isMobileHook = useIsMobile();
+  const [largeurInitialeCompacte] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
+  const [mesure, setMesure] = useState(false);
+  useEffect(() => { setMesure(true); }, []);
+  const isCompact = mesure ? isMobileHook || (typeof window !== 'undefined' && window.innerWidth < 1024) : largeurInitialeCompacte;
+  // File de travail : onglet par situation (par défaut « À traiter »), motif éventuel, panneau de filtres.
+  // Un lien direct vers un client (?clientId=) ouvre « Tous » pour que la carte soit visible.
+  const [situationTab, setSituationTab] = useState<Situation>(() => (searchParams.get('clientId') ? 'tous' : 'a_traiter'));
+  const [motifFilter, setMotifFilter] = useState<Motif | 'tous'>('tous');
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   // Light invite dialog state
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
@@ -142,7 +154,7 @@ const Clients = () => {
   // Onglet journey (Tous / Chercheurs / Reloueurs / Mixtes)
   const initialTab = ((): JourneyTab => {
     const fromUrl = searchParams.get('tab');
-    const allowed: JourneyTab[] = ['all','chercheurs','acheteurs','reloueurs','mixtes'];
+    const allowed: JourneyTab[] = ['all','chercheurs','acheteurs','reloueurs','mixtes','prospects'];
     if (fromUrl && (allowed as string[]).includes(fromUrl)) return fromUrl as JourneyTab;
     const stored = typeof window !== 'undefined' ? localStorage.getItem('adminClientsJourneyTab') : null;
     if (stored && (allowed as string[]).includes(stored)) return stored as JourneyTab;
@@ -170,6 +182,45 @@ const Clients = () => {
 
   useEffect(() => {
     loadData();
+  }, []);
+
+  // Changement d'onglet, de motif ou de parcours : on repart des 50 premiers.
+  useEffect(() => { setDisplayCount(50); }, [situationTab, motifFilter, journeyTab]);
+
+  // Compteur de crédits par utilisateur — affichage seul (badge à côté du statut), aucun statut modifié.
+  const [creditsByUser, setCreditsByUser] = useState<Map<string, { mandat_statut: string; coins_mandat: number }>>(new Map());
+  useEffect(() => {
+    const ids = Array.from(new Set(clients.map((c) => c.user_id).filter(Boolean)));
+    if (ids.length === 0) return;
+    let alive = true;
+    (async () => {
+      try {
+        const map = new Map<string, { mandat_statut: string; coins_mandat: number }>();
+        for (let i = 0; i < ids.length; i += 100) {
+          const { data } = await (supabase as any)
+            .from('user_credits')
+            .select('user_id, mandat_statut, coins_mandat')
+            .in('user_id', ids.slice(i, i + 100));
+          (data || []).forEach((r: any) => map.set(r.user_id, { mandat_statut: r.mandat_statut, coins_mandat: r.coins_mandat }));
+        }
+        if (alive) setCreditsByUser(map);
+      } catch { /* badge simplement absent en cas d'erreur */ }
+    })();
+    return () => { alive = false; };
+  }, [clients]);
+
+  // Prospects (comptes candidat sans dossier client) — chargement séparé, en lecture seule,
+  // pour ne jamais ralentir ni bloquer la liste des clients.
+  const [prospects, setProspects] = useState<CandidatProspect[]>([]);
+  const [prospectsLoading, setProspectsLoading] = useState(true);
+  const [prospectsError, setProspectsError] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetchCandidatProspects()
+      .then((rows) => { if (alive) { setProspects(rows); setProspectsError(null); } })
+      .catch((e) => { if (alive) setProspectsError(e?.message || 'erreur'); })
+      .finally(() => { if (alive) setProspectsLoading(false); });
+    return () => { alive = false; };
   }, []);
 
 
@@ -440,6 +491,8 @@ const Clients = () => {
   const isSearcher = (c: Client) => !isBuyer(c) && (!c.journey_type || c.journey_type === 'housing_search');
 
   const filteredClients = clients.filter(client => {
+    // Onglet Prospects : liste séparée (comptes candidat sans dossier) — aucun client ici.
+    if (journeyTab === 'prospects') return false;
     // 1) Filtre par onglet journey — PRIORITE ABSOLUE acheteurs (jamais reloueurs)
     if (journeyTab === 'acheteurs') {
       if (isReletter(client)) return false;
@@ -558,23 +611,60 @@ const Clients = () => {
     return agent ? `${agent.profile.prenom} ${agent.profile.nom}` : "Non assigné";
   };
 
-  const toggleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('desc');
+  // ============= Vues de travail (calculs purement visuels sur les données chargées) =============
+  // Chaque client filtré reçoit sa situation, ses motifs « à traiter » et UNE prochaine action.
+  const vues = useMemo<ClientVue[]>(() => {
+    const out: ClientVue[] = [];
+    for (const client of filteredClients) {
+      const profile = clientProfiles.get(client.user_id);
+      if (!profile) continue;
+      const reloueur = isReletter(client) || (isMixed(client) && relouerByUser.has(client.user_id));
+      const req = reloueur ? relouerByUser.get(client.user_id) : undefined;
+      out.push(construireVue({
+        client: client as any,
+        profile,
+        candidates: clientCandidates.get(client.id) || [],
+        isAcheteur: isBuyer(client),
+        isMixed: isMixed(client),
+        reloueur,
+        request: req,
+        counts: req ? relouerCounts.get(req.id) : undefined,
+        offresToday: offresToday.get(client.id) || 0,
+        docConfirmed: docConfirmations.has(client.id),
+      }));
     }
-  };
+    return out;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredClients, clientProfiles, clientCandidates, relouerByUser, relouerCounts, offresToday, docConfirmations, purchaseByClient, purchaseByUser]);
 
-  // Trier les clients
-  const sortedClients = useMemo(() => {
-    return [...filteredClients].sort((a, b) => {
-      const profileA = clientProfiles.get(a.user_id);
-      const profileB = clientProfiles.get(b.user_id);
+  // Compteurs : suivent la recherche et les filtres.
+  const situationCounts = useMemo(() => {
+    const c: Record<Situation, number> = { a_traiter: 0, actifs: 0, en_attente: 0, reloges: 0, arretes: 0, tous: vues.length };
+    const m: Record<Motif, number> = { sans_agent: 0, incomplet: 0, mandat: 0, inactif: 0 };
+    for (const v of vues) {
+      c[v.situation]++;
+      if (v.motifs.length > 0) c.a_traiter++;
+      v.motifs.forEach((k) => { m[k]++; });
+    }
+    return { c, m };
+  }, [vues]);
+
+  // Trier les clients de l'onglet courant
+  const sortedVues = useMemo(() => {
+    const list = vues.filter((v) => dansOnglet(v, situationTab, motifFilter));
+    return list.sort((va, vb) => {
+      const a = va.client as unknown as Client;
+      const b = vb.client as unknown as Client;
+      const profileA = va.profile;
+      const profileB = vb.profile;
       let comparison = 0;
 
       switch (sortField) {
+        case 'urgence':
+          // Urgent d'abord (indépendant du sens) : prochaine action la plus pressante, puis échéance la plus proche.
+          return (va.urgence - vb.urgence)
+            || ((va.daysRemaining ?? 9999) - (vb.daysRemaining ?? 9999))
+            || nomComplet(profileA).localeCompare(nomComplet(profileB), 'fr');
         case 'date':
           const dateA = new Date(a.date_ajout || a.created_at || 0).getTime();
           const dateB = new Date(b.date_ajout || b.created_at || 0).getTime();
@@ -594,15 +684,17 @@ const Clients = () => {
           comparison = (a.budget_max || 0) - (b.budget_max || 0);
           break;
         case 'days':
-          const daysA = calculateDaysElapsed(a.date_ajout || a.created_at);
-          const daysB = calculateDaysElapsed(b.date_ajout || b.created_at);
+          const daysA = mandatElapsedFor(a as any);
+          const daysB = mandatElapsedFor(b as any);
           comparison = daysA - daysB;
           break;
       }
 
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [filteredClients, sortField, sortOrder, clientProfiles, agents]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vues, situationTab, motifFilter, sortField, sortOrder, agents]);
+  const sortedClients = useMemo(() => sortedVues.map((v) => v.client as unknown as Client), [sortedVues]);
 
   const handleDeleteAllClients = async () => {
     try {
@@ -819,1091 +911,501 @@ const Clients = () => {
 
   if (loading) {
     return (
-      <div className="p-4 md:p-8" role="status" aria-label="Chargement des clients">
-        <div className="h-7 w-48 rounded bg-muted/60" />
-        <div className="mt-6 h-24 rounded bg-muted/40" />
-      </div>
+      <DashPage>
+        <div role="status" aria-label="Chargement des clients">
+          <div className="h-7 w-48 rounded-full bg-muted/60" />
+          <div className="mt-6 h-24 rounded-2xl bg-muted/40" />
+        </div>
+      </DashPage>
     );
   }
 
+  const { c: sc, m: mc } = situationCounts;
+  const resume = sc.a_traiter === 0
+    ? `Tout est à jour · ${clients.length} clients au total`
+    : [
+        `${sc.a_traiter} client${sc.a_traiter > 1 ? 's' : ''} à traiter`,
+        mc.sans_agent > 0 ? `${mc.sans_agent} sans agent` : null,
+        mc.mandat > 0 ? `${mc.mandat} mandat${mc.mandat > 1 ? 's' : ''} échu${mc.mandat > 1 ? 's' : ''} sous ${SEUIL_MANDAT_JOURS} j` : null,
+        `${clients.length} clients au total`,
+      ].filter(Boolean).join(' · ');
+
+  const journeyTotals = {
+    all: clients.length,
+    chercheurs: clients.filter(c => isSearcher(c) || isMixed(c)).length,
+    acheteurs: clients.filter(c => isBuyer(c) && !isReletter(c)).length,
+    reloueurs: clients.filter(c => isReletter(c) || isMixed(c)).length,
+    mixtes: clients.filter(c => isMixed(c)).length,
+    prospects: prospects.length,
+  };
+  const journeyOptions: { key: JourneyTab; label: string }[] = [
+    { key: 'all', label: 'Tous les clients' },
+    { key: 'chercheurs', label: 'Chercheurs (location)' },
+    { key: 'acheteurs', label: 'Acheteurs' },
+    { key: 'reloueurs', label: 'Clients reloueurs' },
+    { key: 'mixtes', label: 'Mixtes' },
+    { key: 'prospects', label: 'Prospects (candidats)' },
+  ];
+
+  const sortOptions: { value: string; label: string }[] = [
+    { value: 'urgence:asc', label: 'Urgent d’abord' },
+    { value: 'date:desc', label: 'Ajout : plus récents' },
+    { value: 'date:asc', label: 'Ajout : plus anciens' },
+    { value: 'name:asc', label: 'Nom (A–Z)' },
+    { value: 'name:desc', label: 'Nom (Z–A)' },
+    { value: 'agent:asc', label: 'Agent (A–Z)' },
+    { value: 'budget:desc', label: 'Budget décroissant' },
+    { value: 'budget:asc', label: 'Budget croissant' },
+    { value: 'days:desc', label: 'Jours de mandat (plus)' },
+    { value: 'days:asc', label: 'Jours de mandat (moins)' },
+  ];
+  const sortValue = sortField === 'urgence' ? 'urgence:asc' : `${sortField}:${sortOrder}`;
+
+  const resetFilters = () => {
+    setFilterAgent('all'); setShowUnassignedOnly(false); setSelectedRegions([]); setSelectedPieces([]);
+    setSelectedTypeRecherche('all'); setSelectedTypePermis('all'); setSelectedStatut('all'); setBudgetMin(''); setBudgetMax('');
+    setRelouerStatus('all'); setRelouerType('all'); setRelouerCommune(''); setRelouerPhotos('all'); setRelouerDocs('all'); setRelouerAvailability('all');
+  };
+
+  const ctx: ClientListeCtx = {
+    agentName: (v) => getAgentName(v.agentId || undefined),
+    credits: (v) => creditsByUser.get(v.client.user_id),
+    purchaseStatut: (v) => getPurchaseProject(v.client as unknown as Client)?.statut,
+    selectionMode,
+    isSelected: (id) => selectedIds.has(id),
+    onToggleSelect: toggleSelect,
+    // Tous les clients (reloueurs purs ou mixtes compris) ouvrent la fiche client unifiée.
+    onOpen: (v) => navigate(`/admin/clients/${v.client.id}`),
+    onInvite: (v, e) => handleInviteClient(v.profile.email, v.client.id, e),
+    invitingClientId,
+    onAnonymiser: (v, e) => handleDeleteClient(v.client.user_id, e),
+    deletingUserId: deletingClientId,
+    setRef: (id, el) => { cardRefs.current[id] = el; },
+  };
+
+  const visibles = sortedVues.slice(0, displayCount);
+  const allVisibleSelected = sortedVues.length > 0 && sortedVues.every((v) => selectedIds.has(v.client.id));
+
+  const tuiles: { label: string; value: number; onClick: () => void; alerte?: boolean }[] = [
+    { label: 'Actifs', value: sc.actifs, onClick: () => setSituationTab('actifs') },
+    { label: 'En attente', value: sc.en_attente, onClick: () => setSituationTab('en_attente') },
+    { label: 'Sans agent', value: mc.sans_agent, alerte: mc.sans_agent > 0, onClick: () => { setSituationTab('a_traiter'); setMotifFilter('sans_agent'); } },
+    { label: `Mandats ≤ ${SEUIL_MANDAT_JOURS} j`, value: mc.mandat, alerte: mc.mandat > 0, onClick: () => { setSituationTab('a_traiter'); setMotifFilter('mandat'); } },
+    { label: `Inactifs > ${SEUIL_INACTIF_JOURS} j`, value: mc.inactif, alerte: mc.inactif > 0, onClick: () => { setSituationTab('a_traiter'); setMotifFilter('inactif'); } },
+  ];
+
+  const chip = (active: boolean) => cn(
+    'inline-flex h-9 items-center rounded-full border px-3 text-xs font-medium transition-colors',
+    active ? 'border-foreground bg-foreground text-background' : 'border-border bg-background text-foreground hover:border-foreground/60',
+  );
+
   return (
-    <div className="flex-1 overflow-auto relative">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      <div className="p-4 md:p-8">
-        <PremiumPageHeader
-          title="Gestion des Clients"
-          subtitle={`${clients.length} clients au total`}
-          icon={Users}
-          badge="Administration"
-          action={
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant={selectionMode ? "secondary" : "outline"}
-                onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
-                disabled={clients.length === 0}
-              >
-                {selectionMode ? <XIcon className="w-4 h-4 mr-1 md:mr-2" /> : <CheckSquare className="w-4 h-4 mr-1 md:mr-2" />}
-                <span className="hidden sm:inline">{selectionMode ? 'Annuler' : 'Sélectionner'}</span>
-              </Button>
-              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm" disabled={clients.length === 0 || deleting}>
-                    <Trash2 className="w-4 h-4 mr-1 md:mr-2" />
-                    <span className="hidden sm:inline">{deleting ? 'Suppression...' : 'Supprimer tous'}</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Cette action est irréversible. Cela supprimera définitivement tous les clients ({clients.length}) 
-                      et toutes leurs données associées.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteAllClients} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Supprimer tout
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button onClick={() => setShowImportDialog(true)} size="sm">
-                <Upload className="h-4 w-4 mr-1 md:mr-2" />
-                <span className="hidden sm:inline">Importer CSV</span>
-              </Button>
-              <Button onClick={() => setInviteDialogOpen(true)} size="sm" variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
-                <UserPlus className="h-4 w-4 mr-1 md:mr-2" />
-                <span className="hidden sm:inline">Inviter un client</span>
-              </Button>
-              <Button onClick={() => navigate('/admin/inscriptions-echouees')} size="sm" variant="outline" className="border-destructive/50 text-destructive hover:bg-destructive/10">
-                <AlertTriangle className="h-4 w-4 mr-1 md:mr-2" />
-                <span className="hidden sm:inline">Inscriptions échouées</span>
-              </Button>
-            </div>
-          }
-        />
-
-        {/* Toggle mode d'affichage */}
-        <div className="mb-6 flex flex-wrap gap-2">
-          {([
-            { key: 'list', label: 'Liste clients' },
-            { key: 'byAgent', label: 'Clients par agent' },
-          ] as { key: 'list' | 'byAgent'; label: string }[]).map(opt => (
-            <button
-              key={opt.key}
-              type="button"
-              onClick={() => setViewMode(opt.key)}
-              className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium border transition-colors",
-                viewMode === opt.key
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground border-border hover:bg-muted"
-              )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Onglets parcours (registre CRM global) */}
-        {viewMode === 'list' && (() => {
-          const totals = {
-            all: clients.length,
-            chercheurs: clients.filter(c => isSearcher(c) || isMixed(c)).length,
-            acheteurs: clients.filter(c => isBuyer(c) && !isReletter(c)).length,
-            reloueurs: clients.filter(c => isReletter(c) || isMixed(c)).length,
-            mixtes: clients.filter(c => isMixed(c)).length,
-          };
-          const tabs: { key: JourneyTab; label: string; count: number }[] = [
-            { key: 'all', label: 'Tous les clients', count: totals.all },
-            { key: 'chercheurs', label: 'Chercheurs (location)', count: totals.chercheurs },
-            { key: 'acheteurs', label: 'Acheteurs', count: totals.acheteurs },
-            { key: 'reloueurs', label: 'Clients reloueurs', count: totals.reloueurs },
-            { key: 'mixtes', label: 'Mixtes', count: totals.mixtes },
-          ];
-          return (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {tabs.map(t => (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => setJourneyTab(t.key)}
-                  className={cn(
-                    "px-4 py-2 rounded-full text-sm font-medium border transition-colors flex items-center gap-2",
-                    journeyTab === t.key
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "bg-background text-muted-foreground border-border hover:bg-muted"
-                  )}
-                >
-                  <span>{t.label}</span>
-                  <Badge variant="secondary" className={cn(
-                    "text-[10px] px-1.5 py-0",
-                    journeyTab === t.key ? "bg-white/20 text-white border-0" : ""
-                  )}>{t.count}</Badge>
-                </button>
-              ))}
-            </div>
-          );
-        })()}
-
-        {viewMode === 'byAgent' && (
-          <ClientsByAgentView
-            clients={clients}
-            clientProfiles={clientProfiles}
-            agents={agents}
-            clientAgents={clientAgents}
-          />
-        )}
-
-        {viewMode === 'list' && (<>
-
-        {/* Premium Filter Section */}
-
-        <div className="relative overflow-hidden rounded-2xl bg-card/80 backdrop-blur-xl border border-border/50 p-4 md:p-6 mb-6 animate-fade-in">
-          {/* Subtle background particles */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute top-2 right-10 w-16 h-16 bg-primary/5 rounded-full blur-2xl animate-float" />
-            <div className="absolute bottom-2 left-20 w-12 h-12 bg-accent/5 rounded-full blur-xl animate-float" style={{ animationDelay: '1s' }} />
-          </div>
-          
-          <div className="relative z-10">
-            {/* Header with filter icon */}
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium">Filtres de recherche</span>
-             {activeFilterCount > 0 && (
-                <Badge className="bg-primary/20 text-primary border-0 text-[10px] animate-scale-in">
-                  {activeFilterCount} actifs
-                </Badge>
-              )}
-            </div>
-
-            {/* Main filters row */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-4">
-              <div className="relative flex-1 sm:max-w-md group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground transition-colors group-focus-within:text-primary" />
-                <Input
-                  placeholder="Rechercher un client..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 bg-background/50 backdrop-blur-sm border-border/50 focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-              </div>
-              <Select value={filterAgent} onValueChange={setFilterAgent}>
-                <SelectTrigger className="w-full sm:w-[200px] bg-background/50 backdrop-blur-sm border-border/50 hover:border-primary/30 transition-colors">
-                  <SelectValue placeholder="Filtrer par agent" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tous les agents</SelectItem>
-                  {agents.map(agent => (
-                    <SelectItem key={agent.id} value={agent.id}>
-                      {agent.profile.prenom} {agent.profile.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant={showUnassignedOnly ? "default" : "outline"}
-                onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
-                className={cn(
-                  "w-full sm:w-auto transition-all duration-300",
-                  showUnassignedOnly && "shadow-[0_0_15px_rgba(var(--primary),0.3)]"
-                )}
-              >
-                <UserX className="w-4 h-4 mr-2" />
-                Sans agent
-              </Button>
-            </div>
-
-            {/* Filtres dépliables sur mobile */}
-            <details className="sm:hidden">
-              <summary className="text-sm font-medium cursor-pointer p-2 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                <span className="flex items-center gap-2">
-                  <Sparkles className="w-3 h-3 text-primary" />
-                  Filtres avancés
-                </span>
-              </summary>
-              <div className="mt-3 space-y-4 animate-fade-in">
-                {/* Filtres Régions */}
-                <div>
-                  <p className="text-xs font-medium mb-2 text-muted-foreground">Régions</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {regions.map(region => (
-                      <Button
-                        key={region}
-                        variant={selectedRegions.includes(region) ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => toggleRegion(region)}
-                        className={cn(
-                          "text-[10px] h-7 px-2 transition-all duration-300",
-                          selectedRegions.includes(region) && "shadow-[0_0_10px_rgba(var(--primary),0.3)]"
-                        )}
-                      >
-                        {region}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-                {/* Filtres Nombre de pièces */}
-                <div>
-                  <p className="text-xs font-medium mb-2 text-muted-foreground">Nombre de pièces</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {nombrePieces.map(pieces => (
-                      <Button
-                        key={pieces}
-                        variant={selectedPieces.includes(pieces) ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => togglePieces(pieces)}
-                        className={cn(
-                          "text-[10px] h-7 px-2 transition-all duration-300",
-                          selectedPieces.includes(pieces) && "shadow-[0_0_10px_rgba(var(--primary),0.3)]"
-                        )}
-                      >
-                        {pieces === '5+' ? '5+ pièces' : `${pieces} pièce${pieces === '1' ? '' : 's'}`}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </details>
-
-            {/* Filtres Régions - desktop (chercheurs uniquement) */}
-            {showSearcherFilters && (
-            <div className="mb-4 hidden sm:block">
-              <p className="text-xs font-medium mb-2 text-muted-foreground">Régions</p>
-              <div className="flex flex-wrap gap-2">
-                {regions.map(region => (
-                  <Button
-                    key={region}
-                    variant={selectedRegions.includes(region) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => toggleRegion(region)}
-                    className={cn(
-                      "text-xs transition-all duration-300 hover:scale-105",
-                      selectedRegions.includes(region) && "shadow-[0_0_12px_rgba(var(--primary),0.3)]"
-                    )}
-                  >
-                    {region}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            )}
-
-
-            {/* Filtres Nombre de pièces - desktop */}
-            <div className="hidden sm:block">
-              <p className="text-xs font-medium mb-2 text-muted-foreground">Nombre de pièces</p>
-              <div className="flex flex-wrap gap-2">
-                {nombrePieces.map(pieces => (
-                  <Button
-                    key={pieces}
-                    variant={selectedPieces.includes(pieces) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => togglePieces(pieces)}
-                    className={cn(
-                      "text-xs transition-all duration-300 hover:scale-105",
-                      selectedPieces.includes(pieces) && "shadow-[0_0_12px_rgba(var(--primary),0.3)]"
-                    )}
-                  >
-                      {pieces === '5+' ? '5+ pièces' : `${pieces} pièce${pieces === '1' ? '' : 's'}`}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Type de recherche filter - desktop (chercheurs uniquement) */}
-            {showSearcherFilters && (
-            <div className="hidden sm:block">
-              <p className="text-xs font-medium mb-2 text-muted-foreground">Type de recherche</p>
-              <div className="flex flex-wrap gap-2">
-                <Button variant={selectedTypeRecherche === 'all' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('all')} className="text-xs transition-all duration-300 hover:scale-105">
-                  Tous
-                </Button>
-                <Button variant={selectedTypeRecherche === 'Louer' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('Louer')} className={cn("text-xs transition-all duration-300 hover:scale-105", selectedTypeRecherche === 'Louer' && "bg-blue-600 hover:bg-blue-700")}>
-                  <Key className="w-3 h-3 mr-1" /> Location
-                </Button>
-                <Button variant={selectedTypeRecherche === 'Acheter' ? "default" : "outline"} size="sm" onClick={() => setSelectedTypeRecherche('Acheter')} className={cn("text-xs transition-all duration-300 hover:scale-105", selectedTypeRecherche === 'Acheter' && "bg-emerald-600 hover:bg-emerald-700")}>
-                  <Home className="w-3 h-3 mr-1" /> Achat
-                </Button>
-              </div>
-            </div>
-            )}
-
-
-            {/* Type permis + Statut + Budget filters - desktop (chercheurs uniquement) */}
-            {showSearcherFilters && (
-            <div className="hidden sm:flex flex-wrap gap-4">
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Permis</p>
-                <Select value={selectedTypePermis} onValueChange={setSelectedTypePermis}>
-                  <SelectTrigger className="w-[130px] bg-background/50 border-border/50 h-8 text-xs">
-                    <SelectValue placeholder="Tous" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    {typePermisOptions.map(p => (
-                      <SelectItem key={p} value={p}>{p}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Statut</p>
-                <Select value={selectedStatut} onValueChange={setSelectedStatut}>
-                  <SelectTrigger className="w-[130px] bg-background/50 border-border/50 h-8 text-xs">
-                    <SelectValue placeholder="Tous" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    {statutOptions.map(s => (
-                      <SelectItem key={s} value={s}>{statutLabels[s] || s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Budget (CHF)</p>
-                <div className="flex items-center gap-2">
-                  <Input
-                    type="number"
-                    placeholder="Min"
-                    value={budgetMin}
-                    onChange={(e) => setBudgetMin(e.target.value)}
-                    className="w-[90px] bg-background/50 border-border/50 h-8 text-xs"
-                  />
-                  <span className="text-muted-foreground text-xs">–</span>
-                  <Input
-                    type="number"
-                    placeholder="Max"
-                    value={budgetMax}
-                    onChange={(e) => setBudgetMax(e.target.value)}
-                    className="w-[90px] bg-background/50 border-border/50 h-8 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-            )}
-
-            {/* Filtres dossier reloueur — onglet Clients reloueurs */}
-            {showReletterFilters && (
-            <div className="hidden sm:flex flex-wrap items-end gap-4 mt-2 pt-4 border-t border-border/30">
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Statut dossier</p>
-                <Select value={relouerStatus} onValueChange={setRelouerStatus}>
-                  <SelectTrigger className="w-[180px] bg-background/50 border-border/50 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="new_request">Nouvelle</SelectItem>
-                    <SelectItem value="to_qualify">À qualifier</SelectItem>
-                    <SelectItem value="missing_information">Infos manquantes</SelectItem>
-                    <SelectItem value="waiting_documents">Docs en attente</SelectItem>
-                    <SelectItem value="waiting_photos">Photos en attente</SelectItem>
-                    <SelectItem value="ready_to_publish">Prêt à publier</SelectItem>
-                    <SelectItem value="published">Publié</SelectItem>
-                    <SelectItem value="visits_scheduled">Visites en cours</SelectItem>
-                    <SelectItem value="applications_received">Candidatures reçues</SelectItem>
-                    <SelectItem value="sent_to_agency">Transmis régie</SelectItem>
-                    <SelectItem value="rented">Reloué</SelectItem>
-                    <SelectItem value="cancelled">Annulé</SelectItem>
-                    <SelectItem value="archived">Archivé</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Type de logement</p>
-                <Select value={relouerType} onValueChange={setRelouerType}>
-                  <SelectTrigger className="w-[160px] bg-background/50 border-border/50 h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="Appartement">Appartement</SelectItem>
-                    <SelectItem value="Maison">Maison</SelectItem>
-                    <SelectItem value="Studio">Studio</SelectItem>
-                    <SelectItem value="Loft">Loft</SelectItem>
-                    <SelectItem value="Villa">Villa</SelectItem>
-                    <SelectItem value="Autre">Autre</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Commune</p>
-                <Input
-                  value={relouerCommune}
-                  onChange={(e) => setRelouerCommune(e.target.value)}
-                  placeholder="Ville…"
-                  className="w-[160px] bg-background/50 border-border/50 h-8 text-xs"
-                />
-              </div>
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Photos</p>
-                <Select value={relouerPhotos} onValueChange={(v) => setRelouerPhotos(v as any)}>
-                  <SelectTrigger className="w-[140px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes</SelectItem>
-                    <SelectItem value="with">Avec photos</SelectItem>
-                    <SelectItem value="without">Sans photos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Documents</p>
-                <Select value={relouerDocs} onValueChange={(v) => setRelouerDocs(v as any)}>
-                  <SelectTrigger className="w-[140px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous</SelectItem>
-                    <SelectItem value="with">Avec docs</SelectItem>
-                    <SelectItem value="without">Sans docs</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <p className="text-xs font-medium mb-2 text-muted-foreground">Disponibilité</p>
-                <Select value={relouerAvailability} onValueChange={(v) => setRelouerAvailability(v as any)}>
-                  <SelectTrigger className="w-[150px] bg-background/50 border-border/50 h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes</SelectItem>
-                    <SelectItem value="set">Date renseignée</SelectItem>
-                    <SelectItem value="none">Sans date</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            )}
-
-          </div>
-        </div>
-
-        {/* Premium Sort Section */}
-        <div className="mb-4 md:mb-6 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-xs md:text-sm font-medium text-muted-foreground">Trier par:</p>
-            {[
-              { field: 'date' as SortField, label: 'Date' },
-              { field: 'name' as SortField, label: 'Nom' },
-              { field: 'agent' as SortField, label: 'Agent' },
-              { field: 'budget' as SortField, label: 'Budget' },
-              { field: 'days' as SortField, label: 'Jours' },
-            ].map(({ field, label }) => (
-              <Button
-                key={field}
-                variant={sortField === field ? "default" : "outline"}
-                size="sm"
-                onClick={() => toggleSort(field)}
-                className={cn(
-                  "text-[10px] md:text-xs h-7 transition-all duration-300",
-                  sortField === field && "shadow-[0_0_12px_rgba(var(--primary),0.3)]"
-                )}
-              >
-                <ArrowUpDown className={cn(
-                  "h-3 w-3 mr-1 transition-transform",
-                  sortField === field && sortOrder === 'asc' && "rotate-180"
-                )} />
-                {label}
-              </Button>
-            ))}
-          </div>
-          
-          {/* Animated results counter */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-            <Users className="w-3.5 h-3.5 text-primary" />
-            <span className="text-sm font-medium text-primary">
-              <AnimatedCounter value={sortedClients.length} /> client{sortedClients.length > 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
-
-        {/* Empty state */}
-        {sortedClients.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 animate-fade-in">
-            <div className="relative mb-4">
-              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="w-10 h-10 text-primary/50" />
-              </div>
-              <div className="absolute inset-0 w-20 h-20 rounded-full bg-primary/20 animate-ping opacity-50" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground mb-1">Aucun client trouvé</h3>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Modifiez vos filtres ou importez des clients via CSV
-            </p>
-          </div>
-        )}
-
-        {/* Premium Grid de clients */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-          {sortedClients.slice(0, displayCount).map((client, index) => {
-            const profile = clientProfiles.get(client.user_id);
-            const clientStatut = (client as any).statut;
-            const isActivated = ['actif', 'reloge', 'stoppe', 'suspendu'].includes(clientStatut);
-            const isFrozen = ['reloge', 'stoppe', 'suspendu'].includes(clientStatut);
-            const frozenEndDate = isFrozen ? ((client as any).date_changement_statut || (client as any).updated_at) : undefined;
-            const daysElapsed = isActivated ? calculateDaysElapsed(client.date_ajout || client.created_at, frozenEndDate) : 0;
-            const progressPercent = isActivated ? (daysElapsed / 90) * 100 : 0;
-            const candidates = clientCandidates.get(client.id) || [];
-
-            // Calculate solvability
-            const clientHasStableStatus = hasStableStatus(client.type_permis, client.nationalite);
-            const clientRevenus = client.revenus_mensuels || 0;
-            const budgetDemande = client.budget_max || 0;
-            
-            // Filter candidates with stable status for cumulative calculation
-            const stableCumulativeCandidates = candidates.filter(c => {
-              if (!CUMULATIVE_TYPES.includes(c.type as any)) return false;
-              if (c.poursuites) return false;
-              return hasStableStatus(c.type_permis, c.nationalite);
-            });
-            
-            const candidatesRevenus = stableCumulativeCandidates.reduce((sum, c) => sum + (c.revenus_mensuels || 0), 0);
-            const totalRevenus = clientHasStableStatus ? clientRevenus + candidatesRevenus : candidatesRevenus;
-            const budgetPossible = Math.round(totalRevenus / 3);
-            
-            // Garants valides : revenus CUMULÉS de tous les garants stables sans poursuites
-            const garants = candidates.filter(c => c.type === 'garant');
-            const stableGarants = garants.filter(g => !g.poursuites && hasStableStatus(g.type_permis, g.nationalite));
-            const garantsRevenusTotal = stableGarants.reduce((sum, g) => sum + (g.revenus_mensuels || 0), 0);
-            const garantCoverageValid = stableGarants.length > 0 && (budgetDemande === 0 || garantsRevenusTotal >= budgetDemande * 3);
-            const validGarant = garantCoverageValid; // booléen conservé pour le badge "Garant valide"
-            
-            // Determine solvability (location only — never for purchase buyers)
-            const isAcheteur = isBuyer(client);
-            const hasCriticalProblems = client.poursuites || (!clientHasStableStatus && !garantCoverageValid);
-            const budgetOk = budgetDemande === 0 ||
-              (clientHasStableStatus && budgetPossible >= budgetDemande) ||
-              garantCoverageValid;
-            const isSolvable = isAcheteur ? true : (!hasCriticalProblems && budgetOk && (clientHasStableStatus || garantCoverageValid));
-            
-            // Count excluded candidates
-            const excludedCandidates = candidates.filter(c => 
-              CUMULATIVE_TYPES.includes(c.type as any) && 
-              !c.poursuites &&
-              !hasStableStatus(c.type_permis, c.nationalite)
-            ).length;
-
-            if (!profile) return null;
-
-            const isSelected = selectedIds.has(client.id);
-
-            // Carte adaptée parcours reloueur (jamais de badges chercheur)
-            if (isReletter(client) || (isMixed(client) && relouerByUser.has(client.user_id))) {
-              const req = relouerByUser.get(client.user_id);
-              const counts = req ? (relouerCounts.get(req.id) ?? { photos: 0, docs: 0, slots: 0, candidates: 0 }) : { photos: 0, docs: 0, slots: 0, candidates: 0 };
-              const pureReletter = isReletter(client);
-              // Tous les reloueurs (purs ou mixtes) ouvrent la fiche client unifiée.
-              // La fiche reloueur est désormais une variante de ClientDetail (même design).
-              const handleOpenClient = () => navigate(`/admin/clients/${client.id}`);
-              return (
-                <ClientCardReletter
-                  key={client.id}
-                  clientId={client.id}
-                  profile={profile}
-                  request={req}
-                  counts={counts}
-                  agentName={getAgentName(req?.assigned_agent_id || undefined)}
-                  isMixed={!pureReletter}
-                  isSelected={isSelected}
-                  selectionMode={selectionMode}
-                  onToggleSelect={() => toggleSelect(client.id)}
-                  onOpenClient={handleOpenClient}
-                  onOpenDossier={() => navigate(`/admin/clients/${client.id}`)}
-                  onInvite={(e) => handleInviteClient(profile.email, client.id, e)}
-                  inviting={invitingClientId === client.id}
-                  index={index}
-                />
-              );
-            }
-
-            return (
-              <div 
-                key={client.id} 
-                className={cn(
-                  "group relative overflow-hidden rounded-2xl bg-card/90 backdrop-blur-xl p-4 md:p-5",
-                  "border border-border/50 cursor-pointer flex flex-col",
-                  "transition-all duration-500 ease-out",
-                  "hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] hover:border-primary/40 hover:-translate-y-2",
-                  "animate-fade-in",
-                  !isSolvable && "border-destructive/30 hover:border-destructive/50",
-                  isSelected && "ring-2 ring-primary border-primary/60 bg-primary/5"
-                )}
-                style={{ animationDelay: `${Math.min(index * 50, 400)}ms` }}
-                onClick={() => {
-                  if (selectionMode) {
-                    toggleSelect(client.id);
-                  } else {
-                    navigate(`/admin/clients/${client.id}`);
-                  }
-                }}
-              >
-                {selectionMode && (
-                  <div
-                    className="absolute top-3 left-3 z-20 h-7 w-7 rounded-md bg-background/90 backdrop-blur border border-border shadow-sm flex items-center justify-center"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleSelect(client.id);
-                    }}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleSelect(client.id)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                )}
-                {/* Animated glow border on hover */}
-                <div className={cn(
-                  "absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none",
-                  isSolvable 
-                    ? "shadow-[inset_0_0_20px_rgba(var(--primary),0.15)]" 
-                    : "shadow-[inset_0_0_20px_rgba(var(--destructive),0.15)]"
-                )} />
-                
-                {/* Shine effect on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none overflow-hidden rounded-2xl">
-                  <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12" />
-                </div>
-                
-                {/* Floating particles */}
-                <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="absolute top-3 right-12 w-8 h-8 bg-primary/10 rounded-full blur-xl animate-float" />
-                  <div className="absolute bottom-8 left-4 w-6 h-6 bg-accent/10 rounded-full blur-lg animate-float" style={{ animationDelay: '0.5s' }} />
-                </div>
-                
-                {/* Background gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-2xl" />
-                {/* Boutons d'actions - plus gros sur mobile */}
-                <div className="absolute top-2 right-2 flex gap-0.5 md:gap-1">
-                  {/* Bouton Envoyer/Renvoyer invitation */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={cn(
-                      "h-7 w-7 md:h-8 md:w-8 transition-all",
-                      !profile.actif 
-                        ? "text-blue-600 hover:text-blue-700 hover:bg-blue-100 animate-pulse-soft" 
-                        : "text-muted-foreground hover:text-blue-600 hover:bg-blue-50"
-                    )}
-                    onClick={(e) => handleInviteClient(profile.email, client.id, e)}
-                    disabled={invitingClientId === client.id}
-                    title={!profile.actif ? "Envoyer l'invitation (compte non activé)" : "Renvoyer l'invitation"}
-                  >
-                    {invitingClientId === client.id ? (
-                      <div className="h-3.5 w-3.5 md:h-4 md:w-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      <Send className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                    )}
-                  </Button>
-
-                  {/* Bouton Modifier */}
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-primary hover:bg-primary/10"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/admin/clients/${client.id}`);
-                    }}
-                  >
-                    <Pencil className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                  </Button>
-
-                  {/* Bouton Anonymiser RGPD */}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 md:h-8 md:w-8 text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10"
-                        onClick={(e) => e.stopPropagation()}
-                        disabled={deletingClientId === client.user_id}
-                        title="Anonymiser (RGPD)"
-                      >
-                        <ShieldCheck className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent onClick={(e) => e.stopPropagation()} className="max-w-[95vw] sm:max-w-lg">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                          <ShieldCheck className="w-5 h-5 text-amber-600" />
-                          Anonymiser ce client (RGPD) ?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription asChild>
-                          <div className="space-y-2 text-sm">
-                            <p>
-                              Conformément au <strong>droit à l'effacement</strong> (art. 17 RGPD / nLPD CH),
-                              les données personnelles sensibles de <strong>{profile?.prenom} {profile?.nom}</strong> seront effacées :
-                              dossier, situation financière, documents, conversations, mandat signé.
-                            </p>
-                            <p className="text-foreground">
-                              ✅ <strong>Conservés</strong> pour la comptabilité et les statistiques :
-                              nom, prénom, email, téléphone, factures et commissions.
-                            </p>
-                            <p className="text-amber-700 dark:text-amber-400">
-                              Le client ne pourra plus se connecter. <strong>Action irréversible.</strong>
-                            </p>
-                          </div>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel onClick={(e) => e.stopPropagation()}>Annuler</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={(e) => handleDeleteClient(client.user_id, e)}
-                          className="bg-amber-600 text-white hover:bg-amber-700"
-                        >
-                          <ShieldCheck className="w-4 h-4 mr-2" />
-                          Anonymiser
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-
-                {/* SECTION 1: Identité avec statut solvabilité - Premium */}
-                <div className="relative z-10 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30 pr-20">
-                  {/* Premium Avatar/Initials */}
-                  <div className="flex items-start gap-3 mb-2">
-                    <div className={cn(
-                      "w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center text-sm md:text-base font-bold shrink-0",
-                      "bg-gradient-to-br shadow-lg transition-all duration-300",
-                      isSolvable 
-                        ? "from-primary/20 to-primary/10 text-primary group-hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]" 
-                        : "from-destructive/20 to-destructive/10 text-destructive group-hover:shadow-[0_0_20px_rgba(var(--destructive),0.3)]"
-                    )}>
-                      {profile.prenom.charAt(0)}{profile.nom.charAt(0)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base md:text-lg font-bold bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent truncate">
-                        {profile.prenom} {profile.nom}
-                      </h3>
-                      <div className="flex items-center gap-1.5 flex-wrap mt-1">
-                        {/* Badge Profil Incomplet - priorité haute */}
-                        {(!client.type_permis || !profile.telephone || !client.budget_max) && (
-                          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/30 text-[10px] animate-pulse-soft">
-                            <UserX className="w-2.5 h-2.5 mr-0.5" />
-                            Profil incomplet
-                          </Badge>
-                        )}
-                       {!profile.actif && (
-                          <Badge variant="outline" className="bg-blue-500/10 text-blue-600 border-blue-500/30 text-[10px] animate-pulse-soft">
-                            <Mail className="w-2.5 h-2.5 mr-0.5" />
-                            Non activé
-                          </Badge>
-                        )}
-                         {!client.agent_id && (
-                          <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/30 text-[10px] animate-pulse-soft">
-                            Sans agent
-                          </Badge>
-                        )}
-                         {!isActivated && (
-                          <Badge className="bg-gray-500/20 text-gray-600 border border-gray-500/30 text-[10px]">
-                            ⏳ En attente
-                          </Badge>
-                        )}
-                        {/* Badge Période d'essai / Compte activé */}
-                        {(() => {
-                          const hasSignature = !!(client as any).mandat_signature_data;
-                          const hasMandat = !!(client as any).demande_mandat_id;
-                          const isFullyActivated = hasSignature && hasMandat && clientStatut === 'actif';
-                          if (isFullyActivated) {
-                            return (
-                              <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px]">
-                                ✅ Compte activé
-                              </Badge>
-                            );
-                          }
-                          if (!hasSignature || !hasMandat) {
-                            return (
-                              <Badge className="bg-orange-500/20 text-orange-600 border border-orange-500/30 text-[10px]">
-                                ⏳ Période d'essai
-                              </Badge>
-                            );
-                          }
-                          return null;
-                        })()}
-                        {clientStatut === 'reloge' && (
-                          <Badge className="bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 text-[10px]">
-                            ✅ Relogé
-                          </Badge>
-                        )}
-                        {clientStatut === 'stoppe' && (
-                          <Badge className="bg-red-500/20 text-red-600 border border-red-500/30 text-[10px]">
-                            ⛔ Stoppé
-                          </Badge>
-                        )}
-                        {clientStatut === 'suspendu' && (
-                          <Badge className="bg-amber-500/20 text-amber-600 border border-amber-500/30 text-[10px]">
-                            ⏸️ Suspendu
-                          </Badge>
-                        )}
-                        {/* Badge dossier mensuel */}
-                        {isActivated && !isFrozen && (
-                          docConfirmations.has(client.id) ? (
-                            <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px]">
-                              📋 Dossier à jour
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px]">
-                              📋 Non confirmé
-                            </Badge>
-                          )
-                        )}
-                        {isAcheteur ? (
-                          <Badge className="bg-sky-500/20 text-sky-600 border border-sky-500/30 text-[10px]">
-                            <Home className="w-3 h-3 mr-0.5" />
-                            {getPurchaseProject(client)?.statut === 'actif' ? 'Mandat actif' : 'Projet achat'}
-                          </Badge>
-                        ) : isSolvable ? (
-                          <Badge className="bg-green-500/20 text-green-600 border border-green-500/30 text-[10px] shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-                            <CheckCircle className="w-3 h-3 mr-0.5" />
-                            Solvable
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-destructive/20 text-destructive border border-destructive/30 text-[10px] animate-pulse-soft">
-                            <AlertTriangle className="w-3 h-3 mr-0.5" />
-                            Non solvable
-                          </Badge>
-                        )}
-                        {(client as any).candidat_garant?.garant_solvable === true && (
-                          <Badge variant="outline" className="text-[10px]">Garant</Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-1 text-xs md:text-sm pl-[52px] md:pl-[60px]">
-                    <div className="flex items-center gap-1.5 md:gap-2 text-muted-foreground">
-                      <MapPin className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
-                      <span className="truncate">{client.nationalite || 'Non renseigné'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 md:gap-2">
-                      <Users className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0 text-muted-foreground" />
-                      <span className={cn(
-                        "truncate",
-                        !clientHasStableStatus ? 'text-orange-600 font-medium' : 'text-muted-foreground'
-                      )}>
-                        Permis: {client.type_permis || '-'}
-                        {!clientHasStableStatus && ' ⚠️'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SECTION 2: Finances - Premium */}
-                <div className="relative z-10 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
-                  <p className="text-xs md:text-sm font-medium mb-2 flex items-center gap-1.5">
-                    <span className="text-base">💰</span> {isAcheteur ? 'Profil achat' : 'Finances'}
-                  </p>
-                  {isAcheteur ? (
-                    /* Achat: revenus annuels + statut financement */
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-gradient-to-br from-sky-50 to-sky-100/30 p-2 md:p-2.5 rounded-xl text-center border border-sky-200/50">
-                        <p className="text-[10px] md:text-xs text-muted-foreground">Revenus mensuels</p>
-                        <p className="text-xs md:text-sm font-bold text-sky-700">
-                          {client.revenus_mensuels ? `CHF ${(client.revenus_mensuels).toLocaleString()}` : '—'}
-                        </p>
-                      </div>
-                      <div className="bg-gradient-to-br from-sky-50 to-indigo-50/30 p-2 md:p-2.5 rounded-xl text-center border border-sky-200/50">
-                        <p className="text-[10px] md:text-xs text-muted-foreground">Mandat achat</p>
-                        <p className="text-xs md:text-sm font-bold text-sky-700">6 mois</p>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Location: logique solvabilité classique */
-                    <>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-gradient-to-br from-muted/50 to-muted/30 p-2 md:p-2.5 rounded-xl text-center border border-border/30">
-                          <p className="text-[10px] md:text-xs text-muted-foreground">Revenu total</p>
-                          <p className="text-xs md:text-sm font-bold">CHF {(totalRevenus > 0 ? totalRevenus : (garantCoverageValid ? garantsRevenusTotal : 0)).toLocaleString()}</p>
-                        </div>
-                        <div className={cn(
-                          "p-2 md:p-2.5 rounded-xl text-center border transition-all",
-                          budgetOk
-                            ? 'bg-gradient-to-br from-primary/15 to-primary/5 border-primary/30'
-                            : 'bg-gradient-to-br from-destructive/15 to-destructive/5 border-destructive/30'
-                        )}>
-                          <p className="text-[10px] md:text-xs text-muted-foreground">Budget max</p>
-                          <p className={cn(
-                            "text-xs md:text-sm font-bold",
-                            budgetOk ? 'text-primary' : 'text-destructive'
-                          )}>
-                            CHF {budgetDemande.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      {validGarant && (
-                        <div className="mt-2 flex items-center gap-1.5 text-[10px] text-green-600 bg-green-500/10 px-2 py-1 rounded-full w-fit">
-                          <Shield className="w-3 h-3" />
-                          <span className="font-medium">Garant valide</span>
-                        </div>
-                      )}
-                      {excludedCandidates > 0 && (
-                        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-orange-600">
-                          <AlertTriangle className="w-3 h-3 animate-pulse-soft" />
-                          <span>{excludedCandidates} candidat(s) non comptabilisé(s)</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {/* SECTION 3: Contact - Premium */}
-                <div className="relative z-10 mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
-                  <p className="text-xs md:text-sm font-medium mb-2 flex items-center gap-1.5">
-                    <span className="text-base">📞</span> Contact
-                  </p>
-                  <div className="space-y-1 text-xs md:text-sm">
-                    <div className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                      <Phone className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
-                      <span className="truncate">{profile.telephone || '-'}</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors">
-                      <Mail className="h-3 w-3 md:h-3.5 md:w-3.5 flex-shrink-0" />
-                      <span className="truncate text-[10px] md:text-xs">{profile.email}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* SECTION 4: Recherche - Premium */}
-                <div className="relative z-10 mb-3 md:mb-4">
-                  <p className="text-xs md:text-sm font-medium mb-2 flex items-center gap-1.5">
-                    <span className="text-base">🏠</span> Recherche
-                  </p>
-                  <div className="flex gap-1.5 flex-wrap">
-                    <Badge className="bg-secondary/80 text-secondary-foreground border-0 text-[10px] md:text-xs hover:bg-secondary transition-colors">
-                      {client.type_bien || 'Location'}
-                    </Badge>
-                    <Badge className="bg-secondary/80 text-secondary-foreground border-0 text-[10px] md:text-xs hover:bg-secondary transition-colors">
-                      {client.pieces || 0} pièces
-                    </Badge>
-                    <Badge variant="outline" className="text-[10px] md:text-xs bg-background/50 hover:bg-background transition-colors">
-                      {client.region_recherche || 'N/A'}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Agent assigné - Premium */}
-                <div className="relative z-10 text-xs text-muted-foreground mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
-                  <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <Users className="h-3 w-3 md:h-3.5 md:w-3.5" />
-                    <span className="truncate">Agent: <span className="font-medium text-foreground">{getAgentName(client.agent_id)}</span></span>
-                  </div>
-                </div>
-
-                {/* Offres reçues aujourd'hui - Premium */}
-                <div className="relative z-10 text-xs text-muted-foreground mb-3 md:mb-4 pb-3 md:pb-4 border-b border-border/30">
-                  <div className={cn(
-                    "flex items-center gap-1.5 px-2 py-1.5 rounded-lg transition-colors",
-                    (offresToday.get(client.id) || 0) > 0 
-                      ? "bg-primary/10 hover:bg-primary/20" 
-                      : "bg-muted/30 hover:bg-muted/50"
-                  )}>
-                    <Send className={cn(
-                      "h-3 w-3 md:h-3.5 md:w-3.5",
-                      (offresToday.get(client.id) || 0) > 0 ? "text-primary" : ""
-                    )} />
-                    <span className="truncate">
-                      Offres aujourd'hui: 
-                      <span className={cn(
-                        "font-bold ml-1",
-                        (offresToday.get(client.id) || 0) > 0 ? "text-primary" : "text-muted-foreground"
-                      )}>
-                        {offresToday.get(client.id) || 0}
-                      </span>
-                    </span>
-                    {(offresToday.get(client.id) || 0) > 0 && (
-                      <Badge className="ml-auto bg-primary/20 text-primary border-0 text-[10px]">
-                        Actif
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                {/* Date et barre de progression - Premium */}
-                <div className="relative z-10 mt-auto">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-1 text-muted-foreground text-[10px] md:text-xs">
-                      <Calendar className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                      <span>{new Date(client.date_ajout || client.created_at || '').toLocaleDateString('fr-CH')}</span>
-                    </div>
-                    <div className={cn(
-                      "flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] md:text-xs font-bold transition-all",
-                      !isActivated
-                        ? 'bg-gray-500/20 text-gray-500'
-                        : isFrozen
-                          ? clientStatut === 'reloge'
-                            ? 'bg-emerald-500/20 text-emerald-600'
-                            : clientStatut === 'suspendu'
-                              ? 'bg-amber-500/20 text-amber-600'
-                              : 'bg-red-500/20 text-red-600'
-                          : daysElapsed < 60 
-                            ? 'bg-green-500/20 text-green-600 shadow-[0_0_10px_rgba(34,197,94,0.2)]' 
-                            : daysElapsed < 90 
-                              ? 'bg-orange-500/20 text-orange-600 shadow-[0_0_10px_rgba(249,115,22,0.2)]' 
-                              : 'bg-red-500/20 text-red-600 shadow-[0_0_10px_rgba(239,68,68,0.2)] animate-pulse-soft'
-                    )}>
-                      <span>{isActivated ? `J+${Math.floor(daysElapsed)}${isFrozen ? ' ■' : ''}` : '—'}</span>
-                    </div>
-                  </div>
-
-                  {/* Premium Progress bar with glow */}
-                  <div className="relative w-full bg-muted/50 rounded-full h-2 overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded-full transition-all duration-500",
-                        isFrozen
-                          ? clientStatut === 'reloge'
-                            ? 'bg-gradient-to-r from-emerald-500 to-emerald-400'
-                            : clientStatut === 'suspendu'
-                              ? 'bg-gradient-to-r from-amber-500 to-amber-400'
-                              : 'bg-gradient-to-r from-red-500 to-red-400'
-                          : daysElapsed < 60 
-                            ? 'bg-gradient-to-r from-green-500 to-green-400 shadow-[0_0_8px_rgba(34,197,94,0.4)]' 
-                            : daysElapsed < 90 
-                              ? 'bg-gradient-to-r from-orange-500 to-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.4)]' 
-                              : 'bg-gradient-to-r from-red-500 to-red-400 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
-                      )}
-                      style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                    />
-                  </div>
-                </div>
-                
-                {/* Navigation indicator */}
-                <div className="absolute bottom-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
-                  <ChevronRight className="w-5 h-5 text-primary" />
-                </div>
-                
-                {/* Hover arrow indicator */}
-                <ChevronRight className="absolute bottom-4 right-4 h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Load more button */}
-        {sortedClients.length > displayCount && (
-          <div className="flex justify-center mt-6">
+    <DashPage className="space-y-5 pb-28">
+      <DashPageHeader
+        title="Gestion des clients"
+        subtitle={resume}
+        action={
+          <>
+            <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={() => loadData()} aria-label="Actualiser">
+              <RefreshCw className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Actualiser</span>
+            </Button>
             <Button
-              variant="outline"
-              onClick={() => setDisplayCount(prev => prev + 50)}
-              className="gap-2"
+              size="sm"
+              variant={selectionMode ? "secondary" : "outline"}
+              className="h-10 rounded-full"
+              onClick={() => (selectionMode ? exitSelectionMode() : setSelectionMode(true))}
+              disabled={clients.length === 0}
             >
-              Afficher plus ({sortedClients.length - displayCount} restants)
+              {selectionMode ? <XIcon className="h-4 w-4 sm:mr-2" /> : <CheckSquare className="h-4 w-4 sm:mr-2" />}
+              <span className="hidden sm:inline">{selectionMode ? 'Annuler' : 'Sélectionner'}</span>
+            </Button>
+            <Button onClick={() => setInviteDialogOpen(true)} size="sm" className="h-10 rounded-full">
+              <UserPlus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Inviter un client</span>
+            </Button>
+            <DropdownMenu modal={false}>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="h-10 rounded-full" aria-label="Plus d'actions">
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="ml-2 hidden md:inline">Plus</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setShowImportDialog(true)}>
+                  <Upload className="mr-2 h-4 w-4" /> Importer CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/admin/inscriptions-echouees')}>
+                  <AlertTriangle className="mr-2 h-4 w-4" /> Inscriptions échouées
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  disabled={clients.length === 0 || deleting}
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> {deleting ? 'Suppression...' : 'Supprimer tous'}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        }
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous absolument sûr ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Cela supprimera définitivement tous les clients ({clients.length})
+              et toutes leurs données associées.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteAllClients} className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Supprimer tout
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Mode d'affichage */}
+      <div className="inline-flex rounded-full border border-border bg-background p-1" role="tablist" aria-label="Mode d'affichage">
+        {([
+          { key: 'list', label: 'Liste clients' },
+          { key: 'byAgent', label: 'Clients par agent' },
+        ] as { key: 'list' | 'byAgent'; label: string }[]).map(opt => (
+          <button
+            key={opt.key}
+            type="button"
+            role="tab"
+            aria-selected={viewMode === opt.key}
+            onClick={() => setViewMode(opt.key)}
+            className={cn(
+              "h-9 rounded-full px-4 text-sm font-medium transition-colors",
+              viewMode === opt.key ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {viewMode === 'byAgent' && (
+        <ClientsByAgentView
+          clients={clients}
+          clientProfiles={clientProfiles}
+          agents={agents}
+          clientAgents={clientAgents}
+        />
+      )}
+
+      {viewMode === 'list' && (<>
+        {/* Barre d'outils : recherche pleine largeur, parcours et tri côte à côte, filtres repliés */}
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un client (nom, e-mail)…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              aria-label="Rechercher un client"
+              className="h-11 rounded-full pl-10 pr-10"
+            />
+            {searchTerm && (
+              <button type="button" onClick={() => setSearchTerm('')} aria-label="Effacer la recherche"
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+                <XIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-[1fr_1fr_auto] lg:flex">
+            <Select value={journeyTab} onValueChange={(v) => setJourneyTab(v as JourneyTab)}>
+              <SelectTrigger className="h-11 rounded-full lg:w-[220px]" aria-label="Parcours"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {journeyOptions.map((o) => (
+                  <SelectItem key={o.key} value={o.key}>{o.label} ({journeyTotals[o.key]})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={sortValue}
+              onValueChange={(v) => { const [f, o] = v.split(':'); setSortField(f as SortField); setSortOrder(o as SortOrder); }}
+              disabled={journeyTab === 'prospects'}
+            >
+              <SelectTrigger className="h-11 rounded-full lg:w-[200px]" aria-label="Trier"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Button
+              variant={filtersOpen || activeFilterCount > 0 ? 'default' : 'outline'}
+              className="col-span-2 h-11 rounded-full md:col-span-1"
+              onClick={() => setFiltersOpen((o) => !o)}
+              aria-expanded={filtersOpen}
+              disabled={journeyTab === 'prospects'}
+            >
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Filtres{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
             </Button>
           </div>
+        </div>
+
+        {/* Panneau de filtres (replié par défaut) */}
+        {filtersOpen && journeyTab !== 'prospects' && (
+          <section className={cn(DASH_CARD, 'space-y-4 p-4 md:p-5')} aria-label="Filtres">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-muted-foreground">Agent</p>
+                <Select value={filterAgent} onValueChange={setFilterAgent}>
+                  <SelectTrigger className="h-11 rounded-full"><SelectValue placeholder="Filtrer par agent" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les agents</SelectItem>
+                    {agents.map(agent => (
+                      <SelectItem key={agent.id} value={agent.id}>{agent.profile.prenom} {agent.profile.nom}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-end">
+                <Button
+                  variant={showUnassignedOnly ? "default" : "outline"}
+                  onClick={() => setShowUnassignedOnly(!showUnassignedOnly)}
+                  className="h-11 w-full rounded-full"
+                >
+                  <UserX className="mr-2 h-4 w-4" />
+                  Sans agent
+                </Button>
+              </div>
+              {showSearcherFilters && (<>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Permis</p>
+                  <Select value={selectedTypePermis} onValueChange={setSelectedTypePermis}>
+                    <SelectTrigger className="h-11 rounded-full"><SelectValue placeholder="Tous" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous</SelectItem>
+                      {typePermisOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Statut</p>
+                  <Select value={selectedStatut} onValueChange={setSelectedStatut}>
+                    <SelectTrigger className="h-11 rounded-full"><SelectValue placeholder="Tous" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous</SelectItem>
+                      {statutOptions.map(s => <SelectItem key={s} value={s}>{statutLabels[s] || s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>)}
+            </div>
+
+            {showSearcherFilters && (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Type de recherche</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button type="button" className={chip(selectedTypeRecherche === 'all')} onClick={() => setSelectedTypeRecherche('all')}>Tous</button>
+                    <button type="button" className={chip(selectedTypeRecherche === 'Louer')} onClick={() => setSelectedTypeRecherche('Louer')}><Key className="mr-1 h-3 w-3" /> Location</button>
+                    <button type="button" className={chip(selectedTypeRecherche === 'Acheter')} onClick={() => setSelectedTypeRecherche('Acheter')}><Home className="mr-1 h-3 w-3" /> Achat</button>
+                  </div>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Budget (CHF)</p>
+                  <div className="flex items-center gap-2">
+                    <Input type="number" placeholder="Min" value={budgetMin} onChange={(e) => setBudgetMin(e.target.value)} className="h-11 rounded-full" aria-label="Budget minimum" />
+                    <span className="text-xs text-muted-foreground">–</span>
+                    <Input type="number" placeholder="Max" value={budgetMax} onChange={(e) => setBudgetMax(e.target.value)} className="h-11 rounded-full" aria-label="Budget maximum" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {showSearcherFilters && (
+              <div>
+                <p className="mb-1.5 text-xs font-medium text-muted-foreground">Régions</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {regions.map(region => (
+                    <button key={region} type="button" className={chip(selectedRegions.includes(region))} onClick={() => toggleRegion(region)}>{region}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">Nombre de pièces</p>
+              <div className="flex flex-wrap gap-1.5">
+                {nombrePieces.map(pieces => (
+                  <button key={pieces} type="button" className={chip(selectedPieces.includes(pieces))} onClick={() => togglePieces(pieces)}>
+                    {pieces === '5+' ? '5+ pièces' : `${pieces} pièce${pieces === '1' ? '' : 's'}`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Filtres dossier reloueur — parcours « Clients reloueurs » */}
+            {showReletterFilters && (
+              <div className="grid gap-3 border-t border-border/60 pt-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Statut dossier</p>
+                  <Select value={relouerStatus} onValueChange={setRelouerStatus}>
+                    <SelectTrigger className="h-11 rounded-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous</SelectItem>
+                      <SelectItem value="new_request">Nouvelle</SelectItem>
+                      <SelectItem value="to_qualify">À qualifier</SelectItem>
+                      <SelectItem value="missing_information">Infos manquantes</SelectItem>
+                      <SelectItem value="waiting_documents">Docs en attente</SelectItem>
+                      <SelectItem value="waiting_photos">Photos en attente</SelectItem>
+                      <SelectItem value="ready_to_publish">Prêt à publier</SelectItem>
+                      <SelectItem value="published">Publié</SelectItem>
+                      <SelectItem value="visits_scheduled">Visites en cours</SelectItem>
+                      <SelectItem value="applications_received">Candidatures reçues</SelectItem>
+                      <SelectItem value="sent_to_agency">Transmis régie</SelectItem>
+                      <SelectItem value="rented">Reloué</SelectItem>
+                      <SelectItem value="cancelled">Annulé</SelectItem>
+                      <SelectItem value="archived">Archivé</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Type de logement</p>
+                  <Select value={relouerType} onValueChange={setRelouerType}>
+                    <SelectTrigger className="h-11 rounded-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous</SelectItem>
+                      <SelectItem value="Appartement">Appartement</SelectItem>
+                      <SelectItem value="Maison">Maison</SelectItem>
+                      <SelectItem value="Studio">Studio</SelectItem>
+                      <SelectItem value="Loft">Loft</SelectItem>
+                      <SelectItem value="Villa">Villa</SelectItem>
+                      <SelectItem value="Autre">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Commune</p>
+                  <Input value={relouerCommune} onChange={(e) => setRelouerCommune(e.target.value)} placeholder="Ville…" className="h-11 rounded-full" />
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Photos</p>
+                  <Select value={relouerPhotos} onValueChange={(v) => setRelouerPhotos(v as any)}>
+                    <SelectTrigger className="h-11 rounded-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes</SelectItem>
+                      <SelectItem value="with">Avec photos</SelectItem>
+                      <SelectItem value="without">Sans photos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Documents</p>
+                  <Select value={relouerDocs} onValueChange={(v) => setRelouerDocs(v as any)}>
+                    <SelectTrigger className="h-11 rounded-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tous</SelectItem>
+                      <SelectItem value="with">Avec docs</SelectItem>
+                      <SelectItem value="without">Sans docs</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-medium text-muted-foreground">Disponibilité</p>
+                  <Select value={relouerAvailability} onValueChange={(v) => setRelouerAvailability(v as any)}>
+                    <SelectTrigger className="h-11 rounded-full"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Toutes</SelectItem>
+                      <SelectItem value="set">Date renseignée</SelectItem>
+                      <SelectItem value="none">Sans date</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:justify-end">
+              <Button variant="ghost" className="h-11 rounded-full" onClick={resetFilters} disabled={activeFilterCount === 0}>Réinitialiser</Button>
+              <Button className="h-11 rounded-full" onClick={() => setFiltersOpen(false)}>
+                Voir {sortedVues.length} client{sortedVues.length > 1 ? 's' : ''}
+              </Button>
+            </div>
+          </section>
         )}
 
-        {sortedClients.length === 0 && (
-          <div className="text-center py-8 md:py-12">
-            <p className="text-sm md:text-base text-muted-foreground">Aucun client ne correspond aux filtres sélectionnés</p>
+        {journeyTab === 'prospects' ? (
+          <CandidatProspectsList rows={prospects} loading={prospectsLoading} error={prospectsError} />
+        ) : (<>
+          {/* Synthèse : chaque tuile ouvre la file correspondante */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+            {tuiles.map((t) => (
+              <button
+                key={t.label}
+                type="button"
+                onClick={t.onClick}
+                className={cn(DASH_CARD, 'flex min-h-[64px] flex-col justify-center px-3 py-2.5 text-left transition-transform duration-150 active:scale-[0.98]', t.alerte && 'ring-1 ring-amber-500/30')}
+              >
+                <span className={cn('text-xl font-semibold leading-tight', t.alerte ? 'text-amber-700 dark:text-amber-400' : 'text-foreground')}>{t.value}</span>
+                <span className="truncate text-xs text-muted-foreground">{t.label}</span>
+              </button>
+            ))}
           </div>
-        )}
+
+          <div>
+            <DashFilterPills
+              label="Situation des clients"
+              value={situationTab}
+              onChange={(v) => { setSituationTab(v as Situation); setMotifFilter('tous'); }}
+              options={SITUATIONS.map((s) => ({ key: s.key, label: s.label, count: sc[s.key] }))}
+            />
+            {situationTab === 'a_traiter' && sc.a_traiter > 0 && (
+              <div className="-mt-2 mb-1 flex flex-wrap gap-1.5" role="group" aria-label="Motif">
+                <button type="button" className={chip(motifFilter === 'tous')} onClick={() => setMotifFilter('tous')}>
+                  Tous les motifs <span className="ml-1 opacity-70">{sc.a_traiter}</span>
+                </button>
+                {MOTIFS.map((m) => (
+                  <button key={m.key} type="button" className={chip(motifFilter === m.key)} onClick={() => setMotifFilter(m.key)} disabled={mc[m.key] === 0}>
+                    {m.label} <span className="ml-1 opacity-70">{mc[m.key]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {sortedVues.length === 0 ? (
+            <DashEmptyState
+              icon={Users}
+              title={
+                searchTerm || activeFilterCount > 0 ? 'Aucun client ne correspond aux filtres sélectionnés'
+                  : situationTab === 'a_traiter' ? 'Rien à traiter pour le moment'
+                  : 'Aucun client trouvé'
+              }
+              description={situationTab === 'a_traiter' && !searchTerm ? 'Les clients sans agent, au dossier incomplet, au mandat bientôt échu ou inactifs depuis longtemps apparaissent ici.' : 'Modifiez vos filtres ou importez des clients via CSV'}
+            />
+          ) : isCompact ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {visibles.map((v) => <ClientListeCard key={v.client.id} v={v} ctx={ctx} />)}
+            </div>
+          ) : (
+            <ClientListeTable
+              vues={visibles}
+              ctx={ctx}
+              allSelected={allVisibleSelected}
+              onToggleAll={() => setSelectedIds(allVisibleSelected ? new Set() : new Set(sortedClients.map((c) => c.id)))}
+            />
+          )}
+
+          {/* Afficher plus */}
+          {sortedVues.length > displayCount && (
+            <div className="flex justify-center">
+              <Button variant="outline" onClick={() => setDisplayCount(prev => prev + 50)} className="h-11 rounded-full">
+                Afficher plus ({sortedVues.length - displayCount} restants)
+              </Button>
+            </div>
+          )}
         </>)}
-      </div>
+      </>)}
 
 
       <CSVImportDialog
@@ -1920,7 +1422,7 @@ const Clients = () => {
         <DialogContent className="max-w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><UserPlus className="h-4 w-4" /></span>
               Inviter un client
             </DialogTitle>
           </DialogHeader>
@@ -1949,10 +1451,10 @@ const Clients = () => {
             <div>
               <Label>Type de recherche</Label>
               <div className="flex gap-2 mt-1">
-                <Button type="button" size="sm" variant={inviteForm.typeRecherche === 'Acheter' ? 'default' : 'outline'} onClick={() => setInviteForm(f => ({ ...f, typeRecherche: 'Acheter' }))} className="flex-1">
+                <Button type="button" size="sm" variant={inviteForm.typeRecherche === 'Acheter' ? 'default' : 'outline'} onClick={() => setInviteForm(f => ({ ...f, typeRecherche: 'Acheter' }))} className="h-11 flex-1 rounded-full">
                   <Home className="w-4 h-4 mr-1" /> Acheter
                 </Button>
-                <Button type="button" size="sm" variant={inviteForm.typeRecherche === 'Louer' ? 'default' : 'outline'} onClick={() => setInviteForm(f => ({ ...f, typeRecherche: 'Louer' }))} className="flex-1">
+                <Button type="button" size="sm" variant={inviteForm.typeRecherche === 'Louer' ? 'default' : 'outline'} onClick={() => setInviteForm(f => ({ ...f, typeRecherche: 'Louer' }))} className="h-11 flex-1 rounded-full">
                   <Key className="w-4 h-4 mr-1" /> Louer
                 </Button>
               </div>
@@ -1960,9 +1462,9 @@ const Clients = () => {
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Annuler</Button>
+              <Button variant="outline" className="rounded-full">Annuler</Button>
             </DialogClose>
-            <Button onClick={handleLightInvite} disabled={sendingInvite}>
+            <Button onClick={handleLightInvite} disabled={sendingInvite} className="rounded-full">
               {sendingInvite ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
               Envoyer l'invitation
             </Button>
@@ -1985,7 +1487,7 @@ const Clients = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-amber-600" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600"><ShieldCheck className="h-4 w-4" /></span>
               Anonymiser {selectedIds.size} client(s) — Demande RGPD
             </AlertDialogTitle>
             <AlertDialogDescription asChild>
@@ -2006,11 +1508,11 @@ const Clients = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkLoading} className="rounded-full">Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
               disabled={bulkLoading}
-              className="bg-amber-600 text-white hover:bg-amber-700"
+              className="rounded-full bg-amber-600 text-white hover:bg-amber-700"
             >
               {bulkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-2" />}
               Anonymiser (RGPD)
@@ -2030,10 +1532,11 @@ const Clients = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={bulkLoading}>Annuler</AlertDialogCancel>
+            <AlertDialogCancel disabled={bulkLoading} className="rounded-full">Annuler</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); if (bulkStatutTarget) handleBulkChangeStatut(bulkStatutTarget); }}
               disabled={bulkLoading}
+              className="rounded-full"
             >
               {bulkLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Confirmer
@@ -2041,7 +1544,7 @@ const Clients = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashPage>
   );
 };
 

@@ -173,6 +173,18 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.sync-all-imap-emails]
     verify_jwt = false
+  [functions.steeve-turn]
+    verify_jwt = false
+  [functions.sync-shared-mailboxes]
+    verify_jwt = false
+  [functions.steeve-public]
+    verify_jwt = false
+  [functions.steeve-admin]
+    verify_jwt = true
+  [functions.steeve-operator]
+    verify_jwt = false
+  [functions.steeve-partner]
+    verify_jwt = true
   [functions.sync-google-calendar]
     verify_jwt = true
   [functions.track-email-click]

@@ -18,14 +18,14 @@ export const FloatingParticles: React.FC<FloatingParticlesProps> = () => null;
 export const MeshGradientBackground: React.FC<{ className?: string }> = () => null;
 
 /**
- * WhatsApp-style chat background (subtle textured beige/dark).
- * Uses --whatsapp-bg token defined in index.css and the .bg-whatsapp-pattern class.
+ * Fond de la zone de messages : uni et sobre (fond de l'app), sans motif décoratif.
+ * Composant conservé pour compatibilité avec les pages existantes.
  */
 export const ChatPatternBackground: React.FC<{ className?: string }> = ({ className }) => (
   <div
     aria-hidden
     className={cn(
-      'absolute inset-0 pointer-events-none bg-whatsapp-pattern',
+      'absolute inset-0 pointer-events-none bg-background',
       className,
     )}
   />

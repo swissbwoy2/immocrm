@@ -1,9 +1,9 @@
 import { useState, useMemo, memo } from 'react';
 import { startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
-import { ChevronLeft, ChevronRight, Calendar, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { CalendarEvent, eventTypeCalendarColors } from './types';
+import { CalendarEvent, eventTypeCalendarColors, eventTypeChipColors, DEFAULT_EVENT_CHIP } from './types';
 import { toSwissTime, formatSwissDate, formatSwissTime, getSwissDateString } from '@/lib/dateUtils';
 import { useIsIOS } from '@/hooks/useIsIOS';
 
@@ -64,29 +64,26 @@ const PremiumCalendarDay = memo(({
   return (
     <div
       onClick={() => onDateSelect(day)}
-      style={isIOS ? undefined : { animationDelay: `${animationDelay}ms` }}
       className={cn(
-        'h-20 md:h-24 p-1.5 rounded-xl border cursor-pointer min-w-0 group',
-        'transition-all duration-300 ease-out',
-        'hover:scale-[1.02] hover:shadow-lg hover:shadow-primary/10 hover:border-primary/40',
-        // iOS optimizations: remove blur and animation
-        isIOS ? 'ios-gpu-accelerated bg-card/95' : 'backdrop-blur-sm animate-fade-in',
+        'group h-20 min-w-0 cursor-pointer rounded-xl border border-border/70 bg-card p-1 sm:p-1.5 md:h-24',
+        'transition-colors duration-150 hover:border-foreground/30',
+        isIOS && 'ios-gpu-accelerated',
         !isCurrentMonth && 'opacity-40',
-        isWeekend && 'bg-muted/20',
-        isTodayDate && 'border-primary border-2 bg-gradient-to-br from-primary/10 to-primary/5 shadow-md shadow-primary/20',
-        isSelected && 'bg-gradient-to-br from-accent to-accent/80 ring-2 ring-primary shadow-lg shadow-primary/20'
+        isWeekend && 'bg-muted/30',
+        isTodayDate && 'border-primary/40',
+        isSelected && 'border-foreground bg-muted/50'
       )}
     >
       <div className={cn(
-        'text-sm font-semibold mb-1 flex items-center gap-1',
-        isTodayDate && 'text-primary',
-        isSelected && 'text-primary',
+        'mb-1 flex items-center gap-1 text-xs font-medium text-foreground',
         isWeekend && !isTodayDate && !isSelected && 'text-muted-foreground'
       )}>
-        {formatSwissDate(day, 'd')}
-        {isTodayDate && (
-          <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-        )}
+        <span className={cn(
+          'inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1',
+          isTodayDate && 'bg-primary font-semibold text-primary-foreground'
+        )}>
+          {formatSwissDate(day, 'd')}
+        </span>
       </div>
       <div className="space-y-0.5 overflow-hidden">
         {dayEvents.slice(0, 3).map((item, idx) => (
@@ -94,9 +91,9 @@ const PremiumCalendarDay = memo(({
             key={idx}
             onClick={(e) => handleEventClick(e, item)}
             className={cn(
-              'text-[9px] px-1.5 py-0.5 rounded-md truncate text-white cursor-pointer',
-              'transition-all duration-200 hover:opacity-90 hover:translate-x-0.5',
-              eventTypeCalendarColors[item.type] || 'bg-gray-500'
+              'cursor-pointer truncate rounded-md border px-1 py-0.5 text-[10px] leading-tight sm:px-1.5',
+              'transition-opacity hover:opacity-80',
+              eventTypeChipColors[item.type] || DEFAULT_EVENT_CHIP
             )}
             title={item.isVisite ? item.event.adresse : item.event.title}
           >
@@ -104,8 +101,7 @@ const PremiumCalendarDay = memo(({
           </div>
         ))}
         {dayEvents.length > 3 && (
-          <div className="text-[10px] text-muted-foreground font-medium pl-1 flex items-center gap-0.5">
-            <Sparkles className="w-2.5 h-2.5" />
+          <div className="flex items-center gap-0.5 pl-1 text-[10px] font-medium text-muted-foreground">
             +{dayEvents.length - 3}
           </div>
         )}
@@ -182,36 +178,27 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
 
   return (
     <div className={cn(
-      "relative overflow-hidden rounded-2xl border border-border/50 shadow-xl p-4 md:p-6 w-full max-w-full",
-      isIOS ? "bg-card ios-gpu-accelerated" : "bg-card/80 backdrop-blur-xl"
+      "relative w-full max-w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-3 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)] sm:p-4 md:p-5",
+      isIOS && "ios-gpu-accelerated"
     )}>
-      {/* Background effects - disabled on iOS for performance */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-      {!isIOS && (
-        <>
-          <div className="absolute top-0 right-0 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl pointer-events-none" />
-        </>
-      )}
-      
-      <div className="relative z-10">
+      <div className="relative">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 shadow-inner">
-              <Calendar className="h-5 w-5 text-primary animate-pulse-soft" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold capitalize bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Calendar className="h-[18px] w-[18px]" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="truncate text-base font-semibold capitalize text-foreground sm:text-lg">
                 {formatSwissDate(currentMonth, 'MMMM yyyy')}
               </h2>
             </div>
           </div>
-          <div className="flex gap-1.5">
+          <div className="flex gap-1">
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-9 w-9 rounded-xl hover:bg-primary/10 transition-all duration-200 hover:scale-105"
+              className="h-9 w-9 rounded-full"
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -219,15 +206,15 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
             <Button
               variant="outline"
               size="sm"
-              className="h-9 px-4 rounded-xl font-medium transition-all duration-200 hover:bg-primary hover:text-primary-foreground hover:scale-105 hover:shadow-md"
+              className="h-9 rounded-full px-4"
               onClick={() => setCurrentMonth(new Date())}
             >
               Aujourd'hui
             </Button>
             <Button
-              variant="ghost"
+              variant="outline"
               size="icon"
-              className="h-9 w-9 rounded-xl hover:bg-primary/10 transition-all duration-200 hover:scale-105"
+              className="h-9 w-9 rounded-full"
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
             >
               <ChevronRight className="h-4 w-4" />
@@ -236,12 +223,12 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
         </div>
 
         {/* Week days header */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="mb-1 grid grid-cols-7 gap-1">
           {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day, idx) => (
             <div 
               key={day} 
               className={cn(
-                "text-center text-sm font-semibold py-2 rounded-lg",
+                "py-2 text-center text-[11px] font-medium sm:text-xs",
                 idx >= 5 ? "text-muted-foreground/60" : "text-muted-foreground"
               )}
             >
@@ -254,7 +241,7 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
         <div className="grid grid-cols-7 gap-1 w-full">
           {/* Padding for days before month starts */}
           {Array.from({ length: paddingDays }).map((_, index) => (
-            <div key={`padding-${index}`} className="h-20 md:h-24 bg-muted/10 rounded-xl min-w-0" />
+            <div key={`padding-${index}`} className="h-20 min-w-0 rounded-xl md:h-24" />
           ))}
 
           {/* Actual days */}
@@ -274,7 +261,7 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-3 md:gap-4 mt-6 pt-4 border-t border-border/50">
+        <div className="mt-4 flex flex-wrap gap-x-3 gap-y-2 border-t border-border/70 pt-3">
           {[
             { type: 'visite_proposee', label: 'Créneau proposé', ring: false },
             { type: 'visite', label: 'Visite confirmée', ring: false },
@@ -286,13 +273,13 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
             { type: 'tache', label: 'Tâche', ring: false },
             { type: 'reunion', label: 'Réunion', ring: false },
           ].map(({ type, label, ring }) => (
-            <div key={type} className="flex items-center gap-1.5 group cursor-default transition-all duration-200 hover:scale-105">
-              <div className={cn(
-                'w-3 h-3 rounded-md shadow-sm',
+            <div key={type} className="flex cursor-default items-center gap-1.5">
+              <span className={cn(
+                'h-2.5 w-2.5 rounded-full',
                 eventTypeCalendarColors[type],
-                ring && 'ring-2 ring-orange-300'
+                ring && 'ring-2 ring-orange-500/30'
               )} />
-              <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">{label}</span>
+              <span className="text-[11px] text-muted-foreground">{label}</span>
             </div>
           ))}
         </div>

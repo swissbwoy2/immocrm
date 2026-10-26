@@ -21,7 +21,8 @@ import { toast } from 'sonner';
 import { CalendarEvent } from '@/components/calendar/types';
 import { EventManagerCalendar } from '@/components/calendar/EventManagerCalendar';
 import { PhoneAppointmentDetailDialog, type PhoneAppointmentRaw } from '@/components/calendar/PhoneAppointmentDetailDialog';
-import { VisitVideoShareButton } from '@/components/calendar/VisitVideoShareButton';
+import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitPersonRow, VisitSection, VisitStatusBadge, formatCHF, offrePhotoUrl } from '@/components/visites/VisitDetailParts';
+import { formatZurichDateTime, formatZurichDay, formatZurichTime } from '@/lib/dateZurich';
 import CompteRenduVisiteForm from '@/components/visites/CompteRenduVisiteForm';
 import { VisitVideoPlayer } from '@/components/calendar/VisitVideoPlayer';
 import { AddClientsToVisiteDialog } from '@/components/calendar/AddClientsToVisiteDialog';
@@ -29,7 +30,7 @@ import { EditVisiteDialog } from '@/components/calendar/EditVisiteDialog';
 import { EventForm, EventFormData } from '@/components/calendar/EventForm';
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
 import { PremiumAgentDayEvents } from '@/components/calendar/PremiumAgentDayEvents';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { DASH_CARD, DashBadge, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { useNotifications } from '@/hooks/useNotifications';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTimeline';
@@ -938,40 +939,33 @@ export default function AgentCalendrier() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
-        <div className="relative">
-          <div className="w-16 h-16 rounded-full border-4 border-primary/20"></div>
-          <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-transparent border-t-primary animate-spin"></div>
-        </div>
-        <p className="text-muted-foreground animate-pulse">Chargement du calendrier...</p>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3" role="status">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Chargement du calendrier...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-6 overflow-auto h-full">
+    <DashPage className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 page-header">
-        <div className="animate-fade-in">
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10 animate-bounce-soft">
-              <CalendarIcon className="h-6 w-6 text-primary" />
-            </div>
-            Mon calendrier
-          </h1>
-          <p className="text-muted-foreground mt-1 ml-12">
-            <span className="font-medium text-blue-600 dark:text-blue-400">{visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= new Date()).length}</span> visites confirmées
+      <DashPageHeader
+        title="Mon calendrier"
+        subtitle={
+          <>
+            <span className="font-medium text-foreground">{visites.filter(v => v.statut === 'planifiee' && new Date(v.date_visite) >= new Date()).length}</span> visites confirmées
             <span className="mx-2">•</span>
-            <span className="font-medium text-amber-600 dark:text-amber-400">{visites.filter(v => v.statut === 'proposee').length}</span> en attente
+            <span className="font-medium text-foreground">{visites.filter(v => v.statut === 'proposee').length}</span> en attente
             <span className="mx-2">•</span>
-            <span className="font-medium">{events.length}</span> événements
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+            <span className="font-medium text-foreground">{events.length}</span> événements
+          </>
+        }
+        action={
+        <>
           <Button
             variant="outline"
             onClick={() => setShowShareDialog(true)}
-            className="animate-fade-in animate-delay-100 relative"
+            className="relative rounded-full"
           >
             <Share2 className="h-4 w-4 mr-2" />
             Partage d'agenda
@@ -987,20 +981,21 @@ export default function AgentCalendrier() {
               setEditingEvent(null);
               setShowEventForm(true);
             }}
-            className="animate-fade-in animate-delay-100 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+            className="rounded-full"
           >
             <Plus className="h-4 w-4 mr-2" />
             Nouvel événement
           </Button>
-        </div>
-      </div>
+        </>
+        }
+      />
 
       <AgentCalendarShareDialog open={showShareDialog} onOpenChange={setShowShareDialog} />
 
       {/* Urgent visits alert */}
       {visitesUrgentes.length > 0 && (
-        <Alert variant="destructive" className="animate-fade-in animate-delay-150 border-destructive/50 bg-destructive/10">
-          <AlertTriangle className="h-5 w-5 animate-pulse" />
+        <Alert variant="destructive" className="rounded-2xl border-destructive/30 bg-destructive/5">
+          <AlertTriangle className="h-5 w-5" />
           <AlertDescription>
             <div className="ml-2">
               <h2 className="font-semibold text-destructive mb-2">
@@ -1010,14 +1005,13 @@ export default function AgentCalendrier() {
                 {visitesUrgentes.map((visite, idx) => (
                   <div 
                     key={visite.id} 
-                    className="flex items-center justify-between p-3 bg-background/80 backdrop-blur rounded-lg border border-destructive/20 shadow-sm transition-all duration-200 hover:shadow-md"
-                    style={{ animationDelay: `${idx * 50}ms` }}
+                    className="flex items-center justify-between gap-3 p-3 bg-card rounded-xl border border-border/70"
                   >
-                    <div>
-                      <p className="font-medium">{visite.adresse}</p>
+                    <div className="min-w-0">
+                      <p className="font-medium text-foreground">{visite.adresse}</p>
                       <p className="text-sm text-muted-foreground">
                         <Clock className="h-3 w-3 inline mr-1" />
-                        {new Date(visite.date_visite).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                        {formatZurichTime(visite.date_visite)}
                         {visite.client_profile && (
                           <>
                             <span className="mx-1">•</span>
@@ -1030,7 +1024,7 @@ export default function AgentCalendrier() {
                     <Button 
                       size="sm" 
                       variant="destructive"
-                      className="shadow-sm hover:shadow-md transition-all"
+                      className="shrink-0 rounded-full"
                       onClick={() => handleMarquerEffectuee(visite)}
                     >
                       {visite.est_deleguee ? 'Feedback' : 'Effectuée'}
@@ -1044,13 +1038,15 @@ export default function AgentCalendrier() {
       )}
 
       {/* Filter */}
-      <div className="flex flex-wrap items-center gap-3 p-3 bg-muted/30 rounded-xl animate-fade-in animate-delay-200">
+      <div className={`${DASH_CARD} flex flex-wrap items-center gap-3 p-3 md:p-4`}>
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Filter className="h-4 w-4" />
-          <Label className="text-sm font-medium">Filtrer par client</Label>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+            <Filter className="h-4 w-4" />
+          </span>
+          <Label className="text-sm font-medium text-foreground">Filtrer par client</Label>
         </div>
         <Select value={filterClient} onValueChange={setFilterClient}>
-          <SelectTrigger className="w-[220px] bg-background border-muted-foreground/20 focus:ring-primary/30">
+          <SelectTrigger className="w-full sm:w-[220px] rounded-full bg-background">
             <SelectValue placeholder="Tous les clients" />
           </SelectTrigger>
           <SelectContent>
@@ -1064,7 +1060,7 @@ export default function AgentCalendrier() {
         </Select>
 
         <Select value={scope} onValueChange={(v) => setScope(v as 'mine' | 'co' | 'all')}>
-          <SelectTrigger className="w-[200px] bg-background border-muted-foreground/20">
+          <SelectTrigger className="w-full sm:w-[200px] rounded-full bg-background">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -1074,26 +1070,22 @@ export default function AgentCalendrier() {
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant={confirmedOnly ? 'default' : 'outline'}
-            onClick={() => setConfirmedOnly(true)}
-          >
-            Confirmées par le client
-          </Button>
-          <Button
-            size="sm"
-            variant={confirmedOnly ? 'outline' : 'default'}
-            onClick={() => setConfirmedOnly(false)}
-          >
-            Toutes
-          </Button>
+        <div className="flex min-w-0 max-w-full items-center gap-2 [&>div]:mx-0 [&>div]:mb-0 [&>div]:px-0">
+          <DashFilterPills
+            label="Visites affichées"
+            options={[
+              { key: 'confirmees', label: 'Confirmées par le client' },
+              { key: 'toutes', label: 'Toutes' },
+            ]}
+            value={confirmedOnly ? 'confirmees' : 'toutes'}
+            onChange={(key) => setConfirmedOnly(key === 'confirmees')}
+          />
         </div>
 
         <Button
           variant={showFullHistory ? 'default' : 'outline'}
           size="sm"
+          className="rounded-full"
           onClick={() => setShowFullHistory((v) => !v)}
           title={showFullHistory ? 'Limiter à J-14 → J+90' : 'Afficher tout l\'historique'}
         >
@@ -1105,7 +1097,7 @@ export default function AgentCalendrier() {
       {/* Main content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-w-0 w-full">
         {/* Calendar */}
-        <div className="lg:col-span-2 min-w-0 overflow-hidden animate-fade-in animate-delay-300">
+        <div className="lg:col-span-2 min-w-0 overflow-hidden">
           <EventManagerCalendar
             events={filteredEvents}
             visites={filteredVisites}
@@ -1116,7 +1108,7 @@ export default function AgentCalendrier() {
         </div>
 
         {/* Day events */}
-        <div className="min-w-0 h-[600px] animate-fade-in animate-delay-400">
+        <div className="min-w-0 h-[600px]">
           <PremiumAgentDayEvents
             date={selectedDate}
             events={selectedDayEvents}
@@ -1148,23 +1140,23 @@ export default function AgentCalendrier() {
 
       {/* Event detail dialog */}
       <Dialog open={eventDetailDialogOpen} onOpenChange={setEventDetailDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               Détails de l'événement
-              {selectedEvent?.status === 'effectue' && <Badge variant="secondary">Effectué</Badge>}
-              {selectedEvent?.status === 'annule' && <Badge variant="destructive">Annulé</Badge>}
+              {selectedEvent?.status === 'effectue' && <Badge variant="secondary" className="rounded-full">Effectué</Badge>}
+              {selectedEvent?.status === 'annule' && <Badge variant="destructive" className="rounded-full">Annulé</Badge>}
             </DialogTitle>
           </DialogHeader>
 
           {selectedEvent && (
             <div className="space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline">
+                <Badge variant="outline" className="rounded-full">
                   {eventTypeLabels[selectedEvent.event_type] || selectedEvent.event_type}
                 </Badge>
                 {selectedEvent.priority && (
-                  <Badge variant={selectedEvent.priority === 'urgente' ? 'destructive' : selectedEvent.priority === 'haute' ? 'default' : 'secondary'}>
+                  <Badge className="rounded-full" variant={selectedEvent.priority === 'urgente' ? 'destructive' : selectedEvent.priority === 'haute' ? 'default' : 'secondary'}>
                     {priorityLabels[selectedEvent.priority] || selectedEvent.priority}
                   </Badge>
                 )}
@@ -1177,21 +1169,21 @@ export default function AgentCalendrier() {
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  {format(new Date(selectedEvent.event_date), 'EEEE d MMMM yyyy', { locale: fr })}
+                  {formatZurichDay(selectedEvent.event_date)}
                 </div>
-                {!selectedEvent.all_day && (
+                {!selectedEvent.all_day && formatZurichTime(selectedEvent.event_date) && (
                   <div className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
-                    {format(new Date(selectedEvent.event_date), 'HH:mm')}
+                    {formatZurichTime(selectedEvent.event_date)}
                   </div>
                 )}
                 {selectedEvent.all_day && (
-                  <Badge variant="outline">Journée entière</Badge>
+                  <Badge variant="outline" className="rounded-full">Journée entière</Badge>
                 )}
               </div>
 
               {selectedEvent.description && (
-                <div className="p-3 bg-muted rounded-lg">
+                <div className="p-3 bg-muted/60 rounded-xl">
                   <p className="text-sm">{selectedEvent.description}</p>
                 </div>
               )}
@@ -1206,11 +1198,12 @@ export default function AgentCalendrier() {
           )}
 
           <DialogFooter className="gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => setEventDetailDialogOpen(false)}>
+            <Button variant="outline" className="rounded-full" onClick={() => setEventDetailDialogOpen(false)}>
               Fermer
             </Button>
             <Button
               variant="outline"
+              className="rounded-full"
               onClick={() => {
                 setEventDetailDialogOpen(false);
                 if (selectedEvent) handleEditEvent(selectedEvent);
@@ -1221,6 +1214,7 @@ export default function AgentCalendrier() {
             </Button>
             <Button
               variant="destructive"
+              className="rounded-full"
               onClick={() => {
                 if (selectedEvent) handleDeleteEvent(selectedEvent.id);
               }}
@@ -1244,7 +1238,7 @@ export default function AgentCalendrier() {
 
       {/* Feedback dialog */}
       <Dialog open={feedbackDialogOpen} onOpenChange={setFeedbackDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl rounded-2xl">
           <DialogHeader>
             <DialogTitle>Feedback de la visite déléguée</DialogTitle>
             <DialogDescription>
@@ -1254,7 +1248,7 @@ export default function AgentCalendrier() {
 
           {selectedVisite && (
             <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
+              <div className="p-4 bg-muted/60 rounded-xl">
                 <AddressLink address={selectedVisite.adresse} className="font-semibold" iconClassName="h-4 w-4" />
                 {selectedVisite.offres && (
                   <p className="text-sm text-muted-foreground mt-1">
@@ -1269,7 +1263,7 @@ export default function AgentCalendrier() {
                   <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="recommande" id="recommande" />
                     <Label htmlFor="recommande" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <ThumbsUp className="h-4 w-4 text-green-600" />
+                      <ThumbsUp className="h-4 w-4 text-emerald-600" />
                       <div>
                         <p className="font-medium">Je recommande ce bien</p>
                         <p className="text-xs text-muted-foreground">Le bien correspond aux attentes du client</p>
@@ -1279,7 +1273,7 @@ export default function AgentCalendrier() {
                   <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="neutre" id="neutre" />
                     <Label htmlFor="neutre" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <Minus className="h-4 w-4 text-gray-600" />
+                      <Minus className="h-4 w-4 text-muted-foreground" />
                       <div>
                         <p className="font-medium">Avis neutre</p>
                         <p className="text-xs text-muted-foreground">Le bien a des points positifs et négatifs</p>
@@ -1289,7 +1283,7 @@ export default function AgentCalendrier() {
                   <div className="flex items-center space-x-2 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                     <RadioGroupItem value="deconseille" id="deconseille" />
                     <Label htmlFor="deconseille" className="flex items-center gap-2 cursor-pointer flex-1">
-                      <ThumbsDown className="h-4 w-4 text-red-600" />
+                      <ThumbsDown className="h-4 w-4 text-destructive" />
                       <div>
                         <p className="font-medium">Je ne recommande pas ce bien</p>
                         <p className="text-xs text-muted-foreground">Le bien ne convient pas au client</p>
@@ -1311,33 +1305,33 @@ export default function AgentCalendrier() {
               </div>
 
               <div className="space-y-2">
-                <Label>Photos/Vidéos de la visite (optionnel)</Label>
-                <div className="flex items-center gap-2">
-                  <Input
+                <Label>Photos / vidéos de la visite (optionnel)</Label>
+                <label className={`flex h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-border/70 bg-background/70 text-sm font-medium text-foreground backdrop-blur ${uploadingMedia ? 'pointer-events-none opacity-60' : ''}`}>
+                  {uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploadingMedia ? 'Envoi en cours…' : 'Ajouter photo / vidéo'}
+                  <input
                     type="file"
                     accept="image/*,video/*"
                     multiple
                     onChange={(e) => e.target.files && handleMediaUpload(e.target.files)}
                     disabled={uploadingMedia}
-                    className="flex-1"
+                    className="sr-only"
                   />
-                  {uploadingMedia && (
-                    <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
-                  )}
-                </div>
+                </label>
                 {feedbackMedias.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                     {feedbackMedias.map((media, idx) => (
                       <div key={idx} className="relative group">
                         {media.type.startsWith('image/') ? (
-                          <img src={media.url} alt="" className="w-full h-24 object-cover rounded" />
+                          <img src={media.url} alt="" className="w-full h-24 object-cover rounded-2xl" />
                         ) : (
-                          <video src={media.url} className="w-full h-24 object-cover rounded" />
+                          <video src={media.url} className="w-full h-24 object-cover rounded-2xl" />
                         )}
                         <Button
                           size="icon"
                           variant="destructive"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1.5 right-1.5 h-8 w-8"
+                          aria-label="Retirer ce média"
                           onClick={() => removeMedia(idx)}
                         >
                           <X className="h-3 w-3" />
@@ -1358,10 +1352,10 @@ export default function AgentCalendrier() {
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setFeedbackDialogOpen(false)}>
+            <Button variant="outline" className="rounded-full" onClick={() => setFeedbackDialogOpen(false)}>
               Annuler
             </Button>
-            <Button onClick={handleSaveFeedback} disabled={!feedbackText.trim()}>
+            <Button className="rounded-full" onClick={handleSaveFeedback} disabled={!feedbackText.trim()}>
               Enregistrer et notifier
             </Button>
           </DialogFooter>
@@ -1370,291 +1364,233 @@ export default function AgentCalendrier() {
 
       {/* Detail dialog enrichi */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 flex-wrap">
-              Détails de la visite
-              {selectedVisite?.est_deleguee ? <Badge className="bg-green-600 text-white">Visite déléguée</Badge> : isVisiteConfirmedByClient(offreStatutOf(selectedVisite)) ? <Badge className="bg-emerald-600 text-white">Client s'en occupe</Badge> : null}
-              {selectedVisite?.statut === 'effectuee' && <Badge variant="secondary">Effectuée</Badge>}
-            </DialogTitle>
-          </DialogHeader>
-
-          {selectedVisite?.id && (
-            <div className="rounded-xl border border-[hsl(158_55%_45%)]/30 bg-[hsl(158_55%_45%)]/5 p-3">
-              <VisitLiveButton
-                visiteId={selectedVisite.id}
-                dateVisite={selectedVisite.date_visite}
-                size="default"
-                className="w-full"
-              />
-            </div>
-          )}
-
-          {selectedVisite && (
-            <div className="space-y-6">
-              {/* En-tête avec adresse et date/heure */}
-              <div className="p-4 bg-muted rounded-lg">
-                <AddressLink
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
+          {selectedVisite ? (() => {
+            const o = selectedVisite.offres;
+            return (
+              <>
+                <VisitHero
+                  TitleAs={DialogTitle}
+                  date={selectedVisite.date_visite}
+                  endDate={selectedVisite.date_visite_fin}
+                  kicker="Détails de la visite"
+                  badges={
+                    <>
+                      <VisitStatusBadge statut={selectedVisite.statut} />
+                      {selectedVisite.est_deleguee
+                        ? <DashBadge tone="success">Visite déléguée</DashBadge>
+                        : isVisiteConfirmedByClient(offreStatutOf(selectedVisite))
+                          ? <DashBadge tone="success">Client s'en occupe</DashBadge>
+                          : null}
+                    </>
+                  }
                   address={selectedVisite.adresse}
-                  className="font-semibold text-lg"
-                  iconClassName="h-5 w-5 text-primary"
+                  photoUrl={offrePhotoUrl(o)}
+                  title={o?.titre}
                 />
-                <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground pl-7">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    {format(new Date(selectedVisite.date_visite), 'EEEE d MMMM yyyy', { locale: fr })}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {format(new Date(selectedVisite.date_visite), 'HH:mm')}
-                  </div>
-                </div>
-              </div>
 
-              {/* Intérêt client */}
-              <div className="p-3 rounded-lg border border-border/60 flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium">Intérêt du client :</span>
-                <ClientInteretBadge statutOffre={selectedVisite.offres?.statut} />
-                {getInteretState(selectedVisite.offres?.statut).key === 'attente' && (
-                  <span className="text-xs text-amber-700">
-                    À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.
-                  </span>
-                )}
-              </div>
-
-              {/* Client */}
-
-              {selectedVisite.client_profile && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h5 className="font-medium flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      {selectedVisite.est_deleguee ? 'Visite déléguée pour' : 'Client concerné'}
-                    </h5>
-                    <Button size="sm" variant="outline" onClick={() => setAddClientsDialogOpen(true)}>
-                      ➕ Ajouter des clients
-                    </Button>
-                  </div>
-                  <div className="p-3 border rounded-lg">
-                    <p className="font-medium">
-                      {selectedVisite.client_profile.prenom} {selectedVisite.client_profile.nom}
-                    </p>
-                    {selectedVisite.client_profile.email && (
-                      <p className="text-sm text-muted-foreground">{selectedVisite.client_profile.email}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* SECTION OFFRE COMPLÈTE */}
-              {selectedVisite.offres && (
-                <div className="space-y-3">
-                  <h5 className="font-medium flex items-center gap-2">
-                    <Home className="h-4 w-4" />
-                    Détails de l'offre envoyée
-                  </h5>
-                  <div className="p-4 border rounded-lg space-y-4">
-                    {/* Lien de l'annonce */}
-                    {selectedVisite.offres.lien_annonce && (
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Lien de l'annonce</Label>
-                        <div className="mt-1">
-                          <LinkPreviewCard url={selectedVisite.offres.lien_annonce} showInline />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Date d'envoi */}
-                    {selectedVisite.offres.date_envoi && (
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Date d'envoi de l'offre</Label>
-                        <p className="text-sm">
-                          {format(new Date(selectedVisite.offres.date_envoi), 'dd MMMM yyyy à HH:mm', { locale: fr })}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Grille des caractéristiques */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      {selectedVisite.offres.pieces && (
-                        <div className="p-2 bg-muted rounded">
-                          <p className="text-xs text-muted-foreground">Pièces</p>
-                          <p className="font-medium">{selectedVisite.offres.pieces}</p>
-                        </div>
-                      )}
-                      {selectedVisite.offres.surface && (
-                        <div className="p-2 bg-muted rounded">
-                          <p className="text-xs text-muted-foreground">Surface</p>
-                          <p className="font-medium">{selectedVisite.offres.surface} m²</p>
-                        </div>
-                      )}
-                      <div className="p-2 bg-muted rounded">
-                        <p className="text-xs text-muted-foreground">Prix</p>
-                        <p className="font-medium">{selectedVisite.offres.prix} CHF/mois</p>
-                      </div>
-                      {selectedVisite.offres.etage && (
-                        <div className="p-2 bg-muted rounded">
-                          <p className="text-xs text-muted-foreground">Étage</p>
-                          <p className="font-medium">{selectedVisite.offres.etage}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Disponibilité */}
-                    {selectedVisite.offres.disponibilite && (
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Disponibilité</Label>
-                        <p className="text-sm">{selectedVisite.offres.disponibilite}</p>
-                      </div>
-                    )}
-
-                    {/* Description complète */}
-                    {selectedVisite.offres.description && (
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Description</Label>
-                        <p className="text-sm whitespace-pre-wrap mt-1 p-3 bg-muted/50 rounded max-h-32 overflow-y-auto">
-                          {selectedVisite.offres.description}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Commentaires agent */}
-                    {selectedVisite.offres.commentaires && (
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Commentaires</Label>
-                        <p className="text-sm whitespace-pre-wrap mt-1 p-3 bg-primary/5 rounded">
-                          {selectedVisite.offres.commentaires}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Infos contact */}
-                    {(selectedVisite.offres.concierge_nom || selectedVisite.offres.locataire_nom || selectedVisite.offres.code_immeuble) && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
-                        {selectedVisite.offres.code_immeuble && (
-                          <div className="p-2 border rounded">
-                            <p className="text-xs text-muted-foreground">Code immeuble</p>
-                            <p className="font-mono font-medium">{selectedVisite.offres.code_immeuble}</p>
-                          </div>
-                        )}
-                        {selectedVisite.offres.concierge_nom && (
-                          <div className="p-2 border rounded">
-                            <p className="text-xs text-muted-foreground">Concierge</p>
-                            <p className="font-medium">{selectedVisite.offres.concierge_nom}</p>
-                            {selectedVisite.offres.concierge_tel && (
-                              <a href={`tel:${selectedVisite.offres.concierge_tel}`} className="text-sm text-primary flex items-center gap-1 mt-1">
-                                <Phone className="h-3 w-3" />
-                                {selectedVisite.offres.concierge_tel}
-                              </a>
-                            )}
-                          </div>
-                        )}
-                        {selectedVisite.offres.locataire_nom && (
-                          <div className="p-2 border rounded">
-                            <p className="text-xs text-muted-foreground">Locataire actuel</p>
-                            <p className="font-medium">{selectedVisite.offres.locataire_nom}</p>
-                            {selectedVisite.offres.locataire_tel && (
-                              <a href={`tel:${selectedVisite.offres.locataire_tel}`} className="text-sm text-primary flex items-center gap-1 mt-1">
-                                <Phone className="h-3 w-3" />
-                                {selectedVisite.offres.locataire_tel}
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* SECTION WORKFLOW CANDIDATURE */}
-              {selectedVisite.candidature && (
-                <div className="space-y-3">
-                  <h5 className="font-medium flex items-center gap-2">
-                    📋 Étape du dossier
-                    <Badge variant={
-                      selectedVisite.candidature.statut === 'cles_remises' ? 'default' :
-                      selectedVisite.candidature.statut === 'refusee' ? 'destructive' : 'secondary'
-                    }>
-                      {candidatureStatusLabels[selectedVisite.candidature.statut] || selectedVisite.candidature.statut}
-                    </Badge>
-                  </h5>
-                  <div className="p-4 border rounded-lg bg-muted/30">
-                    <CandidatureWorkflowTimeline currentStatut={selectedVisite.candidature.statut} />
-                  </div>
-                  
-                  {/* Bouton pour mettre à jour le statut si pas terminé/refusé */}
-                  {nextStatusOptions[selectedVisite.candidature.statut] && (
-                    <div className="flex flex-wrap gap-2">
-                      {nextStatusOptions[selectedVisite.candidature.statut].map((option) => (
-                        <Button 
-                          key={option.value}
-                          variant={option.value === 'refusee' ? 'destructive' : 'outline'}
-                          size="sm"
-                          onClick={() => handleUpdateCandidatureStatus(selectedVisite.candidature.id, option.value)}
-                        >
-                          {option.label}
-                        </Button>
-                      ))}
-                    </div>
+                <VisitBody>
+                  {selectedVisite.id && (
+                    <VisitLiveButton
+                      visiteId={selectedVisite.id}
+                      dateVisite={selectedVisite.date_visite}
+                      size="default"
+                      className="h-12 w-full"
+                    />
                   )}
-                </div>
-              )}
 
-              {/* Notes de la visite */}
-              {selectedVisite.notes && (
-                <div className="space-y-2">
-                  <h5 className="font-medium">💬 Notes</h5>
-                  <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                    <p className="text-sm">{selectedVisite.notes}</p>
+                  {/* Intérêt client */}
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-medium text-muted-foreground">Intérêt du client</span>
+                      <ClientInteretBadge statutOffre={o?.statut} />
+                    </div>
+                    {getInteretState(o?.statut).key === 'attente' && (
+                      <VisitNote tone="warning">À CONFIRMER — le client n'a pas encore répondu, la visite n'est pas ferme.</VisitNote>
+                    )}
                   </div>
-                </div>
-              )}
 
-              {/* Feedback si effectuée */}
-              {selectedVisite.statut === 'effectuee' && selectedVisite.feedback_agent && (
-                <div className="space-y-2">
-                  <h5 className="font-medium flex items-center gap-2">
-                    📝 Mon feedback
-                    {selectedVisite.recommandation_agent && getRecommandationBadge(selectedVisite.recommandation_agent)}
-                  </h5>
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-sm">{selectedVisite.feedback_agent}</p>
-                  </div>
-                </div>
-              )}
+                  {/* Infos clés */}
+                  {o && (
+                    <VisitInfoTiles
+                      items={[
+                        { icon: Home, label: 'Type', value: o.type_bien },
+                        { label: 'Pièces', value: o.pieces },
+                        { label: 'Surface', value: o.surface ? `${o.surface} m²` : undefined },
+                        { label: 'Étage', value: o.etage },
+                        { label: 'Loyer', value: o.prix !== null && o.prix !== undefined && o.prix !== '' ? formatCHF(o.prix, ' / mois') : undefined },
+                        { label: 'Disponibilité', value: o.disponibilite },
+                        { label: 'Code immeuble', value: o.code_immeuble ? <span className="font-mono">{o.code_immeuble}</span> : undefined },
+                        { label: 'Offre envoyée le', value: o.date_envoi ? formatZurichDateTime(o.date_envoi, { short: true, year: true }) : undefined },
+                      ]}
+                    />
+                  )}
 
-              {/* Vidéo(s) de la visite — lecteur inline */}
-              <VisitVideoPlayer medias={selectedVisite.medias} />
+                  {/* Contact sur place */}
+                  {o && (o.concierge_nom || o.locataire_nom) && (
+                    <VisitSection icon={Phone} title="Contact sur place">
+                      {o.concierge_nom && (
+                        <VisitPersonRow
+                          role="Concierge"
+                          name={o.concierge_nom}
+                          sub={o.concierge_tel || undefined}
+                          action={o.concierge_tel ? (
+                            <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label={`Appeler ${o.concierge_nom}`}>
+                              <a href={`tel:${o.concierge_tel}`}><Phone className="h-4 w-4" /></a>
+                            </Button>
+                          ) : undefined}
+                        />
+                      )}
+                      {o.locataire_nom && (
+                        <VisitPersonRow
+                          role="Locataire actuel"
+                          name={o.locataire_nom}
+                          sub={o.locataire_tel || undefined}
+                          action={o.locataire_tel ? (
+                            <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label={`Appeler ${o.locataire_nom}`}>
+                              <a href={`tel:${o.locataire_tel}`}><Phone className="h-4 w-4" /></a>
+                            </Button>
+                          ) : undefined}
+                        />
+                      )}
+                    </VisitSection>
+                  )}
 
-              {/* Compte-rendu de la visite (formulaire partagé admin/agent/coursier) */}
-              <CompteRenduVisiteForm role="agent" visiteId={selectedVisite.id} embedded onSent={() => loadData()} />
+                  {/* Participants */}
+                  {selectedVisite.client_profile && (
+                    <VisitSection
+                      icon={User}
+                      title="Participants"
+                      action={
+                        <Button size="sm" variant="outline" className="min-h-9" onClick={() => setAddClientsDialogOpen(true)}>
+                          <Plus className="h-4 w-4" /> Ajouter
+                        </Button>
+                      }
+                    >
+                      <VisitPersonRow
+                        role={selectedVisite.est_deleguee ? 'Visite déléguée pour' : 'Client concerné'}
+                        name={`${selectedVisite.client_profile.prenom || ''} ${selectedVisite.client_profile.nom || ''}`.trim() || 'Client'}
+                        sub={selectedVisite.client_profile.email || undefined}
+                      />
+                    </VisitSection>
+                  )}
 
-            </div>
+                  {/* Description, commentaires */}
+                  {(o?.description || o?.commentaires) && (
+                    <VisitSection icon={Home} title="Détails de l'offre envoyée">
+                      {o.description && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground">Description</p>
+                          <VisitNote>{o.description}</VisitNote>
+                        </div>
+                      )}
+                      {o.commentaires && (
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground">Commentaires</p>
+                          <VisitNote>{o.commentaires}</VisitNote>
+                        </div>
+                      )}
+                    </VisitSection>
+                  )}
+
+                  {/* Workflow candidature */}
+                  {selectedVisite.candidature && (
+                    <VisitSection
+                      icon={CalendarIcon}
+                      title="Étape du dossier"
+                      action={
+                        <DashBadge tone={selectedVisite.candidature.statut === 'cles_remises' ? 'success' : selectedVisite.candidature.statut === 'refusee' ? 'danger' : 'muted'}>
+                          {candidatureStatusLabels[selectedVisite.candidature.statut] || selectedVisite.candidature.statut}
+                        </DashBadge>
+                      }
+                    >
+                      <CandidatureWorkflowTimeline currentStatut={selectedVisite.candidature.statut} />
+                      {nextStatusOptions[selectedVisite.candidature.statut] && (
+                        <div className="flex flex-wrap gap-2">
+                          {nextStatusOptions[selectedVisite.candidature.statut].map((option) => (
+                            <Button
+                              key={option.value}
+                              variant={option.value === 'refusee' ? 'destructive' : 'outline'}
+                              className="min-h-11"
+                              onClick={() => handleUpdateCandidatureStatus(selectedVisite.candidature.id, option.value)}
+                            >
+                              {option.label}
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                    </VisitSection>
+                  )}
+
+                  {/* Notes */}
+                  {selectedVisite.notes && (
+                    <VisitSection icon={Pencil} title="Notes">
+                      <VisitNote tone="warning">{selectedVisite.notes}</VisitNote>
+                    </VisitSection>
+                  )}
+
+                  {/* Feedback si effectuée */}
+                  {selectedVisite.statut === 'effectuee' && selectedVisite.feedback_agent && (
+                    <VisitSection
+                      icon={ThumbsUp}
+                      title="Mon feedback"
+                      action={selectedVisite.recommandation_agent ? getRecommandationBadge(selectedVisite.recommandation_agent) : undefined}
+                    >
+                      <VisitNote>{selectedVisite.feedback_agent}</VisitNote>
+                    </VisitSection>
+                  )}
+
+                  {/* Lien de l'annonce */}
+                  {o?.lien_annonce && (
+                    <VisitSection icon={MapPin} title="Lien de l'annonce">
+                      <div className="min-w-0 overflow-hidden">
+                        <LinkPreviewCard url={o.lien_annonce} showInline />
+                      </div>
+                    </VisitSection>
+                  )}
+
+                  {/* Vidéo(s) de la visite — lecteur inline */}
+                  <VisitVideoPlayer medias={selectedVisite.medias} />
+
+                  {/* Compte rendu (formulaire partagé) — une seule entrée « Ajouter photo / vidéo » */}
+                  <CompteRenduVisiteForm
+                    role="agent"
+                    visiteId={selectedVisite.id}
+                    embedded
+                    onSent={() => loadData()}
+                    videoShare={{ visite: selectedVisite }}
+                  />
+                </VisitBody>
+
+                <VisitActionBar
+                  primary={
+                    selectedVisite.statut === 'planifiee' ? (
+                      <Button onClick={() => {
+                        setDetailDialogOpen(false);
+                        handleMarquerEffectuee(selectedVisite);
+                      }}>
+                        {selectedVisite.est_deleguee ? 'Donner mon feedback' : 'Marquer effectuée'}
+                      </Button>
+                    ) : (
+                      <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>Fermer</Button>
+                    )
+                  }
+                >
+                  <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
+                    <Pencil className="h-4 w-4" /> Modifier
+                  </Button>
+                  <Button variant="outline" onClick={() => handleDelegateToCoursier(selectedVisite)}>
+                    <User className="h-4 w-4" /> Déléguer au coursier
+                  </Button>
+                  {selectedVisite.statut === 'planifiee' && (
+                    <Button variant="ghost" onClick={() => setDetailDialogOpen(false)}>Fermer</Button>
+                  )}
+                </VisitActionBar>
+              </>
+            );
+          })() : (
+            <DialogTitle className="sr-only">Détails de la visite</DialogTitle>
           )}
-
-          <DialogFooter className="gap-2 pt-4 border-t">
-            {selectedVisite && (
-              <Button variant="outline" onClick={() => setEditVisiteOpen(true)}>
-                <Pencil className="w-4 h-4 mr-2" />
-                Modifier la visite
-              </Button>
-            )}
-            {selectedVisite && (
-              <VisitVideoShareButton visite={selectedVisite} variant="outline" />
-            )}
-            <Button variant="outline" onClick={() => handleDelegateToCoursier(selectedVisite)} className='bg-blue-600 hover:bg-blue-700 text-white'>Deleguer au coursier</Button><Button variant='outline' onClick={() => setDetailDialogOpen(false)}>
-              Fermer
-            </Button>
-            {selectedVisite?.statut === 'planifiee' && (
-              <Button onClick={() => {
-                setDetailDialogOpen(false);
-                handleMarquerEffectuee(selectedVisite);
-              }}>
-                {selectedVisite.est_deleguee ? 'Donner mon feedback' : 'Marquer effectuée'}
-              </Button>
-            )}
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1695,6 +1631,6 @@ export default function AgentCalendrier() {
           loadData();
         }}
       />
-    </div>
+    </DashPage>
   );
 }

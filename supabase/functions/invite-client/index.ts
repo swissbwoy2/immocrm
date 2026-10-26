@@ -353,6 +353,14 @@ serve(async (req) => {
       userId = existingUser.id;
       message = 'Compte existant complété';
       isNewUser = false;
+    } else if (existingUser && callerIsStaff && storedMandate) {
+      // Activation par l'équipe d'un mandat dont le compte a déjà été créé à la signature
+      // (/nouveau-mandat) : le client a déjà reçu son code de connexion par e-mail.
+      // On NE régénère PAS le mot de passe, sinon le premier code devient « Invalid login credentials ».
+      // (Pour renvoyer un nouveau code : bouton « Inviter / renvoyer » de la fiche client.)
+      userId = existingUser.id;
+      message = 'Compte existant activé — code de connexion inchangé';
+      isNewUser = false;
     } else if (existingUser) {
       const syncEmail = !!normalizedEmail && (existingUser.email || '').toLowerCase() !== normalizedEmail
         && !existingUsers?.users?.some(u => (u.email || '').toLowerCase() === normalizedEmail);

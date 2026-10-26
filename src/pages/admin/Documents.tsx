@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { getStoragePath, formatFileSize as formatFileSizeUtil } from '@/lib/documentUtils';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 export default function AdminDocuments() {
   const { user } = useAuth();
@@ -412,10 +413,10 @@ export default function AdminDocuments() {
                 className="w-full h-auto"
               />
             ) : selectedDocument?.type.includes('pdf') ? (
-              <iframe
+              <PdfPreview
                 src={previewUrl}
                 className="w-full h-[70vh]"
-                title="Document preview"
+                title={selectedDocument?.nom}
               />
             ) : (
               <p className="text-center text-muted-foreground py-8">

@@ -365,13 +365,13 @@ export default function PDFFormFillerDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl max-h-[95vh] p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-primary/5 to-accent/5">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/70">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground shadow-lg">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
               <FileText className="h-5 w-5" />
             </div>
             <div>
-              <DialogTitle className="text-xl font-bold">Remplir un formulaire de location</DialogTitle>
+              <DialogTitle className="text-lg font-semibold">Remplir un formulaire de location</DialogTitle>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Importez un PDF, ajoutez du texte et signez
               </p>
@@ -389,7 +389,7 @@ export default function PDFFormFillerDialog({
           {/* Main content */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Toolbar */}
-            <div className="flex items-center justify-between gap-4 px-4 py-3 border-b bg-muted/30">
+            <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-border/70 bg-muted/40">
               <div className="flex items-center gap-2">
                 <input
                   ref={fileInputRef}
@@ -402,7 +402,7 @@ export default function PDFFormFillerDialog({
                   variant="outline"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
-                  className="gap-2"
+                  className="gap-2 rounded-full"
                 >
                   <Upload className="h-4 w-4" />
                   {pdfFile ? 'Changer PDF' : 'Importer PDF'}
@@ -417,12 +417,12 @@ export default function PDFFormFillerDialog({
               {pdfFile && (
                 <>
                   {/* Mode buttons */}
-                  <div className="flex items-center gap-1 bg-background rounded-lg p-1 border">
+                  <div className="flex items-center gap-1 bg-background rounded-full p-1 border border-border/70">
                     <Button
                       variant={mode === 'select' ? 'default' : 'ghost'}
                       size="sm"
                       onClick={() => setMode('select')}
-                      className="gap-1.5"
+                      className="gap-1.5 rounded-full"
                     >
                       <MousePointer className="h-4 w-4" />
                       Sélection
@@ -431,7 +431,7 @@ export default function PDFFormFillerDialog({
                       variant={mode === 'text' ? 'default' : 'ghost'}
                       size="sm"
                       onClick={() => setMode('text')}
-                      className="gap-1.5"
+                      className="gap-1.5 rounded-full"
                     >
                       <Type className="h-4 w-4" />
                       Texte
@@ -440,7 +440,7 @@ export default function PDFFormFillerDialog({
                       variant={mode === 'signature' ? 'default' : 'ghost'}
                       size="sm"
                       onClick={() => setMode('signature')}
-                      className="gap-1.5"
+                      className="gap-1.5 rounded-full"
                     >
                       <Pen className="h-4 w-4" />
                       Signature
@@ -525,8 +525,8 @@ export default function PDFFormFillerDialog({
 
             {/* Text input modal */}
             {isAddingText && (
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50">
-                <Card className="p-6 w-80 space-y-4">
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-50">
+                <Card className="p-6 w-80 space-y-4 rounded-2xl border-border/70">
                   <div className="flex items-center justify-between">
                     <Label className="font-semibold">Ajouter du texte</Label>
                     <Button variant="ghost" size="icon" onClick={() => setIsAddingText(false)}>
@@ -552,7 +552,7 @@ export default function PDFFormFillerDialog({
                     />
                     <span className="text-sm text-muted-foreground">px</span>
                   </div>
-                  <Button onClick={addTextAnnotation} className="w-full gap-2">
+                  <Button onClick={addTextAnnotation} className="w-full gap-2 rounded-full">
                     <Check className="h-4 w-4" />
                     Ajouter
                   </Button>
@@ -571,7 +571,7 @@ export default function PDFFormFillerDialog({
                     <div className="flex items-center justify-between mb-2">
                       <Label className="font-semibold">Annotations ({annotations.length})</Label>
                       {annotations.length > 0 && (
-                        <Button variant="ghost" size="sm" onClick={clearAll} className="h-7 text-xs text-destructive">
+                        <Button variant="ghost" size="sm" onClick={clearAll} className="h-7 text-xs text-destructive rounded-full">
                           <Trash2 className="h-3 w-3 mr-1" />
                           Tout effacer
                         </Button>
@@ -586,7 +586,7 @@ export default function PDFFormFillerDialog({
                         {pageAnnotations.map((annotation) => (
                           <div
                             key={annotation.id}
-                            className="flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm"
+                            className="flex items-center justify-between p-2 bg-muted/40 border border-border/70 rounded-xl text-sm"
                           >
                             <span className="truncate flex-1">{annotation.text}</span>
                             <Button
@@ -606,7 +606,7 @@ export default function PDFFormFillerDialog({
                   {/* Signature pad */}
                   <div>
                     <Label className="font-semibold mb-2 block">Signature</Label>
-                    <div className="border rounded-lg overflow-hidden">
+                    <div className="border border-border/70 rounded-xl overflow-hidden">
                       <SignaturePad
                         value={signatureData}
                         onChange={setSignatureData}
@@ -629,7 +629,7 @@ export default function PDFFormFillerDialog({
                 <Button
                   onClick={handleDownload}
                   disabled={!pdfFile || isGenerating}
-                  className="w-full gap-2"
+                  className="w-full gap-2 rounded-full"
                   variant="outline"
                 >
                   <Download className="h-4 w-4" />
@@ -639,7 +639,7 @@ export default function PDFFormFillerDialog({
                   <Button
                     onClick={handleSave}
                     disabled={!pdfFile || isSaving}
-                    className="w-full gap-2"
+                    className="w-full gap-2 rounded-full"
                   >
                     <Save className="h-4 w-4" />
                     {isSaving ? 'Sauvegarde...' : 'Sauvegarder dans les documents'}

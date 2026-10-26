@@ -1,12 +1,20 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import type { SteeveCue } from '@/components/steeve/SteeveLauncher';
+import type { SteeveGesture } from '@/components/steeve/mascot/steeve-mascot';
 
 interface FloatingMessengerContextValue {
   isOpen: boolean;
   activeConversationId: string | null;
   unreadCount: number;
   hasNew: boolean;
+  /** Attente réelle en cours (envoi, réponse de Steeve attendue) : affichée par Steeve. */
+  busy: boolean;
+  setBusy: (value: boolean) => void;
+  /** Dernière réaction demandée à Steeve (événement réel : message envoyé, réponse reçue, erreur…). */
+  cue: SteeveCue | null;
+  react: (gesture: SteeveGesture, message?: string) => void;
   open: () => void;
   close: () => void;
   toggle: () => void;
@@ -24,6 +32,11 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [hasNew, setHasNew] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [cue, setCue] = useState<SteeveCue | null>(null);
+  const react = useCallback((gesture: SteeveGesture, message?: string) => {
+    setCue((prev) => ({ key: (Number(prev?.key) || 0) + 1, gesture, message }));
+  }, []);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const refreshUnread = useCallback(async () => {
@@ -58,6 +71,7 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
       const { count } = await supabase
         .from('messages')
         .select('id', { count: 'exact', head: true })
+        .eq('masque_messagerie', false)
         .in('conversation_id', convIds)
         .eq('read', false)
         .neq('sender_id', user.id);
@@ -72,6 +86,14 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
   useEffect(() => {
     refreshUnread();
   }, [refreshUnread]);
+
+  // Changement ou fin de session : la messagerie se referme et oublie la conversation de l'ancien compte.
+  useEffect(() => {
+    setIsOpen(false);
+    setActiveConversationId(null);
+    setHasNew(false);
+    setBusy(false);
+  }, [user?.id]);
 
   // Realtime subscription on messages
   useEffect(() => {
@@ -88,6 +110,7 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
         { event: 'INSERT', schema: 'public', table: 'messages' },
         (payload: any) => {
           const m = payload.new;
+          if (m?.masque_messagerie) return;
           if (!m) return;
           if (m.sender_id === user.id) return; // own message
           // bump unread + show pulse
@@ -136,6 +159,10 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
     activeConversationId,
     unreadCount,
     hasNew,
+    busy,
+    setBusy,
+    cue,
+    react,
     open,
     close,
     toggle,
@@ -143,7 +170,7 @@ export function FloatingMessengerProvider({ children }: { children: ReactNode })
     setActiveConversation,
     acknowledgeNew,
     refreshUnread,
-  }), [isOpen, activeConversationId, unreadCount, hasNew, open, close, toggle, openWith, setActiveConversation, acknowledgeNew, refreshUnread]);
+  }), [isOpen, activeConversationId, unreadCount, hasNew, busy, cue, react, open, close, toggle, openWith, setActiveConversation, acknowledgeNew, refreshUnread]);
 
   return (
     <FloatingMessengerContext.Provider value={value}>

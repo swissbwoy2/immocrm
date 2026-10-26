@@ -1,7 +1,6 @@
-import { EmailLayout, emailStyles } from '../email-layout.tsx'
+import { EmailButton, EmailCode, EmailDetails, EmailHeading, EmailLayout, EmailNote, EmailText } from '../email-layout.tsx'
 import type { TemplateEntry } from './registry.ts'
 import * as React from 'npm:react@18.3.1'
-import { Button, Heading, Section, Text } from 'npm:@react-email/components@0.0.22'
 
 interface ClientCredentialsEmailProps {
   siteUrl?: string
@@ -18,36 +17,24 @@ export const ClientCredentialsEmail = ({
   tempPassword,
   prenom,
 }: ClientCredentialsEmailProps) => (
-  <EmailLayout preview={`Vos identifiants de connexion Logisorama`}>
-<Heading className="email-heading" style={h1}>Vos identifiants de connexion</Heading>
-        <Text style={text}>
-          {prenom ? `Bonjour ${prenom},` : 'Bonjour,'}
-        </Text>
-        <Text style={text}>
-          Votre compte Logisorama a été créé. Voici vos identifiants provisoires pour vous connecter :
-        </Text>
-
-        <Section style={box}>
-          <Text style={label}>Email</Text>
-          <Text style={value}>{recipient}</Text>
-          <Text style={label}>Mot de passe provisoire</Text>
-          <Text style={code}>{tempPassword}</Text>
-        </Section>
-
-        <Section style={{ textAlign: 'center', margin: '32px 0' }}>
-          <Button style={button} href={`${siteUrl}/login`}>
-            Se connecter
-          </Button>
-        </Section>
-
-        <Text style={text}>
-          <strong>Important :</strong> pour votre sécurité, nous vous recommandons de changer ce mot de passe dès votre première connexion dans <strong>Paramètres → Changer le mot de passe</strong>.
-        </Text>
-
-        <Text style={text}>
-          Si vous n'êtes pas à l'origine de cette création de compte, ignorez simplement cet email ou contactez-nous.
-        </Text>
-    </EmailLayout>
+  <EmailLayout category="VOTRE COMPTE" preview={`Vos identifiants de connexion Logisorama`}>
+    <EmailHeading>Vos identifiants de connexion</EmailHeading>
+    <EmailText>{prenom ? `Bonjour ${prenom},` : 'Bonjour,'}</EmailText>
+    <EmailText>
+      Votre compte Logisorama a été créé. Voici vos identifiants provisoires pour vous connecter :
+    </EmailText>
+    <EmailDetails rows={[
+      ['E-mail', recipient],
+      ['Mot de passe provisoire', <EmailCode>{tempPassword}</EmailCode>],
+    ]} />
+    <EmailButton href={`${siteUrl}/login`}>Se connecter</EmailButton>
+    <EmailNote title="Important">
+      Pour votre sécurité, changez ce mot de passe dès votre première connexion dans <strong>Paramètres → Changer le mot de passe</strong>.
+    </EmailNote>
+    <EmailText muted>
+      Si vous n'êtes pas à l'origine de cette création de compte, ignorez simplement cet e-mail ou contactez-nous.
+    </EmailText>
+  </EmailLayout>
 )
 
 export const template = {
@@ -61,5 +48,3 @@ export const template = {
     prenom: 'Marie',
   },
 } satisfies TemplateEntry
-
-const { box, button, code, h1, label, text, value } = emailStyles

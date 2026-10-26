@@ -43,7 +43,7 @@ export function AchatVisitReportsList({ reports, properties }: AchatVisitReports
                 {r.date_visite && (
                   <div className="text-xs text-muted-foreground flex items-center gap-1.5 mb-2">
                     <Calendar className="h-3 w-3" />
-                    Visite du {new Date(r.date_visite).toLocaleDateString('fr-CH')}
+                    Visite du {new Date(r.date_visite).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}
                   </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">

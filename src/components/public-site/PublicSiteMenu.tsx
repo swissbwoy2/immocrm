@@ -42,7 +42,7 @@ const menuGroups: MenuGroup[] = [
   {
     title: 'Outils',
     items: [
-      { to: '#analyse-dossier', label: 'Test solvabilité', icon: FileSearch, anchor: true },
+      { to: '/analyse-dossier', label: 'Test solvabilité', icon: FileSearch },
       { to: '#calculateur', label: 'Calculateur budget', icon: Calculator, anchor: true },
     ],
   },

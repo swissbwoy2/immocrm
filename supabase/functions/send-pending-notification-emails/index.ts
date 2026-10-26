@@ -1,4 +1,5 @@
 import { renderNotificationEmail as generateEmailHtml } from '../_shared/email-brand.ts';
+import { humanizeISODates } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "../_shared/tracked-resend.ts";
@@ -155,10 +156,10 @@ serve(async (req) => {
       }
 
       try {
-        const userName = profile.prenom ? `${profile.prenom}` : undefined;
+        const userName = profile.prenom?.trim() || undefined;
         const emailHtml = generateEmailHtml(
           notification.title,
-          notification.message || '',
+          humanizeISODates(notification.message || ''),
           notification.type,
           notification.link,
           userName

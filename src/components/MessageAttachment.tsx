@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { useSignedUrl } from "@/lib/storageUrl";
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 
 interface MessageAttachmentProps {
@@ -84,7 +85,7 @@ export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, s
             <div className="relative">
               <img src={url} alt={name} className="w-full h-auto max-h-[85vh] object-contain" />
               <div className="absolute top-2 right-2 flex gap-2">
-                <Button variant="secondary" size="sm" onClick={handleDownload}>
+                <Button variant="secondary" size="sm" className="rounded-full" onClick={handleDownload}>
                   <Download className="h-4 w-4 mr-1" />
                   Télécharger
                 </Button>
@@ -147,23 +148,23 @@ export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, s
 
           <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
             <DialogContent className="max-w-lg p-0 overflow-hidden">
-              <DialogHeader className="p-4 border-b">
-                <DialogTitle className="flex items-center justify-between">
+              <DialogHeader className="p-4 border-b border-border/70">
+                <DialogTitle className="flex items-center justify-between text-base font-semibold">
                   <span className="truncate">{name}</span>
                 </DialogTitle>
               </DialogHeader>
-              <div className="flex items-center justify-center bg-muted/50 p-8">
+              <div className="flex items-center justify-center bg-muted/40 p-8">
                 <div className="text-center max-w-md">
-                  <div className="h-20 w-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                    <Video className="h-10 w-10 text-white" />
+                  <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                    <Video className="h-8 w-8" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">{name}</h3>
                   <p className="text-muted-foreground mb-4">{formatSize(size)}</p>
                   
-                  <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-4 mb-4 text-left">
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4 text-left">
                     {isMovFile ? (
                       <>
-                        <p className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">
+                        <p className="text-sm font-medium text-amber-700 dark:text-amber-300 mb-2">
                           📱 Vidéo enregistrée sur iPhone
                         </p>
                         <p className="text-sm text-muted-foreground">
@@ -179,7 +180,7 @@ export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, s
                       </>
                     ) : (
                       <>
-                        <p className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">
+                        <p className="text-sm font-medium text-amber-700 dark:text-amber-300 mb-2">
                           Format vidéo non supporté
                         </p>
                         <p className="text-sm text-muted-foreground">
@@ -192,7 +193,7 @@ export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, s
                     )}
                   </div>
                   
-                  <Button onClick={handleDownload} className="w-full">
+                  <Button onClick={handleDownload} className="w-full rounded-full">
                     <Download className="h-4 w-4 mr-2" />
                     Télécharger la vidéo
                   </Button>
@@ -269,9 +270,9 @@ export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, s
                 <source src={url} type={videoMimeType} />
                 {isMovFile && <source src={url} type="video/mp4" />}
               </video>
-              <div className="p-3 flex items-center justify-between bg-background border-t">
+              <div className="p-3 flex items-center justify-between bg-background border-t border-border/70">
                 <p className="text-sm truncate">{name}</p>
-                <Button asChild size="sm">
+                <Button asChild size="sm" className="rounded-full">
                   <a href={url} target="_blank" rel="noreferrer" download={name}>
                     <Download className="h-4 w-4 mr-2" /> Télécharger
                   </a>
@@ -343,17 +344,17 @@ export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, s
 
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
           <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden">
-            <DialogHeader className="p-4 border-b">
-              <DialogTitle className="flex items-center justify-between">
+            <DialogHeader className="p-4 border-b border-border/70">
+              <DialogTitle className="flex items-center justify-between text-base font-semibold">
                 <span className="truncate">{name}</span>
-                <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={handleDownload}>
                   <Download className="h-4 w-4 mr-1" />
                   Télécharger
                 </Button>
               </DialogTitle>
             </DialogHeader>
-            <iframe 
-              src={`${url}#toolbar=1&navpanes=1&scrollbar=1`}
+            <PdfPreview
+              src={url}
               className="w-full h-full border-0"
               title={name}
             />
@@ -393,10 +394,10 @@ export const MessageAttachment = ({ url: rawUrl, type: rawType, name: rawName, s
 
         <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
           <DialogContent className="max-w-5xl h-[90vh] p-0 overflow-hidden">
-            <DialogHeader className="p-4 border-b">
-              <DialogTitle className="flex items-center justify-between">
+            <DialogHeader className="p-4 border-b border-border/70">
+              <DialogTitle className="flex items-center justify-between text-base font-semibold">
                 <span className="truncate">{name}</span>
-                <Button variant="outline" size="sm" onClick={handleDownload}>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={handleDownload}>
                   <Download className="h-4 w-4 mr-1" />
                   Télécharger
                 </Button>

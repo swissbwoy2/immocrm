@@ -4,6 +4,9 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import {
   Activity,
   ArrowLeft,
+  CheckCircle2,
+  Clock,
+  FileText,
   ArrowRight,
   Code2,
   Download,
@@ -34,7 +37,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
+import { DASH_CARD, DashBadge, DashPageHeader } from "@/components/client/dashboard/DashPrimitives";
 import { newsletterApi as api } from "@/features/newsletter/api";
 import {
   type Campaign,
@@ -48,7 +51,8 @@ import {
   sourceLabel,
   STATUS_LABELS,
 } from "@/features/newsletter/model";
-import { NEWSLETTER_TEMPLATES } from "@/features/newsletter/templates";
+import { NEWSLETTER_TEMPLATE_SECTIONS } from "@/features/newsletter/templates";
+import { rcDb } from "@/features/newsletter/rc-api";
 
 import NewsletterTracking from "@/features/newsletter/Tracking";
 import NewsletterSequences from "@/features/newsletter/Sequences";
@@ -58,7 +62,7 @@ const VisualEditor = lazy(
 );
 
 const selectClass =
-  "flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm";
+  "flex h-10 w-full rounded-xl border border-input bg-background px-3 text-sm";
 const tz = "Europe/Zurich";
 const dateLabel = (value: string | null) =>
   value ? formatInTimeZone(value, tz, "dd.MM.yyyy à HH:mm") : "";
@@ -373,9 +377,23 @@ export default function Newsletter() {
   }
   const selectionPanel = (
     <div className="space-y-4">
+      {draft.html.includes("utm_campaign=rc-dossier-beton") && <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+        <p className="mb-3">Campagne RC : sélectionnez les comptes candidats et les clients actifs. Les désinscriptions et exclusions sont conservées.</p>
+        <Button className="rounded-full" variant="outline" disabled={busy || locked} onClick={() => void run(async () => {
+          const result = await rcDb.rpc("newsletter_rc_audience");
+          if (result.error) throw new Error("Le ciblage RC n’a pas pu être chargé.");
+          const ids = (result.data || []) as { contact_id: string }[];
+          const refreshed = await api<{ contacts: Contact[] }>({ action: "contacts" });
+          setContacts(refreshed.contacts);
+          setSelected(new Set(ids.map(row => row.contact_id)));
+          setQuery(""); setKind("all"); setCategory("all"); setContactSource("all"); setContactForm("all");
+          toast.success(`${ids.length} contacts éligibles sélectionnés pour la campagne RC`);
+        })}>Sélectionner les clients actifs et candidats</Button>
+      </div>}
       <div className="grid gap-3 md:grid-cols-3">
         <Input
           aria-label="Rechercher des contacts"
+          className="rounded-xl"
           placeholder="Nom ou email…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -436,7 +454,7 @@ export default function Newsletter() {
         </p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <Button
+        <Button className="rounded-full"
           variant="outline"
           size="sm"
           disabled={locked || busy}
@@ -445,7 +463,7 @@ export default function Newsletter() {
         >
           Sélectionner les {eligible.length} contacts éligibles affichés
         </Button>
-        <Button
+        <Button className="rounded-full"
           variant="ghost"
           size="sm"
           onClick={() => setSelected(new Set())}
@@ -457,22 +475,23 @@ export default function Newsletter() {
           {recipients.length} sélectionnés, y compris dans les autres filtres
         </span>
       </div>
-      <div className="overflow-x-auto rounded-xl border">
+      <div className={`${DASH_CARD} overflow-hidden`}>
+       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-muted/60 text-left">
+          <thead className="bg-muted/40 text-left text-xs font-medium text-muted-foreground">
             <tr>
-              <th className="p-3">Choix</th>
-              <th className="p-3">Contact</th>
-              <th className="p-3">Dernier lead ↓</th>
-              <th className="p-3">Source / formulaire</th>
-              <th className="p-3">Type et catégories</th>
-              <th className="p-3">Statut</th>
+              <th className="p-3 font-medium">Choix</th>
+              <th className="p-3 font-medium">Contact</th>
+              <th className="p-3 font-medium">Dernier lead ↓</th>
+              <th className="p-3 font-medium">Source / formulaire</th>
+              <th className="p-3 font-medium">Type et catégories</th>
+              <th className="p-3 font-medium">Statut</th>
               <th />
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border/70 border-t border-border/70">
             {visible.slice((page - 1) * 40, page * 40).map((c) => (
-              <tr key={c.id} className="border-t">
+              <tr key={c.id} className="transition-colors hover:bg-muted/50">
                 <td className="p-3">
                   <Checkbox
                     aria-label={`Sélectionner ${c.email}`}
@@ -489,7 +508,7 @@ export default function Newsletter() {
                   />
                 </td>
                 <td className="p-3">
-                  <div className="font-medium">
+                  <div className="font-medium text-foreground">
                     {[c.first_name, c.last_name].filter(Boolean).join(" ") ||
                       c.email}
                   </div>
@@ -515,7 +534,7 @@ export default function Newsletter() {
                       key={`${p.source}:${p.form_key}`}
                       className="mb-2 last:mb-0"
                     >
-                      <Badge variant="secondary">{sourceLabel(p.source)}</Badge>
+                      <DashBadge tone="muted">{sourceLabel(p.source)}</DashBadge>
                       {p.form_name && (
                         <div className="mt-1 text-xs text-muted-foreground">
                           {p.form_name}
@@ -526,9 +545,9 @@ export default function Newsletter() {
                   {!c.provenance?.length && sourceLabel(c.source || "unknown")}
                 </td>
                 <td className="p-3">
-                  <Badge variant="outline">
+                  <DashBadge tone="neutral">
                     {c.kind === "client" ? "Client" : "Prospect"}
-                  </Badge>
+                  </DashBadge>
                   <div className="mt-1 max-w-xs text-xs text-muted-foreground">
                     {c.categories.map((v) =>
                       CONTACT_CATEGORIES[v]
@@ -536,14 +555,16 @@ export default function Newsletter() {
                   </div>
                 </td>
                 <td className="p-3">
-                  {c.unsubscribed
-                    ? "Désinscrit"
-                    : c.excluded
-                    ? "Exclu"
-                    : "Disponible"}
+                  <DashBadge tone={c.unsubscribed ? "muted" : c.excluded ? "warning" : "success"}>
+                    {c.unsubscribed
+                      ? "Désinscrit"
+                      : c.excluded
+                      ? "Exclu"
+                      : "Disponible"}
+                  </DashBadge>
                 </td>
-                <td className="p-3">
-                  <Button
+                <td className="p-3 whitespace-nowrap">
+                  <Button className="rounded-full"
                     size="sm"
                     variant="ghost"
                     onClick={() =>
@@ -551,7 +572,7 @@ export default function Newsletter() {
                   >
                     Classer
                   </Button>
-                  <Button
+                  <Button className="rounded-full"
                     size="sm"
                     variant="ghost"
                     disabled={busy}
@@ -573,19 +594,20 @@ export default function Newsletter() {
             ))}
           </tbody>
         </table>
+       </div>
         {!visible.length && (
-          <p className="p-6 text-center text-muted-foreground">
+          <p className="p-6 text-center text-sm text-muted-foreground">
             Aucun contact ne correspond aux filtres sélectionnés.
           </p>
         )}
       </div>
-      <div className="flex items-center justify-between text-sm">
-        <span>
+      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+        <span className="text-muted-foreground">
           {visible.length} contacts · page {page}/
           {Math.max(1, Math.ceil(visible.length / 40))}
         </span>
         <div className="flex gap-2">
-          <Button
+          <Button className="rounded-full"
             size="sm"
             variant="outline"
             disabled={page <= 1}
@@ -593,7 +615,7 @@ export default function Newsletter() {
           >
             Précédent
           </Button>
-          <Button
+          <Button className="rounded-full"
             size="sm"
             variant="outline"
             disabled={page * 40 >= visible.length}
@@ -606,26 +628,24 @@ export default function Newsletter() {
     </div>
   );
   return (
-    <div className="mx-auto max-w-[1600px] p-4 md:p-6">
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[.2em] text-[#205a43]">
-            Logisorama · Communication
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold">Newsletter</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Créez, partagez et suivez vos campagnes immobilières.
-          </p>
-        </div>
-        <Button disabled={busy} onClick={newCampaign}>
-          <Plus className="mr-2 h-4 w-4" />
-          Créer une campagne
-        </Button>
-      </div>
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-6 md:px-8 md:py-8">
+      <p className="mb-1 text-xs font-medium text-muted-foreground">
+        Logisorama · Communication
+      </p>
+      <DashPageHeader
+        title="Newsletter"
+        subtitle="Créez, partagez et suivez vos campagnes immobilières."
+        action={
+          <Button className="rounded-full" disabled={busy} onClick={newCampaign}>
+            <Plus className="mr-2 h-4 w-4" />
+            Créer une campagne
+          </Button>
+        }
+      />
       <div className="grid items-start gap-6 lg:grid-cols-[210px_minmax(0,1fr)]">
         <nav
           aria-label="Navigation Newsletter"
-          className="flex gap-1 overflow-auto rounded-xl border bg-white p-2 lg:sticky lg:top-5 lg:flex-col"
+          className={`${DASH_CARD} flex gap-1 overflow-x-auto p-2 [scrollbar-width:none] lg:sticky lg:top-5 lg:flex-col [&::-webkit-scrollbar]:hidden`}
         >
           {[
             {
@@ -649,10 +669,10 @@ export default function Newsletter() {
                 ? "page"
                 : undefined}
               onClick={() => setTab(id)}
-              className={`flex shrink-0 items-center gap-3 rounded-lg px-4 py-3 text-left text-sm ${
+              className={`flex shrink-0 items-center gap-3 rounded-full px-4 py-2.5 text-left text-sm transition-colors ${
                 tab === id || (id === "history" && tab === "create")
-                  ? "bg-[#e8efe9] font-semibold text-[#205a43]"
-                  : "text-slate-600 hover:bg-slate-50"
+                  ? "bg-primary/10 font-semibold text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
               }`}
             >
               <Icon size={17} />
@@ -668,10 +688,10 @@ export default function Newsletter() {
         <div className="min-w-0 space-y-5">
           <div
             role="status"
-            className={`rounded-xl border p-4 text-sm ${
+            className={`rounded-2xl border p-4 text-sm ${
               connection.ready
-                ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                : "border-amber-200 bg-amber-50 text-amber-950"
+                ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300"
+                : "border-amber-500/20 bg-amber-500/10 text-amber-800 dark:text-amber-300"
             }`}
           >
             <p className="font-medium">{connection.message}</p>
@@ -682,13 +702,13 @@ export default function Newsletter() {
           {loadError && (
             <div
               role="alert"
-              className="rounded-lg border border-destructive p-4"
+              className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
             >
               <p>Le module n’est pas disponible : {loadError}</p>
               <Button
                 variant="outline"
                 onClick={() => void refresh()}
-                className="mt-2"
+                className="rounded-full mt-2"
               >
                 Réessayer
               </Button>
@@ -696,7 +716,7 @@ export default function Newsletter() {
           )}
           <Tabs value={tab} onValueChange={setTab}>
             <div className="flex justify-end">
-              <Button
+              <Button className="rounded-full"
                 variant="ghost"
                 size="sm"
                 disabled={loading || busy}
@@ -716,8 +736,8 @@ export default function Newsletter() {
             </TabsContent>
             <TabsContent value="dashboard" className="space-y-6">
               <div className="flex flex-wrap justify-between gap-3">
-                <h2 className="text-2xl font-semibold">Tableau de bord</h2>
-                <Button variant="outline" onClick={() => setTab("tracking")}>
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">Tableau de bord</h2>
+                <Button className="rounded-full" variant="outline" onClick={() => setTab("tracking")}>
                   <Activity size={16} className="mr-2" />Suivi des emails et
                   notifications
                 </Button>
@@ -728,61 +748,77 @@ export default function Newsletter() {
                     "Abonnés disponibles",
                     contacts.filter((c) => !c.excluded && !c.unsubscribed)
                       .length,
+                    Users,
                   ],
                   [
                     "Brouillons",
                     campaigns.filter((c) => c.status === "draft").length,
+                    FileText,
                   ],
                   [
                     "En attente / en cours",
                     campaigns.filter((c) => c.status === "queued").length,
+                    Clock,
                   ],
                   [
                     "Traitements terminés",
                     campaigns.filter((c) => c.status === "completed").length,
+                    CheckCircle2,
                   ],
-                ].map(([label, n]) => (
-                  <Card key={String(label)}>
-                    <CardContent className="pt-5">
-                      <p className="text-sm text-muted-foreground">{label}</p>
-                      <p className="mt-2 text-3xl font-semibold">
-                        {loading ? "—" : n}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
+                ].map(([label, n, Icon]) => {
+                  const TileIcon = Icon as typeof Users;
+                  return (
+                    <div key={String(label)} className={`${DASH_CARD} flex min-h-[104px] flex-col items-start justify-between p-4`}>
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <TileIcon className="h-[18px] w-[18px]" />
+                      </span>
+                      <span className="mt-2 block w-full">
+                        <span className="block text-2xl font-semibold text-foreground">
+                          {loading ? "—" : String(n)}
+                        </span>
+                        <span className="block truncate text-xs text-muted-foreground">{String(label)}</span>
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-              <section className="rounded-2xl bg-[#1c4734] p-7 text-white">
-                <p className="text-xs uppercase tracking-widest text-[#dbdec9]">
+              <section className={`${DASH_CARD} p-4 md:p-5`}>
+                <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Paintbrush className="h-5 w-5" />
+                </span>
+                <div className="min-w-0">
+                <p className="text-xs font-medium text-muted-foreground">
                   De l’idée à l’envoi
                 </p>
-                <h3 className="mt-3 text-2xl font-semibold">
+                <h3 className="mt-1 text-base font-semibold text-foreground">
                   Une newsletter à votre image.
                 </h3>
-                <p className="mt-2 max-w-xl text-sm text-white/80">
+                <p className="mt-1 max-w-xl text-sm text-muted-foreground">
                   Choisissez un modèle, composez votre message avec l’éditeur
                   visuel, sélectionnez vos abonnés et programmez votre campagne.
                 </p>
                 <Button
-                  variant="secondary"
-                  className="mt-5"
+                  className="rounded-full mt-4"
                   onClick={newCampaign}
                 >
                   Créer ma campagne
                   <ArrowRight size={16} className="ml-2" />
                 </Button>
+                </div>
+                </div>
               </section>
               <div className="grid gap-4 md:grid-cols-2">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Développer votre audience</CardTitle>
+                <Card className={DASH_CARD}>
+                  <CardHeader className="p-4 md:p-5">
+                    <CardTitle className="text-base font-semibold">Développer votre audience</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 pt-0 md:p-5 md:pt-0">
                     <p className="mb-4 text-sm text-muted-foreground">
                       Importez vos listes CSV en choisissant leur catégorie
                       avant l’import.
                     </p>
-                    <Button
+                    <Button className="rounded-full"
                       variant="outline"
                       onClick={() => {
                         setTab("contacts");
@@ -793,16 +829,16 @@ export default function Newsletter() {
                     </Button>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Collecter des inscriptions</CardTitle>
+                <Card className={DASH_CARD}>
+                  <CardHeader className="p-4 md:p-5">
+                    <CardTitle className="text-base font-semibold">Collecter des inscriptions</CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 pt-0 md:p-5 md:pt-0">
                     <p className="mb-4 text-sm text-muted-foreground">
                       Un formulaire adapté à chaque projet, avec confirmation de
                       l’adresse email.
                     </p>
-                    <Button variant="outline" onClick={() => setTab("forms")}>
+                    <Button className="rounded-full" variant="outline" onClick={() => setTab("forms")}>
                       Gérer les formulaires
                     </Button>
                   </CardContent>
@@ -818,7 +854,7 @@ export default function Newsletter() {
               <NewsletterForms onContactsChanged={() => void refresh()} />
             </TabsContent>
             <TabsContent value="contacts" className="space-y-4">
-              <h2 className="text-2xl font-semibold">Abonnés</h2>
+              <h2 className="text-xl font-semibold tracking-tight text-foreground">Abonnés</h2>
               <p className="text-sm text-muted-foreground">
                 Clients et prospects, organisés selon leur projet immobilier et
                 leurs inscriptions aux visites.
@@ -831,24 +867,24 @@ export default function Newsletter() {
                       setCategory(k);
                       setImportCategories([k as Category]);
                     }}
-                    className={`rounded-xl border p-4 text-left ${
+                    className={`rounded-2xl border p-4 text-left transition-colors ${
                       category === k
-                        ? "border-[#205a43] bg-[#eef3ee]"
-                        : "bg-white"
+                        ? "border-primary bg-primary/5"
+                        : "border-border/70 bg-card hover:bg-muted/50"
                     }`}
                   >
-                    <strong className="block text-2xl text-[#205a43]">
+                    <strong className="block text-2xl font-semibold text-foreground">
                       {contacts.filter((c) =>
                         c.categories.includes(k as Category)
                       ).length}
                     </strong>
-                    <span className="text-xs">{v}</span>
+                    <span className="text-xs text-muted-foreground">{v}</span>
                   </button>
                 ))}
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button
+                <Button className="rounded-full"
                   variant="outline"
                   disabled={busy}
                   onClick={() =>
@@ -862,17 +898,17 @@ export default function Newsletter() {
                 >
                   Synchroniser Shortlist, Meta et visites
                 </Button>
-                <Button onClick={() => openImport("csv")} disabled={busy}>
+                <Button className="rounded-full" onClick={() => openImport("csv")} disabled={busy}>
                   Importer un CSV
                 </Button>
-                <Button
+                <Button className="rounded-full"
                   variant="outline"
                   onClick={() => openImport("application")}
                   disabled={busy}
                 >
                   Ajouter des clients de l’application
                 </Button>
-                <Button
+                <Button className="rounded-full"
                   variant="ghost"
                   onClick={() =>
                     download(
@@ -893,12 +929,12 @@ export default function Newsletter() {
                   <p className="text-xs text-muted-foreground">
                     Campagnes / {campaign?.name || "Nouvelle campagne"}
                   </p>
-                  <h2 className="mt-1 text-2xl font-semibold">
+                  <h2 className="mt-1 text-xl font-semibold tracking-tight text-foreground">
                     {locked ? "Suivi de la campagne" : "Créer une campagne"}
                   </h2>
                 </div>
                 {!locked && (
-                  <Button
+                  <Button className="rounded-full"
                     variant="outline"
                     disabled={busy || !draft.html || !draft.name ||
                       !draft.subject}
@@ -932,10 +968,10 @@ export default function Newsletter() {
                     <button
                       key={label}
                       onClick={() => setStep(i)}
-                      className={`border-b-4 pb-3 text-xs sm:text-sm ${
+                      className={`border-b-2 pb-3 text-xs sm:text-sm ${
                         step === i
-                          ? "border-[#205a43] font-semibold text-[#205a43]"
-                          : "border-slate-200 text-slate-500"
+                          ? "border-primary font-semibold text-primary"
+                          : "border-border text-muted-foreground"
                       }`}
                     >
                       {i + 1}. {label}
@@ -945,8 +981,8 @@ export default function Newsletter() {
               )}
 
               {locked && (
-                <Card>
-                  <CardContent className="space-y-3 pt-6">
+                <Card className={DASH_CARD}>
+                  <CardContent className="space-y-3 p-4 md:p-5">
                     <p className="font-medium">
                       {STATUS_LABELS[campaign.status]}{" "}
                       {dateLabel(campaign.scheduled_at)} · heure suisse
@@ -984,14 +1020,14 @@ export default function Newsletter() {
                       n’est pas une confirmation de livraison.
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      <Button
+                      <Button className="rounded-full"
                         variant="outline"
                         disabled={busy}
                         onClick={() => void openCampaign(campaign.id)}
                       >
                         Actualiser le suivi
                       </Button>
-                      <Button
+                      <Button className="rounded-full"
                         variant="outline"
                         onClick={() => {
                           setCampaign(null);
@@ -1005,7 +1041,7 @@ export default function Newsletter() {
                       {campaign.status === "queued" &&
                         campaign.scheduled_at &&
                         new Date(campaign.scheduled_at) > new Date() && (
-                        <Button
+                        <Button className="rounded-full"
                           variant="destructive"
                           disabled={busy}
                           onClick={() =>
@@ -1042,11 +1078,11 @@ export default function Newsletter() {
 
               {!locked && step === 0 && (
                 <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Détails de la campagne</CardTitle>
+                  <Card className={DASH_CARD}>
+                    <CardHeader className="p-4 md:p-5">
+                      <CardTitle className="text-base font-semibold">Détails de la campagne</CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-5">
+                    <CardContent className="p-4 pt-0 md:p-5 md:pt-0 space-y-5">
                       <div>
                         <Label htmlFor="newsletter-name">Nom interne</Label>
                         <Input
@@ -1084,7 +1120,7 @@ export default function Newsletter() {
                           placeholder="Le texte qui accompagne votre objet dans la boîte de réception."
                         />
                       </div>
-                      <div className="rounded-lg bg-muted/40 p-4 text-sm">
+                      <div className="rounded-xl bg-muted/40 p-4 text-sm">
                         <strong>Expéditeur</strong>
                         <p className="mt-2">
                           Logisorama &lt;
@@ -1097,14 +1133,14 @@ export default function Newsletter() {
                       </div>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Dans la boîte de réception</CardTitle>
+                  <Card className={DASH_CARD}>
+                    <CardHeader className="p-4 md:p-5">
+                      <CardTitle className="text-base font-semibold">Dans la boîte de réception</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="rounded-xl bg-[#f5f6f7] p-5">
-                        <div className="mb-4 h-8 rounded bg-slate-200/50" />
-                        <div className="rounded-lg bg-white p-4 shadow-sm">
+                    <CardContent className="p-4 pt-0 md:p-5 md:pt-0">
+                      <div className="rounded-xl bg-muted/50 p-5">
+                        <div className="mb-4 h-8 rounded-lg bg-muted" />
+                        <div className="rounded-xl border border-border/70 bg-card p-4">
                           <strong>Logisorama</strong>
                           <p className="mt-2 font-medium">
                             {draft.subject || "L’objet de votre newsletter"}
@@ -1114,7 +1150,7 @@ export default function Newsletter() {
                               "La prévisualisation de votre message apparaîtra ici."}
                           </p>
                         </div>
-                        <div className="mt-4 h-8 rounded bg-slate-200/50" />
+                        <div className="mt-4 h-8 rounded-lg bg-muted" />
                       </div>
                     </CardContent>
                   </Card>
@@ -1122,59 +1158,65 @@ export default function Newsletter() {
               )}
               {(locked || step === 1 || step === 3) && (
                 <div className="grid gap-5 xl:grid-cols-2">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>
+                  <Card className={DASH_CARD}>
+                    <CardHeader className="p-4 md:p-5">
+                      <CardTitle className="text-base font-semibold">
                         {step === 3
                           ? "Vérifier votre message"
                           : "Composez votre newsletter"}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="p-4 pt-0 md:p-5 md:pt-0 space-y-4">
                       {!locked && step !== 3 && (
                         <>
                           <div className="grid gap-3">
-                            {NEWSLETTER_TEMPLATES.map((template) => (
-                              <button
-                                key={template.id}
-                                aria-label={`Utiliser le modèle ${template.name}`}
-                                className="overflow-hidden rounded-xl border bg-[#f3f1e9] text-left hover:border-[#205a43]"
-                                onClick={() => {
-                                  if (
-                                    (draft.html || draft.subject ||
-                                      draft.name || draft.preheader) &&
-                                    !window.confirm(
-                                      "Remplacer le contenu, le nom, l’objet et le pré-en-tête par ce modèle ?",
-                                    )
-                                  ) return;
-                                  changeDraft({
-                                    html: template.html,
-                                    subject: template.subject,
-                                    name: template.name,
-                                    preheader: template.preheader,
-                                  });
-                                }}
-                              >
-                                <img
-                                  src={template.image}
-                                  alt=""
-                                  className="aspect-[3/1] w-full object-cover"
-                                  loading="lazy"
-                                />
-                                <span className="block p-4">
-                                  <span className="text-xs uppercase tracking-widest text-[#205a43]">
-                                    {template.audience}
-                                  </span>
-                                  <strong className="mt-1 block text-lg">
-                                    {template.name}
-                                  </strong>
-                                  <span className="mt-1 block text-sm text-muted-foreground">
-                                    {template.description}
-                                  </span>
-                                </span>
-                              </button>
+                            {NEWSLETTER_TEMPLATE_SECTIONS.map((section) => (
+                              <section key={section.id} className="space-y-3" aria-label={section.name}>
+                                <h3 className="text-base font-semibold text-foreground">{section.name}</h3>
+                                <p className="text-sm text-muted-foreground">{section.description}</p>
+                                {section.templates.map((template) => (
+                                  <button
+                                    key={template.id}
+                                    aria-label={`Utiliser le modèle ${template.name}`}
+                                    className="w-full overflow-hidden rounded-2xl border border-border/70 bg-card text-left transition-colors hover:border-primary"
+                                    onClick={() => {
+                                      if (
+                                        (draft.html || draft.subject ||
+                                          draft.name || draft.preheader) &&
+                                        !window.confirm(
+                                          "Remplacer le contenu, le nom, l’objet et le pré-en-tête par ce modèle ?",
+                                        )
+                                      ) return;
+                                      changeDraft({
+                                        html: template.html,
+                                        subject: template.subject,
+                                        name: template.name,
+                                        preheader: template.preheader,
+                                      });
+                                    }}
+                                  >
+                                    <img
+                                      src={template.image}
+                                      alt=""
+                                      className="aspect-[3/1] w-full object-cover"
+                                      loading="lazy"
+                                    />
+                                    <span className="block p-4">
+                                      <span className="text-xs font-medium text-primary">
+                                        {template.audience}
+                                      </span>
+                                      <strong className="mt-1 block text-base font-semibold text-foreground">
+                                        {template.name}
+                                      </strong>
+                                      <span className="mt-1 block text-sm text-muted-foreground">
+                                        {template.description}
+                                      </span>
+                                    </span>
+                                  </button>
+                                ))}
+                              </section>
                             ))}
-                            <Button
+                            <Button className="rounded-full"
                               variant="outline"
                               onClick={() => {
                                 if (
@@ -1195,7 +1237,7 @@ export default function Newsletter() {
                             </Button>
                           </div>
                           <Button
-                            className="w-full bg-[#205a43]"
+                            className="rounded-full w-full"
                             disabled={!draft.html}
                             onClick={() =>
                               setEditorOpen(true)}
@@ -1207,7 +1249,7 @@ export default function Newsletter() {
                             Ajoutez et déplacez des blocs, modifiez les textes,
                             remplacez les images et personnalisez les couleurs.
                           </p>
-                          <Button
+                          <Button className="rounded-full"
                             variant="ghost"
                             onClick={() => setShowCode(!showCode)}
                           >
@@ -1286,11 +1328,11 @@ export default function Newsletter() {
                       </p>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardHeader className="flex-row items-center justify-between">
-                      <CardTitle>Aperçu</CardTitle>
+                  <Card className={DASH_CARD}>
+                    <CardHeader className="flex-row items-center justify-between space-y-0 p-4 md:p-5">
+                      <CardTitle className="text-base font-semibold">Aperçu</CardTitle>
                       <div className="flex gap-1">
-                        <Button
+                        <Button className="rounded-full"
                           aria-label="Aperçu ordinateur"
                           variant={mobile ? "ghost" : "secondary"}
                           size="icon"
@@ -1298,7 +1340,7 @@ export default function Newsletter() {
                         >
                           <Monitor className="h-4 w-4" />
                         </Button>
-                        <Button
+                        <Button className="rounded-full"
                           aria-label="Aperçu mobile"
                           variant={mobile ? "secondary" : "ghost"}
                           size="icon"
@@ -1308,8 +1350,8 @@ export default function Newsletter() {
                         </Button>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="overflow-auto rounded-xl bg-[#eef0eb] p-2">
+                    <CardContent className="p-4 pt-0 md:p-5 md:pt-0">
+                      <div className="overflow-auto rounded-xl bg-muted/50 p-2">
                         {draft.html
                           ? (
                             <iframe
@@ -1338,23 +1380,23 @@ export default function Newsletter() {
               {!locked && (
                 <>
                   {step === 2 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Vos destinataires</CardTitle>
+                    <Card className={DASH_CARD}>
+                      <CardHeader className="p-4 md:p-5">
+                        <CardTitle className="text-base font-semibold">Vos destinataires</CardTitle>
                       </CardHeader>
-                      <CardContent>{selectionPanel}</CardContent>
+                      <CardContent className="p-4 pt-0 md:p-5 md:pt-0">{selectionPanel}</CardContent>
                     </Card>
                   )}
                   {(step === 3 || step === 4) && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>
+                    <Card className={DASH_CARD}>
+                      <CardHeader className="p-4 md:p-5">
+                        <CardTitle className="text-base font-semibold">
                           {step === 3
                             ? "Recevoir un test"
                             : "Planifier votre campagne"}
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-5">
+                      <CardContent className="p-4 pt-0 md:p-5 md:pt-0 space-y-5">
                         {step === 3 && (
                           <div className="flex flex-wrap items-end gap-3">
                             <div className="min-w-64 flex-1">
@@ -1372,7 +1414,7 @@ export default function Newsletter() {
                                 placeholder="votre@email.ch"
                               />
                             </div>
-                            <Button
+                            <Button className="rounded-full"
                               variant="outline"
                               disabled={busy ||
                                 !connection.ready ||
@@ -1416,7 +1458,7 @@ export default function Newsletter() {
                               </p>
                             </div>
                             <Button
-                              className="bg-[#205a43] hover:bg-[#1c4734]"
+                              className="rounded-full"
                               disabled={busy ||
                                 loading ||
                                 !!loadError ||
@@ -1437,7 +1479,7 @@ export default function Newsletter() {
                     </Card>
                   )}
                   <div className="flex justify-between border-t pt-5">
-                    <Button
+                    <Button className="rounded-full"
                       variant="ghost"
                       disabled={step === 0}
                       onClick={() => setStep(step - 1)}
@@ -1446,7 +1488,7 @@ export default function Newsletter() {
                       Précédent
                     </Button>
                     {step < 4 && (
-                      <Button
+                      <Button className="rounded-full"
                         disabled={(step === 0 &&
                           (!draft.name || !draft.subject)) ||
                           (step === 1 && !draft.html) ||
@@ -1462,15 +1504,15 @@ export default function Newsletter() {
               )}
             </TabsContent>
             <TabsContent value="history">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Campagnes</CardTitle>
+              <Card className={DASH_CARD}>
+                <CardHeader className="p-4 md:p-5">
+                  <CardTitle className="text-base font-semibold">Campagnes</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="p-4 pt-0 md:p-5 md:pt-0 space-y-3">
                   <div className="flex flex-wrap gap-3">
                     <Input
                       aria-label="Rechercher une campagne"
-                      className="max-w-xs"
+                      className="max-w-xs rounded-xl"
                       placeholder="Rechercher une campagne…"
                       value={campaignQuery}
                       onChange={(e) => setCampaignQuery(e.target.value)}
@@ -1506,7 +1548,7 @@ export default function Newsletter() {
                     .map((c) => (
                       <button
                         key={c.id}
-                        className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border p-4 text-left hover:bg-muted/40"
+                        className="flex w-full flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 p-4 text-left transition-colors hover:bg-muted/50"
                         disabled={busy}
                         onClick={() => void openCampaign(c.id)}
                       >
@@ -1517,9 +1559,9 @@ export default function Newsletter() {
                           </span>
                         </span>
                         <span className="text-right">
-                          <Badge variant="secondary">
+                          <DashBadge tone={c.status === "completed" ? "success" : c.status === "queued" ? "warning" : "muted"}>
                             {STATUS_LABELS[c.status]}
-                          </Badge>
+                          </DashBadge>
                           <span className="mt-1 block text-xs text-muted-foreground">
                             {dateLabel(c.scheduled_at)}
                           </span>
@@ -1535,7 +1577,7 @@ export default function Newsletter() {
       {editorOpen && (
         <Suspense
           fallback={
-            <div className="fixed inset-0 z-[100] grid place-items-center bg-white">
+            <div className="fixed inset-0 z-[100] grid place-items-center bg-background">
               Chargement de l’éditeur…
             </div>
           }
@@ -1614,7 +1656,7 @@ export default function Newsletter() {
           </p>
           {importRows.length > 0 && (
             <>
-              <Button
+              <Button className="rounded-full"
                 variant="outline"
                 size="sm"
                 onClick={() =>
@@ -1628,11 +1670,11 @@ export default function Newsletter() {
               >
                 Tout sélectionner / désélectionner ({importRows.length})
               </Button>
-              <div className="max-h-64 overflow-auto rounded-lg border">
+              <div className="max-h-64 overflow-auto rounded-xl border border-border/70">
                 {importRows.map((r) => (
                   <label
                     key={r.email}
-                    className="flex items-center gap-3 border-b p-2 text-sm"
+                    className="flex items-center gap-3 border-b border-border/70 p-2 text-sm"
                   >
                     <Checkbox
                       checked={importSelection.has(r.email)}
@@ -1653,7 +1695,7 @@ export default function Newsletter() {
               </div>
             </>
           )}
-          <Button
+          <Button className="rounded-full"
             disabled={busy || !importSelection.size ||
               (!automaticImport && !importCategories.length)}
             onClick={() =>
@@ -1748,7 +1790,7 @@ export default function Newsletter() {
                   réinscrit pas.
                 </p>
               )}
-              <Button
+              <Button className="rounded-full"
                 disabled={busy || !editContact.categories.length}
                 onClick={() =>
                   void run(async () => {
@@ -1788,7 +1830,7 @@ export default function Newsletter() {
             Les nouvelles désinscriptions seront également exclues au moment de
             l’envoi.
           </p>
-          <Button
+          <Button className="rounded-full"
             disabled={busy}
             onClick={() =>
               void run(async () => {
@@ -1874,7 +1916,7 @@ function FormAnswerTree({ value }: { value: unknown }) {
   return (
     <dl className="space-y-3">
       {entries.map(([key, item]) => (
-        <div key={key} className="rounded-lg border p-3">
+        <div key={key} className="rounded-xl border border-border/70 p-3">
           {!/^\d+$/.test(key) && (
             <dt className="mb-1 text-sm font-semibold">
               {labels[key] || key.replace(/_/g, " ")}

@@ -1,6 +1,7 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("notify-new-lead");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailDetails, emailNotice, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatCHF, formatDateTimeFR } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -69,67 +70,44 @@ const handler = async (req: Request): Promise<Response> => {
         from: `Immo-Rama <${SENDER_EMAIL}>`,
         to: [adminEmail],
         subject: `${qualificationStatus} - Nouveau lead shortlist: ${leadData.prenom || ''} ${leadData.nom || ''}`,
-html: renderCorporateEmail({ title: 'Nouveau lead via le formulaire shortlist', category: 'SUIVI ÉQUIPE', bodyHtml: `
-
-          <div style="background-color: ${leadData.is_qualified ? '#d4edda' : '#f8d7da'}; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-            <strong style="font-size: 18px;">${qualificationStatus}</strong>
-            ${!leadData.is_qualified && qualificationReasons.length > 0 ? `
-              <p style="margin: 10px 0 0 0; color: #721c24;">
-                Raisons: ${qualificationReasons.join(', ')}
-              </p>
-            ` : ''}
-          </div>
-
-          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Informations personnelles</h3>
-          <ul>
-            <li style="margin-bottom:8px;"><strong>Prénom:</strong> ${leadData.prenom || 'Non renseigné'}</li>
-            <li style="margin-bottom:8px;"><strong>Nom:</strong> ${leadData.nom || 'Non renseigné'}</li>
-            <li style="margin-bottom:8px;"><strong>Email:</strong> ${leadData.email}</li>
-            <li style="margin-bottom:8px;"><strong>Téléphone:</strong> ${leadData.telephone || 'Non renseigné'}</li>
-          </ul>
-
-          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Critères de recherche</h3>
-          <ul>
-            <li style="margin-bottom:8px;"><strong>Localité:</strong> ${leadData.localite || 'Non renseignée'}</li>
-            <li style="margin-bottom:8px;"><strong>Budget:</strong> ${leadData.budget || 'Non renseigné'}</li>
-          </ul>
-
-          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">Qualification</h3>
-          <ul>
-            <li style="margin-bottom:8px;"><strong>Statut emploi:</strong> ${leadData.statut_emploi === 'salarie' ? 'Salarié(e)' : 'Autre'}</li>
-            <li style="margin-bottom:8px;"><strong>Permis/Nationalité:</strong> ${leadData.permis_nationalite || 'Non renseigné'}</li>
-            <li style="margin-bottom:8px;"><strong>Poursuites:</strong> ${leadData.poursuites ? 'Oui' : 'Non'}</li>
-            ${leadData.poursuites ? `<li style="margin-bottom:8px;"><strong>A un garant:</strong> ${leadData.a_garant ? 'Oui' : 'Non'}</li>` : ''}
-          </ul>
-
-          ${(leadData.utm_source || leadData.utm_medium || leadData.utm_campaign) ? `
-          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">📊 Source marketing</h3>
-          <ul>
-            ${leadData.utm_source ? `<li style="margin-bottom:8px;"><strong>Source:</strong> ${leadData.utm_source}</li>` : ''}
-            ${leadData.utm_medium ? `<li style="margin-bottom:8px;"><strong>Medium:</strong> ${leadData.utm_medium}</li>` : ''}
-            ${leadData.utm_campaign ? `<li style="margin-bottom:8px;"><strong>Campagne:</strong> ${leadData.utm_campaign}</li>` : ''}
-          </ul>
-          ` : `
-          <h3 style="font-size:18px;line-height:26px;color:#193d2c;margin:22px 0 14px;">📊 Source marketing</h3>
-          <p style="color: #888;">Organique (pas de paramètre UTM)</p>
-          `}
-
-          <hr style="margin: 20px 0;" />
-          <p style="color: #666; font-size: 12px;">
-            Lead reçu le ${new Date().toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich',
-              day: '2-digit',
-              month: '2-digit',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </p>
-
-          <a href="https://app.immo-rama.ch/admin/leads"
-             style="display: inline-block; background: #e94560; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 16px;">
-            Voir tous les leads
-          </a>
-        ` }),
+html: renderCorporateEmail({
+          title: 'Nouveau lead via le formulaire shortlist',
+          preview: `${qualificationStatus} — ${`${leadData.prenom || ''} ${leadData.nom || ''}`.trim() || leadData.email}`,
+          category: 'SUIVI ÉQUIPE',
+          bodyHtml:
+            emailNotice(
+              !leadData.is_qualified && qualificationReasons.length > 0
+                ? `Raisons : ${escapeEmailHtml(qualificationReasons.join(', '))}`
+                : '',
+              leadData.is_qualified ? 'info' : 'danger',
+              qualificationStatus,
+            ) +
+            emailDetails([
+              ['Prénom', leadData.prenom || 'Non renseigné'],
+              ['Nom', leadData.nom || 'Non renseigné'],
+              ['Email', leadData.email],
+              ['Téléphone', leadData.telephone || 'Non renseigné'],
+            ], 'Informations personnelles') +
+            emailDetails([
+              ['Localité', leadData.localite || 'Non renseignée'],
+              ['Budget', leadData.budget ? (/^\s*[\d'’ .,]+\s*$/.test(String(leadData.budget)) ? formatCHF(String(leadData.budget).replace(/['’ ]/g, '')) : leadData.budget) : 'Non renseigné'],
+            ], 'Critères de recherche') +
+            emailDetails([
+              ['Statut emploi', leadData.statut_emploi === 'salarie' ? 'Salarié(e)' : 'Autre'],
+              ['Permis/Nationalité', leadData.permis_nationalite || 'Non renseigné'],
+              ['Poursuites', leadData.poursuites ? 'Oui' : 'Non'],
+              ...(leadData.poursuites ? [['A un garant', leadData.a_garant ? 'Oui' : 'Non'] as [string, unknown]] : []),
+            ], 'Qualification') +
+            ((leadData.utm_source || leadData.utm_medium || leadData.utm_campaign)
+              ? emailDetails([
+                ...(leadData.utm_source ? [['Source', leadData.utm_source] as [string, unknown]] : []),
+                ...(leadData.utm_medium ? [['Medium', leadData.utm_medium] as [string, unknown]] : []),
+                ...(leadData.utm_campaign ? [['Campagne', leadData.utm_campaign] as [string, unknown]] : []),
+              ], 'Source marketing')
+              : emailDetails([['Source', 'Organique (pas de paramètre UTM)']], 'Source marketing')) +
+            emailParagraph(`Lead reçu le ${escapeEmailHtml(formatDateTimeFR(new Date(), { weekday: false }))}`, true) +
+            emailButton('Voir tous les leads', 'https://logisorama.ch/admin/leads'),
+        }),
       }),
     });
 

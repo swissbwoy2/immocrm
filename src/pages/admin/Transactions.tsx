@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, TrendingUp, Calendar as CalendarIcon, Trash2, CheckCircle2, Clock, Building2, Target, Wallet, RefreshCw, ArrowDownLeft } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DollarSign, TrendingUp, Calendar as CalendarIcon, Trash2, CheckCircle2, Clock, Building2, Target, Wallet, RefreshCw, ArrowDownLeft, AlertTriangle, Loader2, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -11,7 +11,6 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { calculateDaysElapsed } from "@/utils/calculations";
 import { AgencyProjectionSection } from "@/components/admin/AgencyProjectionSection";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +20,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
   Dialog,
@@ -32,9 +30,36 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { isClientActif, useUsersAvecCreditsMandat } from '@/lib/activeClients';
 import { Calendar } from "@/components/ui/calendar";
+import { DashPage, DashPageHeader, DashFilterPills, DashEmptyState, DashBadge, DASH_CARD } from "@/components/client/dashboard/DashPrimitives";
+import { FinanceStat, NextAction, DelaiPill, SearchField, ToggleDetails, Ligne, TableCard } from "@/components/admin/finances/FinanceParts";
+import {
+  chf, dateCH, joursDepuis, libelleJours, estCeMois, pluriel, dansPeriode, PERIODES,
+  etapeTransaction, prochaineActionTransaction, etapeAcompte, prochaineActionAcompte, RETARD_COMMISSION_JOURS,
+  type EtapeTransaction, type EtapeAcompte, type PeriodeKey,
+} from "@/components/admin/finances/financeModel";
+import { cn } from "@/lib/utils";
+
+type VueTransactions = 'en_retard' | 'a_encaisser' | 'en_cours' | 'payees' | 'toutes' | 'acomptes';
+type VueAcomptes = EtapeAcompte | 'tous';
+type TriTransactions = 'urgence' | 'recent' | 'oldest' | 'montant';
+
+const ORDRE_ETAPES: EtapeTransaction[] = ['en_retard', 'a_encaisser', 'en_cours', 'payees', 'annulees'];
+
+const STATUT_TRANSACTION: Record<string, { label: string; tone: 'primary' | 'neutral' | 'danger' }> = {
+  conclue: { label: 'Conclue', tone: 'primary' },
+  en_cours: { label: 'En cours', tone: 'neutral' },
+};
+
+const STATUT_ACOMPTE: Record<string, { label: string; tone: 'neutral' | 'success' | 'danger' }> = {
+  paye: { label: 'Payé', tone: 'neutral' },
+  acquis: { label: 'Acquis', tone: 'success' },
+  ristourne: { label: 'Ristourné', tone: 'danger' },
+};
 
 const Transactions = () => {
+  const usersAvecCreditsMandat = useUsersAvecCreditsMandat();
   const navigate = useNavigate();
   const { user, userRole } = useAuth();
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -358,10 +383,7 @@ const Transactions = () => {
   const totalRistournes = acomptesRistournes.reduce((sum, a) => sum + (a.montant || 0), 0);
 
   // Calcul de la projection financière de l'agence (clients actifs non relogés)
-  const clientsActifsPourProjection = clients.filter(c => {
-    const dateAjout = c.date_ajout || c.created_at;
-    return c.statut !== 'reloge' && calculateDaysElapsed(dateAjout) <= 90;
-  });
+  const clientsActifsPourProjection = clients.filter(c => isClientActif(c, usersAvecCreditsMandat));
 
   const agencyProjections = clientsActifsPourProjection.map(client => {
     const clientAgent = clientAgents.find(ca => ca.client_id === client.id && ca.is_primary);
@@ -388,6 +410,87 @@ const Transactions = () => {
     ? Math.round((totalAgencyPart / totalCommissionAgence) * 100) 
     : 0;
 
+  // ─── Affichage : file de travail par étape (calculs purement visuels) ───
+  const [vue, setVue] = useState<VueTransactions>('a_encaisser');
+  const [vueChoisie, setVueChoisie] = useState(false);
+  const [vueAcomptes, setVueAcomptes] = useState<VueAcomptes>('a_decider');
+  const [q, setQ] = useState('');
+  const [tri, setTri] = useState<TriTransactions>('urgence');
+  const [periode, setPeriode] = useState<PeriodeKey>('all');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showProjection, setShowProjection] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([loadTransactions(), loadClientsAndAgents(), loadAcomptes()]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const qn = q.trim().toLowerCase();
+  const transactionsVisibles = useMemo(() => transactions.filter((t) => {
+    if (!dansPeriode(t.date_transaction, periode)) return false;
+    if (!qn) return true;
+    return `${getClientName(t)} ${getAgentName(t)} ${t.adresse ?? ''}`.toLowerCase().includes(qn);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [transactions, profiles, qn, periode]);
+
+  const acomptesVisibles = useMemo(() => acomptes.filter((a) => {
+    if (!dansPeriode(a.date_paiement, periode)) return false;
+    if (!qn) return true;
+    return `${a.client_name ?? ''} ${a.agent_name ?? ''}`.toLowerCase().includes(qn);
+  }), [acomptes, qn, periode]);
+
+  const parEtape = useMemo(() => {
+    const m: Record<EtapeTransaction, any[]> = { en_retard: [], a_encaisser: [], en_cours: [], payees: [], annulees: [] };
+    for (const t of transactionsVisibles) m[etapeTransaction(t)].push(t);
+    return m;
+  }, [transactionsVisibles]);
+
+  const acomptesParEtape = useMemo(() => {
+    const m: Record<EtapeAcompte, any[]> = { a_decider: [], acquis: [], ristournes: [] };
+    for (const a of acomptesVisibles) m[etapeAcompte(a)].push(a);
+    return m;
+  }, [acomptesVisibles]);
+
+  // Onglet par défaut : ce qui attend une action (en retard d'abord), choisi une seule fois après le chargement.
+  useEffect(() => {
+    if (loading || vueChoisie) return;
+    setVue(parEtape.en_retard.length > 0 ? 'en_retard' : parEtape.a_encaisser.length > 0 ? 'a_encaisser' : acomptesParEtape.a_decider.length > 0 ? 'acomptes' : 'toutes');
+    setVueChoisie(true);
+  }, [loading, vueChoisie, parEtape, acomptesParEtape]);
+
+  const listeTransactions = useMemo(() => {
+    const arr = vue === 'toutes' ? [...transactionsVisibles] : vue === 'acomptes' ? [] : [...parEtape[vue]];
+    const t = (x: any) => new Date(x.date_transaction || 0).getTime();
+    if (tri === 'urgence') arr.sort((a, b) => ORDRE_ETAPES.indexOf(etapeTransaction(a)) - ORDRE_ETAPES.indexOf(etapeTransaction(b)) || t(a) - t(b));
+    else if (tri === 'montant') arr.sort((a, b) => (b.commission_totale || 0) - (a.commission_totale || 0));
+    else arr.sort((a, b) => (tri === 'recent' ? t(b) - t(a) : t(a) - t(b)));
+    return arr;
+  }, [vue, transactionsVisibles, parEtape, tri]);
+
+  const listeAcomptes = useMemo(() => {
+    const arr = vueAcomptes === 'tous' ? [...acomptesVisibles] : [...acomptesParEtape[vueAcomptes]];
+    const t = (x: any) => new Date(x.date_paiement || 0).getTime();
+    if (tri === 'montant') arr.sort((a, b) => (b.montant || 0) - (a.montant || 0));
+    else arr.sort((a, b) => (tri === 'recent' ? t(b) - t(a) : t(a) - t(b)));
+    return arr;
+  }, [vueAcomptes, acomptesVisibles, acomptesParEtape, tri]);
+
+  // Synthèse (sur toutes les données chargées)
+  const payeesCeMois = transactionsPayees.filter((t) => estCeMois(t.date_paiement_commission));
+  const encaisseCeMois = payeesCeMois.reduce((s, t) => s + (t.commission_totale || 0), 0);
+  const enRetardTous = transactionsEnAttente.filter((t) => etapeTransaction(t) === 'en_retard');
+  const totalEnRetard = enRetardTous.reduce((s, t) => s + (t.commission_totale || 0), 0);
+
+  const paymentTransaction = transactions.find((t) => t.id === paymentDialogOpen) ?? null;
+  const deleteTransaction = transactions.find((t) => t.id === deleteId) ?? null;
+  const acquisAcompte = acomptes.find((a) => a.id === acquisDialogOpen) ?? null;
+  const ristourneAcompte = acomptes.find((a) => a.id === ristourneDialogOpen) ?? null;
+
   if (loading) {
     return (
       <div className="p-4 md:p-8" role="status" aria-label="Chargement des transactions">
@@ -397,477 +500,527 @@ const Transactions = () => {
     );
   }
 
+  const ouvrirPaiement = (transaction: any) => {
+    setSelectedPaymentDate(new Date());
+    setPaymentDialogOpen(transaction.id);
+  };
+
+  const statutBadge = (transaction: any) => {
+    const s = STATUT_TRANSACTION[transaction.statut] ?? { label: 'Annulée', tone: 'danger' as const };
+    return <DashBadge tone={s.tone}>{s.label}</DashBadge>;
+  };
+
+  const boutonSupprimer = (transaction: any, compact = false) => (
+    <Button
+      variant="outline"
+      className={cn(
+        "shrink-0 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive",
+        compact ? "h-9 w-9 p-0" : "h-11 w-11 p-0",
+      )}
+      aria-label="Supprimer la transaction"
+      onClick={() => setDeleteId(transaction.id)}
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  );
+
+  const actionPrincipale = (transaction: any, compact = false) => {
+    if (transaction.commission_payee) {
+      return (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1.5 text-sm text-emerald-700 dark:text-emerald-400">
+          <CheckCircle2 className="h-4 w-4" />
+          Payée le {dateCH(transaction.date_paiement_commission)}
+        </span>
+      );
+    }
+    const enRetard = etapeTransaction(transaction) === 'en_retard';
+    return (
+      <Button
+        variant={transaction.statut === 'conclue' ? 'default' : 'outline'}
+        className={cn("rounded-full", compact ? "h-9" : "h-11 flex-1")}
+        onClick={() => ouvrirPaiement(transaction)}
+      >
+        {enRetard ? <AlertTriangle className="mr-2 h-4 w-4" /> : <Clock className="mr-2 h-4 w-4" />}
+        Marquer payée
+      </Button>
+    );
+  };
+
+  const vides: Record<VueTransactions, string> = {
+    en_retard: `Aucune commission en retard (plus de ${RETARD_COMMISSION_JOURS} jours)`,
+    a_encaisser: 'Aucune commission à encaisser',
+    en_cours: 'Aucune transaction en cours',
+    payees: 'Aucune commission payée',
+    toutes: 'Aucune transaction enregistrée',
+    acomptes: 'Aucun acompte',
+  };
+
+  const filtresActifs = !!qn || periode !== 'all';
+
   return (
-    <div className="flex-1 overflow-auto relative">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
+    <DashPage className="space-y-5">
+      <DashPageHeader
+        title="Transactions"
+        subtitle={
+          <>
+            {chf(encaisseCeMois)} encaissés ce mois
+            {` · ${chf(totalCommissions - totalCommissionsPayees)} à encaisser`}
+            {enRetardTous.length > 0 && ` · ${pluriel(enRetardTous.length, 'commission')} en retard`}
+            {acomptesPayes.length > 0 && ` · ${pluriel(acomptesPayes.length, 'acompte')} à décider`}
+          </>
+        }
+        action={
+          <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={refresh} disabled={refreshing} aria-label="Actualiser">
+            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            <span className="ml-2 hidden sm:inline">Actualiser</span>
+          </Button>
+        }
+      />
+
+      {/* Synthèse */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <FinanceStat icon={Wallet} tone="success" label="Encaissé ce mois" value={chf(encaisseCeMois)} hint={pluriel(payeesCeMois.length, 'commission')} onClick={() => setVue('payees')} />
+        <FinanceStat icon={Clock} tone="primary" label="À encaisser" value={chf(totalCommissions - totalCommissionsPayees)} hint={pluriel(transactionsEnAttente.length, 'transaction')} onClick={() => setVue('a_encaisser')} active={vue === 'a_encaisser'} />
+        <FinanceStat icon={AlertTriangle} tone={enRetardTous.length > 0 ? 'warning' : 'muted'} label={`En retard (> ${RETARD_COMMISSION_JOURS} j)`} value={chf(totalEnRetard)} hint={pluriel(enRetardTous.length, 'transaction')} onClick={() => setVue('en_retard')} active={vue === 'en_retard'} />
+        <FinanceStat icon={DollarSign} tone="primary" label="Commissions réalisées" value={chf(totalCommissions)} hint={`dont ${chf(totalCommissionsPayees)} payées (${transactionsPayees.length})`} />
+        <FinanceStat icon={Building2} tone="primary" label="Potentiel agence" value={chf(totalCommissionAgence)} hint={`${clientsActifsPourProjection.length} mandat${clientsActifsPourProjection.length > 1 ? 's' : ''} actif${clientsActifsPourProjection.length > 1 ? 's' : ''}`} onClick={() => setShowProjection((v) => !v)} active={showProjection} />
+        <FinanceStat icon={Target} tone="primary" label="Taux conversion" value={`${tauxConversion}%`} hint="réalisé / potentiel" />
       </div>
-      <div className="p-4 md:p-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground">Transactions</h1>
-            <p className="text-muted-foreground">
-              Suivi des commissions et transactions — {transactionsConclues.length} conclue{transactionsConclues.length > 1 ? 's' : ''}
-              {transactionsEnCours.length > 0 && ` · ${transactionsEnCours.length} en cours`}
-              {acomptes.length > 0 && ` · ${acomptes.length} acompte${acomptes.length > 1 ? 's' : ''}`}
-            </p>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4 mb-6 md:mb-8">
-            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '0ms' }}>
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-primary/10 rounded-lg group-hover:scale-110 transition-transform">
-                  <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Commissions réalisées</p>
-                  <p className="text-lg md:text-2xl font-bold group-hover:scale-105 transition-transform origin-left">CHF {totalCommissions.toLocaleString()}</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '50ms' }}>
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-emerald-500/10 rounded-lg group-hover:scale-110 transition-transform">
-                  <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-emerald-500" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Payées</p>
-                  <p className="text-lg md:text-2xl font-bold text-emerald-600 group-hover:scale-105 transition-transform origin-left">CHF {totalCommissionsPayees.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{transactionsPayees.length} transaction{transactionsPayees.length > 1 ? 's' : ''}</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '100ms' }}>
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-orange-500/10 rounded-lg group-hover:scale-110 transition-transform">
-                  <Clock className="h-5 w-5 md:h-6 md:w-6 text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">En attente</p>
-                  <p className="text-lg md:text-2xl font-bold text-orange-600 group-hover:scale-105 transition-transform origin-left">CHF {(totalCommissions - totalCommissionsPayees).toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{transactionsEnAttente.length} transaction{transactionsEnAttente.length > 1 ? 's' : ''}</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '150ms' }}>
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-blue-500/10 rounded-lg group-hover:scale-110 transition-transform">
-                  <Building2 className="h-5 w-5 md:h-6 md:w-6 text-blue-500" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Potentiel agence</p>
-                  <p className="text-lg md:text-2xl font-bold text-blue-600 group-hover:scale-105 transition-transform origin-left">CHF {totalCommissionAgence.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{clientsActifsPourProjection.length} mandat{clientsActifsPourProjection.length > 1 ? 's' : ''} actif{clientsActifsPourProjection.length > 1 ? 's' : ''}</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="card-interactive p-4 md:p-6 animate-fade-in group" style={{ animationDelay: '200ms' }}>
-              <div className="flex items-center gap-3 md:gap-4">
-                <div className="p-2 md:p-3 bg-violet-500/10 rounded-lg group-hover:scale-110 transition-transform">
-                  <Target className="h-5 w-5 md:h-6 md:w-6 text-violet-500" />
-                </div>
-                <div>
-                  <p className="text-xs md:text-sm text-muted-foreground">Taux conversion</p>
-                  <p className="text-lg md:text-2xl font-bold text-violet-600 group-hover:scale-105 transition-transform origin-left">{tauxConversion}%</p>
-                  <p className="text-xs text-muted-foreground">réalisé / potentiel</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-
-          {/* Section Projection détaillée */}
-          <div className="mb-8">
-            <AgencyProjectionSection 
+      {/* Projection détaillée (repliable) */}
+      <section aria-label="Projection de l'agence">
+        <ToggleDetails open={showProjection} onToggle={() => setShowProjection((v) => !v)}>
+          Projection de l'agence · {chf(totalCommissionAgence)} sur {clientsActifsPourProjection.length} mandat{clientsActifsPourProjection.length > 1 ? 's' : ''} actif{clientsActifsPourProjection.length > 1 ? 's' : ''}
+        </ToggleDetails>
+        {showProjection && (
+          <div className="mt-3">
+            <AgencyProjectionSection
               projections={agencyProjections}
               totalCommissionAgence={totalCommissionAgence}
             />
           </div>
+        )}
+      </section>
 
-          {/* Tabs: Transactions / Acomptes */}
-          <Tabs defaultValue="transactions" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="transactions">
-                Transactions ({transactions.length})
-              </TabsTrigger>
-              <TabsTrigger value="acomptes">
-                Acomptes ({acomptes.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="transactions">
-              <div className="grid gap-4">
-                {transactions.length === 0 ? (
-                  <Card className="card-interactive p-12 animate-fade-in" style={{ animationDelay: '150ms' }}>
-                    <div className="text-center text-muted-foreground">
-                      <DollarSign className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p className="font-medium">Aucune transaction enregistrée</p>
-                      <p className="text-sm mt-1">Les transactions apparaîtront ici une fois conclues</p>
-                    </div>
-                  </Card>
-                ) : (
-                  transactions.map((transaction, index) => {
-                    return (
-                      <Card key={transaction.id} className="card-interactive p-6 animate-fade-in" style={{ animationDelay: `${150 + index * 40}ms`, animationFillMode: 'backwards' }}>
-                        <div className="space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="text-xl font-semibold mb-2">{getClientName(transaction)}</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Agent: {getAgentName(transaction)}
-                              </p>
-                              {transaction.adresse && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                  {transaction.adresse}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge variant={
-                                transaction.statut === 'conclue' ? 'default' : 
-                                transaction.statut === 'en_cours' ? 'secondary' : 
-                                'destructive'
-                              }>
-                                {transaction.statut === 'conclue' ? 'Conclue' : 
-                                 transaction.statut === 'en_cours' ? 'En cours' : 
-                                 'Annulée'}
-                              </Badge>
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive hover:bg-destructive/10">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Supprimer cette transaction ?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Cette action est irréversible. La transaction de <strong>{getClientName(transaction)}</strong> 
-                                      {transaction.adresse && <> ({transaction.adresse})</>} pour un montant de <strong>CHF {transaction.commission_totale?.toLocaleString()}</strong> sera définitivement supprimée.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                                    <AlertDialogAction 
-                                      onClick={() => handleDeleteTransaction(transaction.id)}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      Supprimer
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3 md:gap-4 pt-4 border-t">
-                            <div>
-                              <p className="text-xs md:text-sm text-muted-foreground mb-1">Montant total (annuel)</p>
-                              <p className="text-base md:text-lg font-semibold">CHF {transaction.montant_total.toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs md:text-sm text-muted-foreground mb-1">Commission totale</p>
-                              <p className="text-base md:text-lg font-semibold text-primary">CHF {transaction.commission_totale.toLocaleString()}</p>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-3 md:gap-4">
-                            <div className="p-3 md:p-4 bg-muted/50 rounded-lg">
-                              <p className="text-xs md:text-sm text-muted-foreground mb-1">Part agent</p>
-                              <p className="text-lg md:text-xl font-bold text-success">CHF {transaction.part_agent.toLocaleString()}</p>
-                            </div>
-                            <div className="p-3 md:p-4 bg-muted/50 rounded-lg">
-                              <p className="text-xs md:text-sm text-muted-foreground mb-1">Part agence</p>
-                              <p className="text-lg md:text-xl font-bold">CHF {transaction.part_agence.toLocaleString()}</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between pt-4 border-t">
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <CalendarIcon className="h-4 w-4" />
-                              Conclue le {new Date(transaction.date_transaction).toLocaleDateString('fr-CH')}
-                            </div>
-                            
-                            {transaction.commission_payee ? (
-                              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-sm">
-                                <CheckCircle2 className="h-4 w-4" />
-                                <span>Payée le {new Date(transaction.date_paiement_commission).toLocaleDateString('fr-CH')}</span>
-                              </div>
-                            ) : (
-                              <>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                                  onClick={() => {
-                                    setSelectedPaymentDate(new Date());
-                                    setPaymentDialogOpen(transaction.id);
-                                  }}
-                                >
-                                  <Clock className="h-4 w-4 mr-2" />
-                                  Marquer payée
-                                </Button>
-                                
-                                <Dialog 
-                                  open={paymentDialogOpen === transaction.id} 
-                                  onOpenChange={(open) => {
-                                    if (!open) setPaymentDialogOpen(null);
-                                  }}
-                                >
-                                  <DialogContent>
-                                    <DialogHeader>
-                                      <DialogTitle>Confirmer le paiement</DialogTitle>
-                                      <DialogDescription>
-                                        Marquer la commission de <strong>CHF {transaction.commission_totale?.toLocaleString()}</strong> comme payée.
-                                      </DialogDescription>
-                                    </DialogHeader>
-                                    
-                                    <div className="space-y-4 py-4">
-                                      <div className="space-y-2">
-                                        <label className="text-sm font-medium">Date du paiement</label>
-                                        <Popover>
-                                          <PopoverTrigger asChild>
-                                            <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                              <CalendarIcon className="mr-2 h-4 w-4" />
-                                              {format(selectedPaymentDate, "dd MMMM yyyy", { locale: fr })}
-                                            </Button>
-                                          </PopoverTrigger>
-                                          <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar
-                                              mode="single"
-                                              selected={selectedPaymentDate}
-                                              onSelect={(date) => date && setSelectedPaymentDate(date)}
-                                              disabled={(date) => date > new Date()}
-                                              locale={fr}
-                                              initialFocus
-                                            />
-                                          </PopoverContent>
-                                        </Popover>
-                                        <p className="text-xs text-muted-foreground">
-                                          Sélectionnez la date exacte à laquelle le paiement a été effectué
-                                        </p>
-                                      </div>
-                                    </div>
-                                    
-                                    <DialogFooter>
-                                      <Button variant="outline" onClick={() => setPaymentDialogOpen(null)}>
-                                        Annuler
-                                      </Button>
-                                      <Button 
-                                        onClick={() => handleMarkCommissionPaid(transaction.id, selectedPaymentDate)}
-                                        className="bg-emerald-600 text-white hover:bg-emerald-700"
-                                      >
-                                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                                        Confirmer
-                                      </Button>
-                                    </DialogFooter>
-                                  </DialogContent>
-                                </Dialog>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </Card>
-                    );
-                  })
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="acomptes">
-              {/* Acomptes KPIs */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4 mb-6">
-                <Card className="p-4 md:p-6 animate-fade-in group">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className="p-2 md:p-3 bg-primary/10 rounded-lg">
-                      <Wallet className="h-5 w-5 md:h-6 md:w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs md:text-sm text-muted-foreground">Acomptes encaissés</p>
-                      <p className="text-lg md:text-2xl font-bold">CHF {totalAcomptesEncaisses.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">{acomptes.length} acompte{acomptes.length > 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                </Card>
-                <Card className="p-4 md:p-6 animate-fade-in group">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className="p-2 md:p-3 bg-emerald-500/10 rounded-lg">
-                      <CheckCircle2 className="h-5 w-5 md:h-6 md:w-6 text-emerald-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs md:text-sm text-muted-foreground">Acomptes acquis</p>
-                      <p className="text-lg md:text-2xl font-bold text-emerald-600">CHF {totalAcomptesAcquis.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">{acomptesAcquis.length} acquis</p>
-                    </div>
-                  </div>
-                </Card>
-                <Card className="p-4 md:p-6 animate-fade-in group">
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <div className="p-2 md:p-3 bg-orange-500/10 rounded-lg">
-                      <ArrowDownLeft className="h-5 w-5 md:h-6 md:w-6 text-orange-500" />
-                    </div>
-                    <div>
-                      <p className="text-xs md:text-sm text-muted-foreground">Ristournes</p>
-                      <p className="text-lg md:text-2xl font-bold text-orange-600">CHF {totalRistournes.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">{acomptesRistournes.length} ristourné{acomptesRistournes.length > 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Acomptes list */}
-              <div className="grid gap-4">
-                {acomptes.length === 0 ? (
-                  <Card className="p-12">
-                    <div className="text-center text-muted-foreground">
-                      <Wallet className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                      <p className="font-medium">Aucun acompte enregistré</p>
-                      <p className="text-sm mt-1">Les acomptes apparaîtront ici une fois payés par les clients</p>
-                    </div>
-                  </Card>
-                ) : (
-                  acomptes.map((acompte, index) => (
-                    <Card key={acompte.id} className="card-interactive p-4 md:p-6 animate-fade-in" style={{ animationDelay: `${index * 40}ms`, animationFillMode: 'backwards' }}>
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex-1 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-lg">{acompte.client_name || 'Client inconnu'}</h3>
-                            <Badge variant={
-                              acompte.statut === 'acquis' ? 'default' :
-                              acompte.statut === 'ristourne' ? 'destructive' :
-                              'secondary'
-                            }>
-                              {acompte.statut === 'paye' ? 'Payé' :
-                               acompte.statut === 'acquis' ? 'Acquis' :
-                               'Ristourné'}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Agent: {acompte.agent_name || 'Non assigné'}
-                          </p>
-                          {acompte.date_paiement && (
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                              <CalendarIcon className="h-3.5 w-3.5" />
-                              Payé le {new Date(acompte.date_paiement).toLocaleDateString('fr-CH')}
-                            </p>
-                          )}
-                          {acompte.statut === 'ristourne' && acompte.date_ristourne && (
-                            <p className="text-sm text-orange-600 flex items-center gap-1">
-                              <ArrowDownLeft className="h-3.5 w-3.5" />
-                              Ristourné le {new Date(acompte.date_ristourne).toLocaleDateString('fr-CH')}
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3">
-                          <p className="text-xl font-bold">CHF {(acompte.montant || 300).toLocaleString()}</p>
-                          
-                          {acompte.statut === 'paye' && (
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
-                                onClick={() => setAcquisDialogOpen(acompte.id)}
-                              >
-                                <CheckCircle2 className="h-4 w-4 mr-1" />
-                                Acquis
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-orange-600 border-orange-300 hover:bg-orange-50"
-                                onClick={() => {
-                                  setSelectedRistourneDate(new Date());
-                                  setRistourneDialogOpen(acompte.id);
-                                }}
-                              >
-                                <ArrowDownLeft className="h-4 w-4 mr-1" />
-                                Ristourner
-                              </Button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Acquis confirmation dialog */}
-                      <AlertDialog 
-                        open={acquisDialogOpen === acompte.id}
-                        onOpenChange={(open) => { if (!open) setAcquisDialogOpen(null); }}
-                      >
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Marquer l'acompte comme acquis ?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              L'acompte de <strong>CHF {acompte.montant}</strong> de <strong>{acompte.client_name}</strong> sera considéré comme revenu acquis (client ayant arrêté sa recherche).
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleMarquerAcquis(acompte.id)}>
-                              Confirmer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-
-                      {/* Ristourne dialog */}
-                      <Dialog
-                        open={ristourneDialogOpen === acompte.id}
-                        onOpenChange={(open) => { if (!open) setRistourneDialogOpen(null); }}
-                      >
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Ristourner l'acompte</DialogTitle>
-                            <DialogDescription>
-                              Rembourser l'acompte de <strong>CHF {acompte.montant}</strong> à <strong>{acompte.client_name}</strong>.
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <label className="text-sm font-medium">Date de la ristourne</label>
-                              <Popover>
-                                <PopoverTrigger asChild>
-                                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {format(selectedRistourneDate, "dd MMMM yyyy", { locale: fr })}
-                                  </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                  <Calendar
-                                    mode="single"
-                                    selected={selectedRistourneDate}
-                                    onSelect={(date) => date && setSelectedRistourneDate(date)}
-                                    disabled={(date) => date > new Date()}
-                                    locale={fr}
-                                    initialFocus
-                                  />
-                                </PopoverContent>
-                              </Popover>
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button variant="outline" onClick={() => setRistourneDialogOpen(null)}>
-                              Annuler
-                            </Button>
-                            <Button
-                              onClick={() => handleRistourne(acompte.id, selectedRistourneDate)}
-                              className="bg-orange-600 text-white hover:bg-orange-700"
-                            >
-                              <ArrowDownLeft className="h-4 w-4 mr-2" />
-                              Confirmer la ristourne
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    </Card>
-                  ))
-                )}
-              </div>
-            </TabsContent>
-          </Tabs>
+      {/* Barre d'outils */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <SearchField value={q} onChange={setQ} placeholder="Client, agent, adresse…" label="Rechercher une transaction ou un acompte" />
+        <div className="grid grid-cols-2 gap-2 md:flex md:w-auto">
+          <Select value={tri} onValueChange={(v) => setTri(v as TriTransactions)}>
+            <SelectTrigger className="h-11 rounded-full md:w-[190px]" aria-label="Trier"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="urgence">Urgent d’abord</SelectItem>
+              <SelectItem value="recent">Plus récentes</SelectItem>
+              <SelectItem value="oldest">Plus anciennes</SelectItem>
+              <SelectItem value="montant">Montant décroissant</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={periode} onValueChange={(v) => setPeriode(v as PeriodeKey)}>
+            <SelectTrigger className="h-11 rounded-full md:w-[180px]" aria-label="Période"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {PERIODES.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
       </div>
-    );
-  };
-  
-  export default Transactions;
+
+      <DashFilterPills
+        label="Étapes des transactions"
+        value={vue}
+        onChange={(v) => setVue(v as VueTransactions)}
+        options={[
+          { key: 'en_retard', label: 'En retard', count: parEtape.en_retard.length },
+          { key: 'a_encaisser', label: 'À encaisser', count: parEtape.a_encaisser.length },
+          { key: 'en_cours', label: 'En cours', count: parEtape.en_cours.length },
+          { key: 'payees', label: 'Payées', count: parEtape.payees.length },
+          { key: 'toutes', label: 'Toutes', count: transactionsVisibles.length },
+          { key: 'acomptes', label: 'Acomptes', count: acomptesVisibles.length },
+        ]}
+      />
+
+      {vue !== 'acomptes' ? (
+        listeTransactions.length === 0 ? (
+          <DashEmptyState
+            icon={DollarSign}
+            title={filtresActifs ? 'Aucun résultat pour ces filtres' : vides[vue]}
+            description={vue === 'toutes' && !filtresActifs ? 'Les transactions apparaîtront ici une fois conclues' : undefined}
+          />
+        ) : (
+          <>
+            {/* Mobile et tablette : une carte par transaction */}
+            <div className="grid gap-3 md:grid-cols-2 lg:hidden">
+              {listeTransactions.map((transaction) => (
+                <TransactionCard
+                  key={transaction.id}
+                  transaction={transaction}
+                  clientName={getClientName(transaction)}
+                  agentName={getAgentName(transaction)}
+                  statut={statutBadge(transaction)}
+                  action={actionPrincipale(transaction)}
+                  supprimer={boutonSupprimer(transaction)}
+                />
+              ))}
+            </div>
+
+            {/* PC : registre dense */}
+            <div className="hidden lg:block">
+              <TableCard>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Client</TableHead>
+                      <TableHead>Conclue le</TableHead>
+                      <TableHead className="text-right">Montant annuel</TableHead>
+                      <TableHead className="text-right">Commission</TableHead>
+                      <TableHead className="text-right">Part agent</TableHead>
+                      <TableHead className="text-right">Part agence</TableHead>
+                      <TableHead>Prochaine action</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {listeTransactions.map((transaction) => {
+                      const enRetard = etapeTransaction(transaction) === 'en_retard';
+                      return (
+                        <TableRow key={transaction.id} className={cn(enRetard && 'bg-amber-500/5')}>
+                          <TableCell className="max-w-[220px]">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate font-medium text-foreground">{getClientName(transaction)}</span>
+                              {statutBadge(transaction)}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">Agent: {getAgentName(transaction)}</div>
+                            {transaction.adresse && <div className="truncate text-xs text-muted-foreground">{transaction.adresse}</div>}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-sm">
+                            {dateCH(transaction.date_transaction)}
+                            {!transaction.commission_payee && transaction.statut === 'conclue' && (
+                              <div className="mt-1"><DelaiPill label={libelleJours(joursDepuis(transaction.date_transaction))} alerte={enRetard} /></div>
+                            )}
+                          </TableCell>
+                          <TableCell className="whitespace-nowrap text-right tabular-nums">{chf(transaction.montant_total)}</TableCell>
+                          <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums text-primary">{chf(transaction.commission_totale)}</TableCell>
+                          <TableCell className="whitespace-nowrap text-right tabular-nums">{chf(transaction.part_agent)}</TableCell>
+                          <TableCell className="whitespace-nowrap text-right tabular-nums">{chf(transaction.part_agence)}</TableCell>
+                          <TableCell className="max-w-[240px]"><NextAction action={prochaineActionTransaction(transaction)} className="text-xs" /></TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {actionPrincipale(transaction, true)}
+                              {boutonSupprimer(transaction, true)}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </TableCard>
+            </div>
+          </>
+        )
+      ) : (
+        <div className="space-y-4">
+          {/* Synthèse acomptes */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <FinanceStat icon={Wallet} tone="primary" label="Acomptes encaissés" value={chf(totalAcomptesEncaisses)} hint={pluriel(acomptes.length, 'acompte')} onClick={() => setVueAcomptes('tous')} active={vueAcomptes === 'tous'} />
+            <FinanceStat icon={CheckCircle2} tone="success" label="Acomptes acquis" value={chf(totalAcomptesAcquis)} hint={`${acomptesAcquis.length} acquis`} onClick={() => setVueAcomptes('acquis')} active={vueAcomptes === 'acquis'} />
+            <FinanceStat icon={ArrowDownLeft} tone="warning" label="Ristournes" value={chf(totalRistournes)} hint={`${acomptesRistournes.length} ristourné${acomptesRistournes.length > 1 ? 's' : ''}`} onClick={() => setVueAcomptes('ristournes')} active={vueAcomptes === 'ristournes'} />
+          </div>
+
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Étapes des acomptes">
+            {([
+              { key: 'a_decider', label: 'À décider', count: acomptesParEtape.a_decider.length },
+              { key: 'acquis', label: 'Acquis', count: acomptesParEtape.acquis.length },
+              { key: 'ristournes', label: 'Ristournés', count: acomptesParEtape.ristournes.length },
+              { key: 'tous', label: 'Tous', count: acomptesVisibles.length },
+            ] as { key: VueAcomptes; label: string; count: number }[]).map((o) => (
+              <button
+                key={o.key}
+                type="button"
+                role="tab"
+                aria-selected={vueAcomptes === o.key}
+                onClick={() => setVueAcomptes(o.key)}
+                className={cn(
+                  'inline-flex h-9 items-center gap-1.5 rounded-full border px-3.5 text-sm font-medium transition-colors',
+                  vueAcomptes === o.key ? 'border-foreground/80 bg-muted text-foreground' : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                )}
+              >
+                {o.label} <span className="text-xs text-muted-foreground">{o.count}</span>
+              </button>
+            ))}
+          </div>
+
+          {listeAcomptes.length === 0 ? (
+            <DashEmptyState
+              icon={Wallet}
+              title={filtresActifs ? 'Aucun résultat pour ces filtres' : acomptes.length === 0 ? 'Aucun acompte enregistré' : 'Aucun acompte dans cette étape'}
+              description={acomptes.length === 0 ? 'Les acomptes apparaîtront ici une fois payés par les clients' : undefined}
+            />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {listeAcomptes.map((acompte) => {
+                const s = STATUT_ACOMPTE[acompte.statut] ?? STATUT_ACOMPTE.ristourne;
+                return (
+                  <article key={acompte.id} className={cn(DASH_CARD, 'flex flex-col gap-3 p-4 md:p-5')}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-semibold text-foreground">{acompte.client_name || 'Client inconnu'}</p>
+                        <p className="truncate text-xs text-muted-foreground">Agent: {acompte.agent_name || 'Non assigné'}</p>
+                      </div>
+                      <DashBadge tone={s.tone}>{s.label}</DashBadge>
+                    </div>
+                    <div className="flex items-end justify-between gap-2">
+                      <p className="text-xl font-semibold tabular-nums text-foreground">{chf(acompte.montant || 300)}</p>
+                      <div className="text-right text-xs text-muted-foreground">
+                        {acompte.date_paiement && (
+                          <p className="inline-flex items-center gap-1"><CalendarIcon className="h-3.5 w-3.5" /> Payé le {dateCH(acompte.date_paiement)}</p>
+                        )}
+                        {acompte.statut === 'ristourne' && acompte.date_ristourne && (
+                          <p className="flex items-center justify-end gap-1 text-amber-700 dark:text-amber-400"><ArrowDownLeft className="h-3.5 w-3.5" /> Ristourné le {dateCH(acompte.date_ristourne)}</p>
+                        )}
+                      </div>
+                    </div>
+                    <NextAction action={prochaineActionAcompte(acompte)} />
+                    {acompte.statut === 'paye' && (
+                      <div className="mt-auto grid grid-cols-2 gap-2">
+                        <Button className="h-11 rounded-full md:h-10" onClick={() => setAcquisDialogOpen(acompte.id)}>
+                          <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                          Acquis
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="h-11 rounded-full md:h-10"
+                          onClick={() => {
+                            setSelectedRistourneDate(new Date());
+                            setRistourneDialogOpen(acompte.id);
+                          }}
+                        >
+                          <ArrowDownLeft className="mr-1.5 h-4 w-4" />
+                          Ristourner
+                        </Button>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Suppression d'une transaction */}
+      <AlertDialog open={!!deleteTransaction} onOpenChange={(open) => { if (!open) setDeleteId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer cette transaction ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La transaction de <strong>{deleteTransaction ? getClientName(deleteTransaction) : ''}</strong>
+              {deleteTransaction?.adresse && <> ({deleteTransaction.adresse})</>} pour un montant de <strong>{chf(deleteTransaction?.commission_totale)}</strong> sera définitivement supprimée.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (deleteTransaction) handleDeleteTransaction(deleteTransaction.id); setDeleteId(null); }}
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Paiement d'une commission */}
+      <Dialog
+        open={!!paymentTransaction}
+        onOpenChange={(open) => {
+          if (!open) setPaymentDialogOpen(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer le paiement</DialogTitle>
+            <DialogDescription>
+              Marquer la commission de <strong>{chf(paymentTransaction?.commission_totale)}</strong> comme payée.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date du paiement</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-11 w-full justify-start rounded-full text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(selectedPaymentDate, "dd.MM.yyyy", { locale: fr })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedPaymentDate}
+                    onSelect={(date) => date && setSelectedPaymentDate(date)}
+                    disabled={(date) => date > new Date()}
+                    locale={fr}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <p className="text-xs text-muted-foreground">
+                Sélectionnez la date exacte à laquelle le paiement a été effectué
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setPaymentDialogOpen(null)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => paymentTransaction && handleMarkCommissionPaid(paymentTransaction.id, selectedPaymentDate)}
+              className="rounded-full"
+            >
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Confirmer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Acompte acquis */}
+      <AlertDialog
+        open={!!acquisAcompte}
+        onOpenChange={(open) => { if (!open) setAcquisDialogOpen(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Marquer l'acompte comme acquis ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              L'acompte de <strong>CHF {acquisAcompte?.montant}</strong> de <strong>{acquisAcompte?.client_name}</strong> sera considéré comme revenu acquis (client ayant arrêté sa recherche).
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction className="rounded-full" onClick={() => acquisAcompte && handleMarquerAcquis(acquisAcompte.id)}>
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Ristourne d'un acompte */}
+      <Dialog
+        open={!!ristourneAcompte}
+        onOpenChange={(open) => { if (!open) setRistourneDialogOpen(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ristourner l'acompte</DialogTitle>
+            <DialogDescription>
+              Rembourser l'acompte de <strong>CHF {ristourneAcompte?.montant}</strong> à <strong>{ristourneAcompte?.client_name}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Date de la ristourne</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-11 w-full justify-start rounded-full text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {format(selectedRistourneDate, "dd.MM.yyyy", { locale: fr })}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={selectedRistourneDate}
+                    onSelect={(date) => date && setSelectedRistourneDate(date)}
+                    disabled={(date) => date > new Date()}
+                    locale={fr}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setRistourneDialogOpen(null)}>
+              Annuler
+            </Button>
+            <Button
+              onClick={() => ristourneAcompte && handleRistourne(ristourneAcompte.id, selectedRistourneDate)}
+              className="rounded-full bg-amber-600 text-white hover:bg-amber-700"
+            >
+              <ArrowDownLeft className="h-4 w-4 mr-2" />
+              Confirmer la ristourne
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </DashPage>
+  );
+};
+
+/**
+ * Une transaction = une carte (mobile et tablette) : client, montants, délai,
+ * UNE prochaine action et le bouton correspondant ; répartition repliable.
+ */
+function TransactionCard({ transaction, clientName, agentName, statut, action, supprimer }: {
+  transaction: any;
+  clientName: string;
+  agentName: string;
+  statut: ReactNode;
+  action: ReactNode;
+  supprimer: ReactNode;
+}) {
+  const [ouvert, setOuvert] = useState(false);
+  const etape = etapeTransaction(transaction);
+  const enRetard = etape === 'en_retard';
+  return (
+    <article className={cn(DASH_CARD, 'flex flex-col gap-3 p-4 md:p-5', enRetard && 'ring-1 ring-amber-500/40')}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-[15px] font-semibold text-foreground">{clientName}</p>
+          <p className="truncate text-xs text-muted-foreground">Agent: {agentName}</p>
+          {transaction.adresse && <p className="line-clamp-2 text-xs text-muted-foreground">{transaction.adresse}</p>}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          {statut}
+          {(etape === 'a_encaisser' || enRetard) && (
+            <DelaiPill label={libelleJours(joursDepuis(transaction.date_transaction))} alerte={enRetard} />
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 rounded-xl bg-muted/40 px-3 py-2">
+        <div>
+          <p className="text-xs text-muted-foreground">Commission totale</p>
+          <p className="text-base font-semibold tabular-nums text-primary">{chf(transaction.commission_totale)}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xs text-muted-foreground">Conclue le</p>
+          <p className="text-sm font-medium text-foreground">{dateCH(transaction.date_transaction)}</p>
+        </div>
+      </div>
+
+      <NextAction action={prochaineActionTransaction(transaction)} />
+
+      <div>
+        <ToggleDetails open={ouvert} onToggle={() => setOuvert((o) => !o)}>Répartition</ToggleDetails>
+        {ouvert && (
+          <div className="mt-1 space-y-1.5 rounded-lg bg-muted/50 p-3">
+            <Ligne label="Montant total (annuel)">{chf(transaction.montant_total)}</Ligne>
+            <Ligne label="Part agent">{chf(transaction.part_agent)}</Ligne>
+            <Ligne label="Part agence">{chf(transaction.part_agence)}</Ligne>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-auto flex items-center gap-2">
+        {action}
+        {supprimer}
+      </div>
+    </article>
+  );
+}
+
+export default Transactions;

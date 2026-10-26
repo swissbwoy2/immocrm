@@ -1,10 +1,10 @@
-import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { LayoutGrid, List, Rows, Zap, Upload, Download, MoreHorizontal, Sparkles, MessageCircle } from "lucide-react";
+import { LayoutGrid, List, Rows, Zap, Upload, Download, MoreHorizontal, MessageCircle } from "lucide-react";
+import { DashPageHeader } from "@/components/client/dashboard/DashPrimitives";
 import { cn } from "@/lib/utils";
 
 export type ViewMode = "pipeline" | "list" | "cards";
@@ -36,78 +36,86 @@ export function LeadsHero({
   onImport, onExport,
 }: Props) {
   return (
-    <div className="flex flex-col lg:flex-row gap-3 lg:gap-4 justify-between items-stretch lg:items-center">
-      <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
-          Leads Shortlist
-        </h1>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-1 flex flex-wrap gap-x-1.5 gap-y-0.5">
-          <span><span className="font-medium text-foreground">{total}</span> leads</span>
-          <span aria-hidden>·</span>
-          <span><span className="font-medium text-amber-600 dark:text-amber-400">{rdvCount}</span> RDV</span>
-          <span aria-hidden>·</span>
-          <span><span className="font-medium text-orange-600 dark:text-orange-400">{hotCount}</span> à traiter</span>
-        </p>
-      </motion.div>
-
-      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2">
-        <div className="flex items-center gap-2">
-          {/* Segmented control */}
-          <div className="inline-flex items-center rounded-lg bg-muted p-1 flex-1 sm:flex-none">
-            {VIEW_TABS.map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setView(t.key)}
-                className={cn(
-                  "flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-2.5 sm:px-3 py-1.5 min-h-[36px] rounded-md text-xs font-medium transition-all cursor-pointer",
-                  view === t.key
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
+    <div>
+      <DashPageHeader
+        title="Leads Shortlist"
+        subtitle={
+          <span className="flex flex-wrap gap-x-1.5 gap-y-0.5">
+            <span><span className="font-medium text-foreground">{total}</span> leads</span>
+            <span aria-hidden>·</span>
+            <span><span className="font-medium text-amber-600 dark:text-amber-400">{rdvCount}</span> RDV</span>
+            <span aria-hidden>·</span>
+            <span><span className="font-medium text-foreground">{hotCount}</span> à traiter</span>
+          </span>
+        }
+        action={
+          <>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0 rounded-full">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {onImport && (
+                  <DropdownMenuItem onClick={onImport} className="gap-2">
+                    <Upload className="h-4 w-4" /> Importer CSV
+                  </DropdownMenuItem>
                 )}
-              >
-                {t.icon}
-                <span className="hidden xs:inline sm:inline">{t.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-11 w-11 sm:h-10 sm:w-10 flex-shrink-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {onImport && (
-                <DropdownMenuItem onClick={onImport} className="gap-2">
-                  <Upload className="h-4 w-4" /> Importer CSV
+                <DropdownMenuItem onClick={onExport} className="gap-2">
+                  <Download className="h-4 w-4" /> Exporter CSV
                 </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button onClick={onRelance} disabled={notContactedCount === 0} className="gap-2 min-h-[40px] rounded-full">
+              <Zap className="h-4 w-4" />
+              Relancer ({notContactedCount})
+            </Button>
+
+            {onWhatsapp && (
+              <Button
+                onClick={onWhatsapp}
+                disabled={whatsappLoading || whatsappCount === 0}
+                variant="outline"
+                title="Leads Shortlist avec téléphone, jamais contactés sur WhatsApp (dédup logs Meta)."
+                className="gap-2 min-h-[40px] rounded-full"
+              >
+                <MessageCircle className="h-4 w-4 text-emerald-600" />
+                {whatsappLoading ? "Envoi…" : `WhatsApp (${whatsappCount})`}
+              </Button>
+            )}
+          </>
+        }
+      />
+
+      {/* Onglets de vue (même rendu que DashFilterPills) */}
+      <div
+        className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        role="tablist"
+        aria-label="Vue"
+      >
+        {VIEW_TABS.map((t) => {
+          const active = view === t.key;
+          return (
+            <button
+              key={t.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setView(t.key)}
+              className={cn(
+                "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-colors duration-150",
+                active
+                  ? "border-foreground bg-foreground text-background"
+                  : "border-border bg-background text-foreground hover:border-foreground/60"
               )}
-              <DropdownMenuItem onClick={onExport} className="gap-2">
-                <Download className="h-4 w-4" /> Exporter CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-
-        <Button onClick={onRelance} disabled={notContactedCount === 0} className="gap-2 min-h-[44px] sm:min-h-[40px] w-full sm:w-auto">
-          <Zap className="h-4 w-4" />
-          Relancer ({notContactedCount})
-        </Button>
-
-        {onWhatsapp && (
-          <Button
-            onClick={onWhatsapp}
-            disabled={whatsappLoading || whatsappCount === 0}
-            variant="secondary"
-            title="Leads Shortlist avec téléphone, jamais contactés sur WhatsApp (dédup logs Meta)."
-            className="gap-2 min-h-[44px] sm:min-h-[40px] w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
-          >
-            <MessageCircle className="h-4 w-4" />
-            {whatsappLoading ? "Envoi…" : `WhatsApp (${whatsappCount})`}
-          </Button>
-        )}
+            >
+              {t.icon}
+              {t.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

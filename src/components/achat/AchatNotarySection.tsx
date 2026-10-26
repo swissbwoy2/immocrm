@@ -60,7 +60,7 @@ export function AchatNotarySection({ notary }: AchatNotarySectionProps) {
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
-          <DateBlock icon={Calendar} label="Rendez-vous" date={notary.date_rdv} />
+          <DateBlock icon={Calendar} label="Rendez-vous" date={notary.date_rdv} withTime />
           <DateBlock icon={Scale} label="Signature" date={notary.date_signature} />
           <DateBlock icon={Key} label="Remise des clés" date={notary.date_remise_cles} />
         </div>
@@ -69,7 +69,7 @@ export function AchatNotarySection({ notary }: AchatNotarySectionProps) {
   );
 }
 
-function DateBlock({ icon: Icon, label, date }: any) {
+function DateBlock({ icon: Icon, label, date, withTime }: any) {
   return (
     <div className="rounded-xl border border-border p-3">
       <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-muted-foreground mb-1">
@@ -77,7 +77,11 @@ function DateBlock({ icon: Icon, label, date }: any) {
         {label}
       </div>
       <div className="text-sm font-semibold">
-        {date ? new Date(date).toLocaleDateString('fr-CH') : '—'}
+        {date
+          ? (withTime
+            ? new Date(date).toLocaleString('fr-CH', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' })
+            : new Date(date).toLocaleDateString('fr-CH'))
+          : '—'}
       </div>
     </div>
   );

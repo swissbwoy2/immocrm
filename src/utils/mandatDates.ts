@@ -19,6 +19,8 @@ export interface MandatClientLike {
 
 export interface MandatDates {
   start: Date | null;
+  /** Début de la période de 90 jours en cours (= start tant qu'il n'y a pas eu de reconduction). */
+  cycleStart: Date | null;
   end: Date | null;
   /** Jours écoulés depuis la dernière date d'effet (modulo renouvellement auto), borné [0, 90]. */
   daysSinceSignature: number;
@@ -30,14 +32,46 @@ export interface MandatDates {
   renewalCount: number;
 }
 
+/**
+ * Date d'effet du mandat : la plus récente entre la signature du mandat et un renouvellement
+ * enregistré par l'équipe (date_ajout est remise à jour au renouvellement dans « Mandats »).
+ * À défaut : date de création de la fiche.
+ */
+export function mandatStartRaw(client: MandatClientLike | null | undefined): string | null {
+  if (!client) return null;
+  const sig = client.mandat_date_signature ? new Date(client.mandat_date_signature).getTime() : NaN;
+  const add = client.date_ajout ? new Date(client.date_ajout).getTime() : NaN;
+  if (!isNaN(sig) && !isNaN(add)) return sig >= add ? client.mandat_date_signature! : client.date_ajout!;
+  return client.mandat_date_signature || client.date_ajout || client.created_at || null;
+}
+
+/** Jours écoulés dans la période de mandat en cours (même calcul que « Mon contrat » côté client).
+ *  frozenEnd : date d'arrêt (relogé, stoppé, suspendu) — le compteur est figé à cette date. */
+export function mandatElapsedFor(client: MandatClientLike | null | undefined, frozenEnd?: string | null): number {
+  if (!client) return 0;
+  if (frozenEnd) {
+    const start = mandatStartRaw(client);
+    if (!start) return 0;
+    return Math.max(0, (new Date(frozenEnd).getTime() - new Date(start).getTime()) / (1000 * 60 * 60 * 24));
+  }
+  return getMandatDates(client).daysSinceSignature;
+}
+
+/** Jours restants dans la période de mandat en cours (même calcul que « Mon contrat »). */
+export function mandatRemainingFor(client: MandatClientLike | null | undefined, frozenEnd?: string | null): number {
+  if (!client) return 0;
+  if (frozenEnd) return MANDAT_DURATION_DAYS - mandatElapsedFor(client, frozenEnd);
+  return getMandatDates(client).daysRemaining;
+}
+
 export function getMandatDates(client: MandatClientLike | null | undefined): MandatDates {
   if (!client) {
-    return { start: null, end: null, daysSinceSignature: 0, daysRemaining: 0, isAutoRenewed: false, renewalCount: 0 };
+    return { start: null, cycleStart: null, end: null, daysSinceSignature: 0, daysRemaining: 0, isAutoRenewed: false, renewalCount: 0 };
   }
 
-  const startRaw = client.mandat_date_signature || client.date_ajout || client.created_at;
+  const startRaw = mandatStartRaw(client);
   if (!startRaw) {
-    return { start: null, end: null, daysSinceSignature: 0, daysRemaining: 0, isAutoRenewed: false, renewalCount: 0 };
+    return { start: null, cycleStart: null, end: null, daysSinceSignature: 0, daysRemaining: 0, isAutoRenewed: false, renewalCount: 0 };
   }
 
   const start = new Date(startRaw);
@@ -88,6 +122,7 @@ export function getMandatDates(client: MandatClientLike | null | undefined): Man
 
   return {
     start,
+    cycleStart: currentCycleStart,
     end,
     daysSinceSignature,
     daysRemaining,
