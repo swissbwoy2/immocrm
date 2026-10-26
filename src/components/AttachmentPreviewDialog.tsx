@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Image as ImageIcon, File } from "lucide-react";
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 interface AttachmentPreviewDialogProps {
   open: boolean;
@@ -48,7 +49,7 @@ export function AttachmentPreviewDialog({
               />
             </div>
           ) : isPdf ? (
-            <iframe
+            <PdfPreview
               src={previewUrl}
               className="w-full h-[70vh] border rounded-lg"
               title={file.name}

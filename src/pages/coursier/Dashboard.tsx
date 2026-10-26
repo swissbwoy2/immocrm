@@ -17,6 +17,7 @@ import { groupVisitesByPhysiqueAgent } from '@/utils/visitesCalculator';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
 import { DASH_CARD, DashBadge, DashEmptyState, DashPage, DashPageHeader, DashSection, DashSectionLink } from '@/components/client/dashboard/DashPrimitives';
 import { cn } from '@/lib/utils';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 export default function CoursierDashboard() {
   const { user } = useAuth();
@@ -172,6 +173,7 @@ export default function CoursierDashboard() {
     <DashPage className="space-y-6">
       <DashboardBanner />
       <DashPageHeader title="Tableau de bord" subtitle={subtitle} />
+      <MaJourneeBanner role="coursier" />
 
       {/* 1. Prochaine mission, en grand */}
       {nextMission ? (

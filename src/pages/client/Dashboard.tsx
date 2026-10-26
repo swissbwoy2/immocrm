@@ -56,6 +56,7 @@ import DashboardAchat from './DashboardAchat';
 import DashboardAchatEnAttente from './DashboardAchatEnAttente';
 import { resolveClientParcours } from '@/lib/journey';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 export default function ClientDashboardDispatcher() {
   const { user } = useAuth();
@@ -574,6 +575,8 @@ function ClientDashboardLocation() {
               onOffersClick={() => navigate('/client/offres-recues')}
             />
           </SectionErrorBoundary>
+          {/* Ma journée : visites du jour */}
+          <MaJourneeBanner role="client" visites={visites} />
 
           {/* 2. À faire : tout ce qui bloque ou demande une action */}
           <div className="space-y-3">

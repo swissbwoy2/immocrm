@@ -512,8 +512,8 @@ export default function AgentDashboard() {
           />
 
           {/* (a) Ma journée + (b) À traiter : premier écran */}
-          <div className="grid gap-3 lg:grid-cols-12">
-            <div className="lg:col-span-4">
+          <div className="grid min-w-0 grid-cols-1 gap-3 lg:grid-cols-12">
+            <div className="min-w-0 lg:col-span-4">
               <DayBanner
                 greeting="Bonjour"
                 dateLabel={formatJourLong(now)}
@@ -524,7 +524,7 @@ export default function AgentDashboard() {
                 agendaLabel="Calendrier"
               />
             </div>
-            <section className="space-y-2 lg:col-span-8" aria-label="À traiter">
+            <section className="min-w-0 space-y-2 lg:col-span-8" aria-label="À traiter">
               <h2 className="px-0.5 text-base font-semibold text-foreground">
                 À traiter <span className="font-normal text-muted-foreground">· urgent d’abord</span>
               </h2>

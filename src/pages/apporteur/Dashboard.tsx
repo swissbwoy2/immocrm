@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 interface ApporteurStats {
   total_referrals: number;
@@ -130,6 +131,9 @@ export default function ApporteurDashboard() {
           </p>
         </div>
       </div>
+
+      {/* Ma journée */}
+      <MaJourneeBanner role="apporteur" />
 
       {/* Code Parrainage avec glassmorphism */}
       <Card className="relative overflow-hidden border-primary/20 animate-fade-in group" style={{ animationDelay: '100ms' }}>
