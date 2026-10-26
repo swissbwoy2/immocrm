@@ -3,6 +3,7 @@
 // L'identifiant du client vient toujours de la conversation, jamais des paramètres du modèle.
 // deno-lint-ignore-file no-explicit-any
 import type { ToolDefinition } from './anthropic.ts';
+import { zurichToUtc } from './dates.ts';
 import { applications, documentsStatus, mandate, offers, visits, type Db, type Dossier } from './context.ts';
 
 export const STEEVE_TOOLS: ToolDefinition[] = [
@@ -58,7 +59,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'propose_action',
-    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve). Jamais pour ce que tes outils font directement : critères (modifier_criteres), réponse à une offre (repondre_offre), demande de visite (demander_visite). Types : note_agent (demande ou information pour l'agent : visite déjà fixée à replanifier, question particulière pour une régie… ; la conversation reste avec Steeve), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
+    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve). Jamais pour ce que tes outils font directement : critères (modifier_criteres), réponse à une offre (repondre_offre), demande de visite (demander_visite), visite déléguée (deleguer_visite), confirmation de présence (confirmer_visite), inscription à une visite groupée (inscrire_visite). Types : note_agent (demande ou information pour l'agent : visite déjà fixée à replanifier, question particulière pour une régie… ; la conversation reste avec Steeve), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
     input_schema: {
       type: 'object',
       properties: {
@@ -127,8 +128,45 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: { type: 'object', properties: { precision: { type: 'string', description: 'Ce que le client a demandé, en quelques mots.' } } },
   },
   {
+    name: 'deleguer_visite',
+    description: "Visite DÉLÉGUÉE : un collaborateur de l'agence visite le bien à la place du client et lui fait un compte rendu. Consomme 1 crédit de visite déléguée (location ; gratuit en achat) : seulement si le client dit clairement qu'il veut déléguer la visite de CE bien (« visitez pour moi », « je ne peux pas y aller, déléguez »). Si une visite à venir existe déjà, elle devient déléguée ; si un créneau est connu, la visite est publiée aux coursiers ; sinon Steeve demande la date à l'annonceur et la visite déléguée est créée dès sa réponse. Une seule délégation par bien (pas de crédit en double).",
+    input_schema: {
+      type: 'object',
+      properties: {
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        date: { type: 'string', description: "Facultatif : créneau DÉJÀ fixé ou proposé par l'annonceur, heure suisse au format AAAA-MM-JJTHH:MM (ex. 2026-10-30T17:30). Ne jamais inventer : sans créneau connu, laisse vide." },
+        precision: { type: 'string', description: 'Ce que le client veut que le collaborateur vérifie, facultatif.' },
+      },
+      required: ['bien'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'confirmer_visite',
+    description: "Enregistre que le client confirme sa présence à une visite à venir déjà fixée pour ce bien (comme le bouton « Je confirme » de l'application). Seulement sur confirmation claire du client.",
+    input_schema: {
+      type: 'object',
+      properties: { bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." } },
+      required: ['bien'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'inscrire_visite',
+    description: "Visite groupée sur inscription (annonce Flatfox « visite sur inscription », créneau publié par l'annonceur) : la routine de l'agence inscrit le client sur Flatfox, puis la visite est enregistrée et le client prévenu ici. Seulement si le client veut y aller (ou la déléguer). Ce n'est confirmé qu'après l'inscription réelle.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        creneau: { type: 'string', description: "Créneau choisi s'il y en a plusieurs (ex. « jeudi 29.10 à 17h30 »), facultatif." },
+      },
+      required: ['bien'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'transfer_to_agent',
-    description: "Rend toute la conversation à l'agent du client (Steeve arrête alors de répondre ici). Seulement si le client demande explicitement une personne, est mécontent ou en désaccord, en cas d'urgence, ou pour un sujet sensible (signature, bail, dossier retenu, paiement contesté, remboursement, litige, poursuites, résiliation). Pour une simple action que Steeve ne peut pas faire (visite à organiser, réponse à une offre…), utiliser propose_action de type note_agent : la conversation reste avec Steeve.",
+    description: "Rend toute la conversation à l'agent du client (Steeve arrête alors de répondre ici). Seulement si le client demande explicitement une personne, est mécontent ou en désaccord, en cas d'urgence, ou pour un sujet sensible (signature, bail, dossier retenu, paiement contesté, remboursement, litige, poursuites, résiliation). Pour une simple action que Steeve ne peut pas faire (visite déjà fixée à déplacer, question particulière…), utiliser propose_action de type note_agent : la conversation reste avec Steeve.",
     input_schema: {
       type: 'object',
       properties: {
@@ -196,6 +234,12 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
       return await clientOfferAnswer(ctx, String(input?.bien ?? ''), input?.reponse === 'refuse' ? 'refuse' : input?.reponse === 'interesse' ? 'interesse' : '');
     case 'demander_visite':
       return await clientVisitRequest(ctx, String(input?.bien ?? ''), input?.precision ? String(input.precision).slice(0, 300) : null);
+    case 'deleguer_visite':
+      return await clientDelegateVisit(ctx, String(input?.bien ?? ''), input?.date ? String(input.date).trim() : '', input?.precision ? String(input.precision).slice(0, 300) : null);
+    case 'confirmer_visite':
+      return await clientConfirmVisit(ctx, String(input?.bien ?? ''));
+    case 'inscrire_visite':
+      return await clientRegisterVisit(ctx, String(input?.bien ?? ''), input?.creneau ? String(input.creneau).slice(0, 120) : null);
     case 'modifier_criteres':
       return await clientCriteria(ctx, input ?? {});
     case 'chercher_offres':
@@ -423,6 +467,66 @@ async function clientVisitRequest(ctx: ToolContext, bien: string, precision: str
     }),
   };
 }
+
+async function clientDelegateVisit(ctx: ToolContext, bien: string, date: string, precision: string | null): Promise<ToolOutcome> {
+  let when: Date | null = null;
+  if (date) {
+    when = zurichToUtc(date.slice(0, 16));
+    if (!when) return { content: "Date illisible : donne-la au format AAAA-MM-JJTHH:MM (heure suisse), ou laisse-la vide si aucun créneau n'est fixé.", isError: true };
+  }
+  const m = await matchOffer(ctx, bien);
+  if ('content' in m) return m;
+  const { data, error } = await ctx.db.rpc('steeve_client_deleguer_visite', {
+    p_client_id: ctx.dossier.clientId, p_offre_id: m.id, p_date: when ? when.toISOString() : null, p_note: precision,
+  });
+  if (error) {
+    console.error('[steeve] deleguer_visite', error.message);
+    return { content: "La visite déléguée n'a pas pu être enregistrée.", isError: true };
+  }
+  if (!data?.ok) return { content: json({ deleguee: false, motif: data?.motif }) };
+  if (data.deja) return { content: json({ deleguee: true, deja: true, bien: m.adresse, suite: 'Cette visite est déjà déléguée : aucun crédit de plus.' }) };
+  const datee = Boolean(data.date) || Boolean(data.visite_id);
+  await notifyTeam(ctx, 'Visite déléguée (via Steeve)', `${m.adresse}${when ? ` — ${fmtZurich(when)}` : datee ? ' — visite déjà fixée' : ' — date demandée à l’annonceur'}${precision ? ` — ${precision}` : ''}.`);
+  return {
+    content: json({
+      deleguee: true, bien: m.adresse,
+      quand: when ? fmtZurich(when) : null,
+      credits_restants: data.achat ? null : data.credits_restants ?? null,
+      suite: datee
+        ? "Visite déléguée enregistrée et proposée aux collaborateurs de l'agence ; le client reçoit le compte rendu après la visite. Ne promets pas le nom du collaborateur."
+        : "Date demandée à l'annonceur (demande partie ou au prochain passage entre 7 h et 20 h). Dès qu'il confirme, la visite déléguée est créée et le client prévenu ici. Ce n'est PAS encore un rendez-vous.",
+    }),
+  };
+}
+
+async function clientConfirmVisit(ctx: ToolContext, bien: string): Promise<ToolOutcome> {
+  const m = await matchOffer(ctx, bien);
+  if ('content' in m) return m;
+  const { data, error } = await ctx.db.rpc('steeve_client_confirmer_visite', { p_client_id: ctx.dossier.clientId, p_offre_id: m.id });
+  if (error) return { content: "La confirmation n'a pas pu être enregistrée.", isError: true };
+  if (!data?.ok) return { content: json({ confirmee: false, motif: data?.motif }) };
+  if (!data.deja) await notifyTeam(ctx, 'Présence confirmée (via Steeve)', `${m.adresse} — visite du ${data.le ?? '?'}.`);
+  return { content: json({ confirmee: true, bien: m.adresse, le: data.le, deja: Boolean(data.deja), deleguee: Boolean(data.deleguee) }) };
+}
+
+async function clientRegisterVisit(ctx: ToolContext, bien: string, creneau: string | null): Promise<ToolOutcome> {
+  const m = await matchOffer(ctx, bien);
+  if ('content' in m) return m;
+  const { data, error } = await ctx.db.rpc('steeve_client_inscrire_visite', { p_client_id: ctx.dossier.clientId, p_offre_id: m.id, p_creneau: creneau });
+  if (error) return { content: "L'inscription n'a pas pu être demandée.", isError: true };
+  if (!data?.ok) return { content: json({ inscription_demandee: false, motif: data?.motif }) };
+  if (!data.tache?.existante) await notifyTeam(ctx, 'Inscription à une visite groupée (via Steeve)', `${m.adresse}${creneau ? ` — ${creneau}` : ''}.`);
+  return {
+    content: json({
+      inscription_demandee: true, bien: m.adresse, deja_en_cours: Boolean(data.tache?.existante),
+      suite: "La routine de l'agence l'inscrit sur Flatfox (entre 7 h et 20 h). Le client est prévenu ici dès que l'inscription est faite et la visite enregistrée : ce n'est pas encore confirmé.",
+    }),
+  };
+}
+
+const fmtZurich = (d: Date) => new Intl.DateTimeFormat('fr-CH', {
+  timeZone: 'Europe/Zurich', weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+}).format(d);
 
 async function clientCriteria(ctx: ToolContext, input: Record<string, any>): Promise<ToolOutcome> {
   const changes: Record<string, unknown> = {};
