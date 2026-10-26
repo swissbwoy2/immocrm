@@ -7,6 +7,7 @@ import { ScrollToTopButton } from "@/components/messaging/ScrollToTopButton";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { MessageAttachmentUploader } from "@/components/MessageAttachmentUploader";
 import { useNotifications } from "@/hooks/useNotifications";
 import { AdminNewConversationDialog } from "@/components/AdminNewConversationDialog";
@@ -87,6 +88,8 @@ const Messagerie = () => {
   }, [activeTab]);
   // Filtre d'affichage par type de conversation (non mémorisé)
   const [typeFilter, setTypeFilter] = useState<"all" | ConvTypeKey>("all");
+  // Conversation « Steeve » de l'admin : demandes à valider, réponses de l'admin → Steeve agit et répond.
+  const [steeveBusy, setSteeveBusy] = useState(false);
 
   const scrollToBottom = useCallback((instant: boolean = false) => {
     const viewport = scrollViewportRef.current;
@@ -116,7 +119,8 @@ const Messagerie = () => {
   }, []);
 
   useEffect(() => {
-    loadConversations();
+    // Crée au besoin la conversation Steeve de l'admin, puis charge la liste (elle y apparaît en tête).
+    (supabase.rpc as unknown as (fn: string) => PromiseLike<unknown>)('steeve_admin_conversation').then(() => loadConversations(), () => loadConversations());
     loadUnreadCounts();
     // Mark new_message notifications as read when visiting this page
     markTypeAsRead('new_message');
@@ -235,7 +239,7 @@ const Messagerie = () => {
               .then(({ data: senderProfile }) => {
                 const enrichedMessage = {
                   ...newMessage,
-                  senderName: senderProfile
+                  senderName: newMessage.sender_type === 'assistant' ? 'Steeve' : senderProfile
                     ? `${senderProfile.prenom} ${senderProfile.nom}`
                     : newMessage.sender_type === 'client' ? 'Client' : newMessage.sender_type === 'admin' ? 'Admin' : 'Agent'
                 };
@@ -260,6 +264,9 @@ const Messagerie = () => {
         .order('last_message_at', { ascending: false });
 
       if (data) {
+        // Conversations « Steeve » : chaque admin ne voit que la sienne.
+        const own = data.filter((c) => c.conversation_type !== 'steeve-admin' || c.admin_user_id === user?.id);
+        data.splice(0, data.length, ...own);
         // Charger les clients et les agents
         const clientIds = [...new Set(data.map(c => c.client_id).filter(Boolean))] as string[];
         const agentIds = [...new Set(data.map(c => c.agent_id).filter(Boolean))] as string[];
@@ -337,6 +344,9 @@ const Messagerie = () => {
           const lastMsg = lastMessagesMap.get(conv.id);
           const lastMessageText = lastMsg?.content || (lastMsg?.attachment_name ? `📎 ${lastMsg.attachment_name}` : null);
           
+          if (conv.conversation_type === 'steeve-admin') {
+            return { ...conv, clientName: 'Steeve', agentName: null, adminName: null, lastMessageText, clientLastSeenAt: null, clientIsOnline: true };
+          }
           return {
             ...conv,
             clientName: clientProfile 
@@ -391,7 +401,7 @@ const Messagerie = () => {
         
         const enrichedMessages = data.map(msg => ({
           ...msg,
-          senderName: sendersMap.get(msg.sender_id) 
+          senderName: msg.sender_type === 'assistant' ? 'Steeve' : sendersMap.get(msg.sender_id)
             ? `${sendersMap.get(msg.sender_id).prenom} ${sendersMap.get(msg.sender_id).nom}`
             : msg.sender_type === 'client' ? 'Client' : msg.sender_type === 'admin' ? 'Admin' : 'Agent'
         }));
@@ -444,8 +454,20 @@ const Messagerie = () => {
       .update({ last_message_at: new Date().toISOString() })
       .eq('id', selectedConv);
 
-    // Send notifications
     const conversation = conversations.find(c => c.id === selectedConv);
+    // Conversation Steeve : Steeve lit la réponse, agit avec ses outils et répond ici (pas de notification).
+    if (conversation?.conversation_type === 'steeve-admin') {
+      setSteeveBusy(true);
+      try {
+        const { error: steeveError } = await supabase.functions.invoke('steeve-admin', { body: { conversation_id: selectedConv } });
+        if (steeveError) toast.error("Steeve n'a pas pu répondre. Réessaie dans un instant.");
+      } finally {
+        setSteeveBusy(false);
+      }
+      return;
+    }
+
+    // Send notifications
     if (conversation) {
       // Get admin name
       const { data: adminProfile } = await supabase
@@ -566,7 +588,12 @@ const Messagerie = () => {
     }),
     [searchedConversations, lastMetaMap, unreadCountsMap, videoConvSet]
   );
-  const filteredConversations = tabBuckets[activeTab];
+  // La conversation Steeve reste en tête de liste.
+  const pinSteeve = <T extends { conversation_type?: string | null }>(list: T[]): T[] => {
+    const s = list.filter((c) => c.conversation_type === 'steeve-admin');
+    return s.length ? [...s, ...list.filter((c) => c.conversation_type !== 'steeve-admin')] : list;
+  };
+  const filteredConversations = pinSteeve(tabBuckets[activeTab]);
 
   const selectedMessages = messages.filter(m => m.conversation_id === selectedConv);
   const currentConversation = conversations.find(c => c.id === selectedConv);
@@ -594,7 +621,7 @@ const Messagerie = () => {
 
   const visibleConversations = typeFilter === 'all'
     ? filteredConversations
-    : searchedConversations.filter((c) => typeOf(c) === typeFilter);
+    : pinSteeve(searchedConversations.filter((c) => typeOf(c) === typeFilter));
 
   // Résumé de l'en-tête (sur l'ensemble, hors recherche)
   const totalUnreadConvs = useMemo(
@@ -692,21 +719,22 @@ const Messagerie = () => {
           <ConversationItemsList>
             {visibleConversations.map((conv, index) => {
               const isAgentConv = conv.conversation_type === 'admin-agent';
+              const isSteeveConv = conv.conversation_type === 'steeve-admin';
               const type = typeOf(conv);
               return (
                 <PremiumConversationItem
                   key={conv.id}
                   name={getListName(conv)}
                   avatarUrl={null}
-                  subtitle={isAgentConv ? 'Agent' : conv.agentName ? `Agent : ${conv.agentName}` : undefined}
+                  subtitle={isSteeveConv ? 'Assistant · demandes à valider' : isAgentConv ? 'Agent' : conv.agentName ? `Agent : ${conv.agentName}` : undefined}
                   lastMessage={conv.lastMessageText}
                   lastMessageTime={conv.last_message_at}
                   unreadCount={unreadCountsMap.get(conv.id) || 0}
                   isSelected={selectedConv === conv.id}
                   onClick={() => setSelectedConv(conv.id)}
                   index={index}
-                  lastSeenAt={!isAgentConv ? conv.clientLastSeenAt : undefined}
-                  isOnline={!isAgentConv ? conv.clientIsOnline : undefined}
+                  lastSeenAt={!isAgentConv && !isSteeveConv ? conv.clientLastSeenAt : undefined}
+                  isOnline={isSteeveConv ? true : !isAgentConv ? conv.clientIsOnline : undefined}
                   channelIcon={type === 'clients' ? undefined : CONV_TYPE_ICONS[type]}
                   channelLabel={type === 'clients' ? undefined : CONV_TYPE_LABELS[type]}
                 />
@@ -723,7 +751,10 @@ const Messagerie = () => {
       ? currentConversation.agentName
       : currentConversation.clientName ?? 'Client'
     : undefined;
-  const headerSubtitle = currentConversation
+  const isSteeveCurrent = currentConversation?.conversation_type === 'steeve-admin';
+  const headerSubtitle = isSteeveCurrent
+    ? (steeveBusy ? 'Steeve écrit…' : 'Assistant Logisorama · demandes à valider')
+    : currentConversation
     ? [
         currentConversation.conversation_type === 'admin-agent'
           ? 'Agent'
@@ -797,13 +828,16 @@ const Messagerie = () => {
           </div>
         )}
       </ScrollArea>
+      {isSteeveCurrent && steeveBusy && (
+        <div className="px-4 pb-1 text-xs text-muted-foreground" role="status" aria-live="polite">Steeve s'en occupe…</div>
+      )}
       <ScrollToTopButton show={showScrollTop} onClick={scrollToTop} />
       <PremiumChatInput
         onSendMessage={handleSendMessage}
         message={messageText}
         onMessageChange={setMessageText}
         disabled={false}
-        placeholder="Écrivez un message..."
+        placeholder={isSteeveCurrent ? 'Réponds à Steeve (« oui, vas-y », « non », ta consigne)…' : 'Écrivez un message...'}
         pendingAttachment={pendingAttachment}
         onRemoveAttachment={() => setPendingAttachment(null)}
         attachmentSlot={
