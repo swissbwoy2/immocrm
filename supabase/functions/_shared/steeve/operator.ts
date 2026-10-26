@@ -1,4 +1,5 @@
 // Steeve opérateur : reprend les tâches sûres des routines et les exécute lui-même, avec un journal complet.
+/* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON des fonctions de la base et de l’API, validées champ par champ */
 //  1. File des postulations bloquée par le quota OpenAI : remise en file (le triage passe par Claude).
 //  2. Demande du QR code / lien de la demande de location Flatfox après la visite : e-mail depuis visites@
 //     si l'adresse de la régie est connue, sinon tâche confiée à la routine Flatfox locale (chat Flatfox).
@@ -14,6 +15,7 @@
 import PostalMime from 'npm:postal-mime@2.4.4';
 import { costOf, type CallModel } from './anthropic.ts';
 import { buildTextEmail, isEmail, latin1, messageId, prepareDraftForSend } from './mail.ts';
+import { processInbox } from './inbox.ts';
 
 export type Mode = 'off' | 'a_blanc' | 'autonome';
 export const BOX_VISITES = 'visites@immo-rama.ch';
@@ -53,6 +55,7 @@ export interface OperatorReport {
   dossiers_a_blanc: number;
   bloques: number;
   taches: number;
+  mails?: number;
   erreurs: string[];
   cout_usd: number;
 }
@@ -581,6 +584,9 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       }
     });
 
+    // 6. Réponses des régies et annonceurs reçues dans visites@ et relocation@ (lot 5).
+    await step('courrier', async () => { await processInbox({ db, callModel: deps.callModel, now: deps.now }, rep.mode, rep); });
+
     // 2. Demandes de QR Flatfox.
     await step('qr', async () => {
       const { data: list } = await db.rpc('steeve_qr_candidates', { p_limit: LIMITS.qrPerRun, p_offre_id: null });
@@ -611,7 +617,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       etapes: steps,
       contacts: rep.qr + rep.relances + rep.dossiers_envoyes,
       erreurs: rep.erreurs.map((e) => ({ erreur: e.slice(0, 300) })),
-      notes: `Mode ${rep.mode} · QR ${rep.qr} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · bloqués ${rep.bloques} · tâches ${rep.taches} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
+      notes: `Mode ${rep.mode} · QR ${rep.qr} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
     }).eq('id', run.id);
   }
   return rep;

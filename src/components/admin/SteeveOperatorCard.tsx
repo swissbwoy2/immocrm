@@ -24,6 +24,7 @@ type Overview = {
 const KIND: Record<string, string> = {
   demande_qr: 'Demande de QR Flatfox', relance_annonceur: 'Relance d’annonceur', envoi_dossier: 'Envoi du dossier',
   triage_postulations: 'File des postulations', demande_postulation: 'Postulation demandée', lecon: 'Réglage',
+  lecture_mail: 'Réponse lue (régie / annonceur)',
 };
 const STATUT: Record<string, { label: string; tone: string }> = {
   a_faire: { label: 'À faire', tone: 'bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-100' },
@@ -94,7 +95,7 @@ export function SteeveOperatorCard() {
           </Badge>
         </CardTitle>
         <CardDescription>
-          Steeve reprend les tâches des routines : demande du QR code Flatfox après la visite, relances oubliées, contrôle puis envoi des
+          Steeve reprend les tâches des routines : lecture des réponses des régies (visites@, relocation@), demande du QR code Flatfox après la visite, relances oubliées, contrôle puis envoi des
           dossiers préparés dans relocation@. Bail, signature, dossier retenu, paiement et questions des régies restent à l'équipe.
           Chaque action est notée ci-dessous.
         </CardDescription>
