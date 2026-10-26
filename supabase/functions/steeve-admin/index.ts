@@ -3,7 +3,7 @@
 // exécutés avec la session de l'admin (chaque fonction revérifie le rôle). Voir _shared/steeve/admin-chat.ts.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { anthropicCaller } from "../_shared/steeve/anthropic.ts";
-import { handleAdminChat } from "../_shared/steeve/admin-chat.ts";
+import { handleAdminChat, historyFromConversation } from "../_shared/steeve/admin-chat.ts";
 import { runOperator } from "../_shared/steeve/operator.ts";
 import { realMailPort } from "../_shared/steeve/operator-mail.ts";
 
@@ -54,6 +54,27 @@ Deno.serve(async (req) => {
     const r = await runOperator({ db: serviceDb, mail: realMailPort(serviceDb), callModel, taskId });
     return { mode: r.mode, tache: r.tache ?? null, erreurs: r.erreurs };
   };
+  // Conversation « Steeve » de la messagerie : l'historique vient de la base, la réponse y est publiée.
+  const conversationId = typeof (body as any)?.conversation_id === "string" && /^[0-9a-f-]{36}$/i.test((body as any).conversation_id)
+    ? (body as any).conversation_id as string : null;
+  if (conversationId) {
+    const { data: conv } = await userDb.from("conversations").select("id, conversation_type, admin_user_id").eq("id", conversationId).maybeSingle();
+    if (!conv || conv.conversation_type !== "steeve-admin" || conv.admin_user_id !== user.id) return reply(403, { error: "Accès refusé" });
+    const { data: rows } = await serviceDb.from("messages").select("sender_type, content, payload, created_at")
+      .eq("conversation_id", conversationId).order("created_at", { ascending: false }).limit(16);
+    const history = historyFromConversation([...(rows ?? [])].reverse());
+    if (!history) return reply(200, { reply: null });
+    const result = await handleAdminChat({ serviceDb, userDb, userId: user.id, body, callModel, runTask, history });
+    if (result.body.reply) {
+      await serviceDb.from("messages").insert({
+        conversation_id: conversationId, sender_id: "steeve", sender_type: "assistant", content: result.body.reply,
+        payload: { source: "steeve_admin", outils: result.body.tools ?? [] }, read: false,
+      });
+      await serviceDb.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", conversationId);
+    }
+    return reply(result.status, result.body);
+  }
+
   const result = await handleAdminChat({ serviceDb, userDb, userId: user.id, body, callModel, runTask });
   return reply(result.status, result.body);
 });
