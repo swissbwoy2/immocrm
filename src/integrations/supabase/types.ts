@@ -19083,6 +19083,7 @@ export type Database = {
       steeve_mail_get: { Args: { p_id: string }; Returns: Json }
       steeve_mail_prospects: { Args: { p_limit?: number }; Returns: Json }
       steeve_norm: { Args: { t: string }; Returns: string }
+      steeve_norm_adresse: { Args: { p: string }; Returns: string }
       steeve_operator_mode: {
         Args: { p_mailbox_ready?: boolean }
         Returns: Json
