@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
-import { denyIfNotInternal } from "../_shared/internal-auth.ts";
+import { denyIfNoAccesBien } from "../_shared/acces-bien.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -555,8 +555,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  // Appels internes ou utilisateurs connectés uniquement : aucun appel anonyme.
-  const refus = await denyIfNotInternal(req, corsHeaders, "generate-bail-pdf", { allowAnyAuthenticated: true });
+  // Équipe, appels internes ou propriétaire du bien uniquement.
+  const refus = await denyIfNoAccesBien(req, corsHeaders, "generate-bail-pdf");
   if (refus) return refus;
 
   try {
