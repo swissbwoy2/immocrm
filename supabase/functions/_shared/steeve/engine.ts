@@ -88,6 +88,17 @@ async function loadTranscript(db: Db, conversationId: string) {
  */
 export function stripUntrusted(text: string): string {
   const allowed = /^(?:[a-z0-9-]+\.)*(?:logisorama|immo-rama)\.ch(?:[/?#]|$)/i;
+  // Les dates (05.10.2026, 2026-10-05) et heures ne sont pas des numéros de téléphone : mises de côté pendant le filtre.
+  const kept: string[] = [];
+  const keep = (m: string) => `\u0001${kept.push(m) - 1}\u0001`;
+  const protectedText = text
+    .replace(/\u0001/g, '')
+    .replace(/(?<![0-9.])(?:0?[1-9]|[12][0-9]|3[01])\.(?:0?[1-9]|1[0-2])\.(?:19|20)[0-9]{2}(?![0-9])/g, keep)
+    .replace(/(?<![0-9-])(?:19|20)[0-9]{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])(?![0-9])/g, keep);
+  return stripContacts(protectedText, allowed).replace(/\u0001([0-9]+)\u0001/g, (_m, i) => kept[Number(i)] ?? '');
+}
+
+function stripContacts(text: string, allowed: RegExp): string {
   return text
     // Adresses e-mail (le personnel et les tiers ne sont jamais cités).
     .replace(/[A-Za-z0-9._%+-]+\s*(?:@|\(at\)|\[at\])\s*[A-Za-z0-9-]+(?:\s*(?:\.|\(dot\)|\[dot\])\s*[A-Za-z0-9-]+)+/gi, '[adresse retirée]')
