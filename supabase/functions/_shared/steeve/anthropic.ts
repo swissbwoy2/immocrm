@@ -111,6 +111,16 @@ export interface ModelResponse {
 
 export type CallModel = (req: ModelRequest) => Promise<ModelResponse>;
 
+/**
+ * Réglage de réflexion par modèle. Haiku 5.5 : désactivée (sinon active par défaut, et Steeve épuisait max_tokens à
+ * réfléchir). Sonnet / Opus 5.5 refusent « disabled » (erreur 400 du 26.10.2026) : la forme sans réflexion préalable
+ * est « between_tools » — de courtes notes entre deux appels d'outils, renvoyées en blocs « thinking » (ignorés par
+ * textOf, conservés tels quels dans l'historique des tours d'outils).
+ */
+export function thinkingFor(model: string): { type: 'disabled' } | { type: 'between_tools' } {
+  return /sonnet|opus|fable|mythos/i.test(model) ? { type: 'between_tools' } : { type: 'disabled' };
+}
+
 /** Appel réel à l'API. La clé reste côté serveur (secret ANTHROPIC_API_KEY). */
 export function anthropicCaller(apiKey: string): CallModel {
   return async (req) => {
@@ -123,9 +133,8 @@ export function anthropicCaller(apiKey: string): CallModel {
         'anthropic-version': '2023-06-01',
       },
       // Sans outil (site public) : le champ est omis.
-      // Réflexion désactivée : sur Claude Haiku 5.5 (et les modèles 5.5), elle est active par défaut et ses jetons
-      // comptent dans max_tokens ; Steeve épuisait sa limite à réfléchir, sans écrire de réponse.
-      body: JSON.stringify({ ...(req.tools.length ? req : { ...req, tools: undefined }), thinking: { type: 'disabled' } }),
+      // Réflexion coupée (ses jetons comptent dans max_tokens) : voir thinkingFor.
+      body: JSON.stringify({ ...(req.tools.length ? req : { ...req, tools: undefined }), thinking: thinkingFor(req.model) }),
     });
     if (!res.ok) {
       const detail = (await res.text()).slice(0, 500);
