@@ -5,6 +5,7 @@ import { costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, typ
 import { accountPhase, depositAmount, loadDossier, overview, type Db } from './context.ts';
 import { staticWelcome, STEEVE_SYSTEM_PROMPT, welcomeInstructions } from './prompt.ts';
 import { runTool, STEEVE_TOOLS, transferToAgent } from './tools.ts';
+import { abaninjaFromEnv, type AbaNinjaPort } from './abaninja.ts';
 
 export const MAX_MODEL_CALLS = 6;
 /** Au-delà, le passage s'arrête et transmet à l'agent (la fonction edge est coupée vers 150 s). */
@@ -58,7 +59,11 @@ function formatZurich(iso: string): string {
 }
 
 function describeMessage(m: any): string {
+  // Message écrit par l'administrateur et publié au nom de Steeve (conversation « Steeve » de l'admin) : il fait foi
+  // comme un message de l'équipe, même si le dossier ne le montre pas encore (ex. facture envoyée, numéro Twint).
   const who = m.sender_type === 'client' ? 'Client'
+    : m.sender_type === 'assistant' && m.payload?.steeve_admin ? 'Équipe Logisorama (message de l’administrateur, publié au nom de Steeve)'
+    : m.sender_type === 'assistant' && m.payload?.steeve_operateur ? 'Steeve (message automatique de suivi)'
     : m.sender_type === 'assistant' ? 'Steeve'
     : m.sender_type === 'admin' ? 'Équipe Logisorama'
     : 'Agent';
@@ -181,6 +186,8 @@ export async function runTurn(opts: {
   callModel: CallModel | null;
   now?: () => Date;
   deadlineMs?: number;
+  /** Comptabilité AbaNinja (par défaut : depuis les secrets du serveur). */
+  abaninja?: AbaNinjaPort | null;
 }): Promise<TurnResult> {
   const { db, runId, callModel } = opts;
   const now = opts.now ?? (() => new Date());
@@ -238,7 +245,7 @@ export async function runTurn(opts: {
 
   const dossier = await loadDossier(db, conv.client_id);
   if (!dossier) return finish({ status: 'failed', reason: 'dossier_introuvable' }, `client ${conv.client_id} introuvable`);
-  const toolCtx = { db, dossier, conversationId, now: now() };
+  const toolCtx = { db, dossier, conversationId, now: now(), abaninja: opts.abaninja === undefined ? abaninjaFromEnv() : opts.abaninja };
 
   // Repli commun : message honnête au client, demande transmise à l'agent.
   const fallback = async (status: 'capped' | 'failed', reason: string, message: string, error?: string) => {
