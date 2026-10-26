@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.84.0";
+import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,6 +14,11 @@ interface AnonymiseRequest {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+  // Réservé aux administrateurs (et aux appels internes) : aucun appel anonyme, client ou agent.
+  const appelant = await verifyInternalCaller(req);
+  if (!appelant.ok || (appelant.kind === 'staff' && !(appelant.roles ?? []).includes('admin'))) {
+    return new Response(JSON.stringify({ error: 'Accès refusé' }), { status: appelant.userId ? 403 : 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
 
   try {
