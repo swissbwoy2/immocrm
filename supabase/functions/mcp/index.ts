@@ -132,7 +132,7 @@ var list_pending_postulations_default = defineTool({
     const { data: offres, error } = await supabase.from("offres").select("id, created_at, adresse, prix, pieces, surface, etage, type_bien, lien_annonce, statut, client_id").eq("statut", "souhaite_postuler").order("created_at", { ascending: false }).limit(max);
     if (error) throw new Error(error.message);
     const jobPriority = { ready: 0, blocked: 1, queued: 2, processing: 3, failed: 4, completed: 5 };
-    const { data: jobs } = await supabase.from("postulation_jobs").select("id, offre_id, status, priority, created_at, ai_result").in("status", ["queued", "ready", "blocked"]).order("created_at", { ascending: true }).limit(max);
+    const { data: jobs } = await supabase.from("postulation_jobs").select("id, offre_id, status, priority, created_at, ai_result").in("status", ["queued", "ready", "blocked"]).order("created_at", { ascending: true }).limit(200);
     const jobByOffre = /* @__PURE__ */ new Map();
     for (const j of jobs ?? []) jobByOffre.set(j.offre_id, j);
     const known = new Set((offres ?? []).map((o) => o.id));
@@ -144,6 +144,8 @@ var list_pending_postulations_default = defineTool({
     }
     const rows = [...extra ?? [], ...offres ?? []].sort((a, b) => {
       const ja = jobByOffre.get(a.id), jb = jobByOffre.get(b.id);
+      const ua = ja?.priority === "urgent" ? 0 : 1, ub = jb?.priority === "urgent" ? 0 : 1;
+      if (ua !== ub) return ua - ub;
       const pa = ja ? jobPriority[ja.status] ?? 9 : 9, pb = jb ? jobPriority[jb.status] ?? 9 : 9;
       return pa - pb;
     }).slice(0, max);

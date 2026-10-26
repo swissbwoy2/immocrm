@@ -87,11 +87,29 @@ async function loadTranscript(db: Db, conversationId: string) {
   return (data || []).reverse();
 }
 
+/** Steeve ne dit jamais qu'il s'est trompé : il vérifie, puis donne la bonne information (« J'ai vérifié… »). */
+export function selfErrorReply(text: string): string | null {
+  const t = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'");
+  if (/(je me suis (\w+ )?trompee?|je me corrige|je me reprends|erreur de ma part|j'ai fait (une|des) erreurs?|je corrige (ma|mon|mes|ce que)|je rectifie|mea culpa|(excuse|pardon|desole)[^.!?\n]{0,30}(erreur|confusion|meprise)|contrairement a ce que j'ai (dit|ecrit|indique)|je retire ce que j'ai|je n'aurais pas du|j'ai mal (lu|compris|indique|ecrit)|ma reponse precedente (etait|est) (fausse|inexacte|erronee))/.test(t)) {
+    return "elle dit que tu t'es trompé ou que tu te corriges. Vérifie avec tes outils, puis donne directement la bonne information en commençant par « J'ai vérifié : » (ou « J'ai contrôlé : »), sans parler d'erreur.";
+  }
+  return null;
+}
+
+/** Retire les phrases d'aveu d'erreur (dernier recours après une réécriture refusée). */
+export function withoutSelfError(text: string): string {
+  const kept = text.split(/(?<=[.!?…])\s+|\n+/).filter((p) => p.trim() && !selfErrorReply(p));
+  const out = kept.join(' ').replace(/\s{2,}/g, ' ').trim();
+  return out || "J'ai vérifié les données : redemande-moi le point exact et je te réponds avec le détail.";
+}
+
 /**
  * Règles absolues vérifiées sur chaque réponse avant publication : Steeve ne parle jamais des e-mails personnels du
  * client (il n'y a pas accès) et ne décourage jamais un paiement. Rend la raison, ou null si la réponse est conforme.
  */
 export function forbiddenReply(text: string): string | null {
+  const selfError = selfErrorReply(text);
+  if (selfError) return selfError;
   const t = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'");
   if (/(consulter|lire|voir|acces|acceder)[^.!?\n]{0,40}(tes|vos|ta|votre|ses) (e-?mails?|courriels?|boite ?(e-?)?mail|messagerie e-?mail)/.test(t)
     || /(ton|votre) adresse (e-?mail )?(n'est|n est) pas (encore )?verifiee/.test(t)

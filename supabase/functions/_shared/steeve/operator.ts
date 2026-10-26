@@ -16,6 +16,7 @@ import PostalMime from 'npm:postal-mime@2.4.4';
 import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { buildTextEmail, isEmail, latin1, messageId, prepareDraftForSend, SmtpUncertainError } from './mail.ts';
 import { processInbox } from './inbox.ts';
+import { INTERNAL_MARK, relireMail, stripSubjectMarkers } from './relecture.ts';
 import { searchAndSendOffers } from './offers.ts';
 import { buildMailWithAttachments, evaluatePieces, isImage, MANUAL_PIECES, MAX_MAIL_BYTES, MAX_PIECE_BYTES, mimeOf, readPieces, REGIE_PIECES, type DocCandidate } from './pieces-regie.ts';
 
@@ -63,6 +64,7 @@ export interface OperatorReport {
   remises_en_file: number;
   qr: number;
   relances: number;
+  visites_lancees?: number;
   dossiers_envoyes: number;
   dossiers_a_blanc: number;
   bloques: number;
@@ -366,6 +368,60 @@ async function handleVisite(deps: Required<OperatorDeps>, mode: Mode, taskId: st
   }
 }
 
+// ---------- 2d. réponses aux e-mails de visite (annonceur : créneau confirmé, disponibilités ; prospect : créneaux) ----------
+
+/**
+ * Seules réponses que Steeve envoie seul (règle de l'admin) : la visite. Texte préparé par règle, relu avant l'envoi ;
+ * au moindre doute (relecture négative, ligne à retirer, marque interne), rien ne part : « à valider » + alerte.
+ */
+async function handleReponse(deps: Required<OperatorDeps>, mode: Mode, taskId: string, rep: OperatorReport) {
+  const { db, mail, callModel } = deps;
+  const now = deps.now();
+  const { data: t } = await db.from('steeve_actions').select('id, kind, canal, offre_id, client_id, destinataire, objet, corps, controles, idempotency_key').eq('id', taskId).single();
+  const free = { verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() };
+  const stop = async (statut: string, motif: string) => {
+    await db.from('steeve_actions').update({ ...free, statut, motif: motif.slice(0, 500) }).eq('id', taskId);
+    // Toute réponse non envoyée est signalée : le client a pu être prévenu que la visite était confirmée à l'annonceur.
+    if (statut === 'a_valider') await alertAdmins(db, `steeve-reponse-${taskId}`, 'Réponse de visite à valider', `${t.objet ?? 'Réponse'} → ${t.destinataire ?? '?'} : ${motif} Dis à Steeve « envoie la réponse » pour qu'il l'envoie.`, '/admin/steeve');
+    else if (statut === 'bloque' || statut === 'bloque_acces') await alertAdmins(db, `steeve-reponse-${taskId}`, 'Réponse de visite non envoyée', `${t.objet ?? 'Réponse'} → ${t.destinataire ?? '?'} : ${motif} À envoyer par l'équipe.`, '/admin/steeve');
+  };
+  const to = String(t.destinataire ?? '').toLowerCase().trim();
+  if (!isEmail(to) || /(no-?reply|ne-?pas-?repondre|donotreply)/i.test(to)) return stop('bloque', 'Destinataire invalide pour une réponse.');
+  if (t.canal !== 'email') return stop('bloque', 'Réponse hors e-mail : confiée à la routine Chrome.');
+  if (!t.corps || !t.objet) return stop('bloque', 'Réponse vide.');
+  if (mode === 'a_blanc') {
+    await db.from('steeve_actions').update({ ...free, statut: 'a_blanc', note: 'Mode à blanc : réponse prête, non envoyée.' }).eq('id', taskId);
+    return;
+  }
+  const valideAdmin = t.controles?.valide_admin === true;
+  if (FORBIDDEN_TEXT.test(`${t.objet}\n${t.corps}`) || INTERNAL_MARK.test(`${t.objet}\n${t.corps}`)) return stop('a_valider', 'Marque interne ou champ à remplir dans la réponse.');
+  if (!valideAdmin) {
+    if (!callModel) return stop('a_valider', 'Relecture impossible (clé API absente).');
+    const { data: o } = t.offre_id ? await db.from('offres').select('adresse').eq('id', t.offre_id).maybeSingle() : { data: null };
+    let rel: Awaited<ReturnType<typeof relireMail>>;
+    try {
+      rel = await relireMail(callModel, { objet: t.objet, texte: t.corps, bien: o?.adresse ?? String(t.controles?.reference ?? ''), client: t.kind === 'reponse_prospect' ? 'prospect (personne intéressée par une annonce de l’agence)' : 'client de l’agence (non nommé)', destinataires: [to],
+      but: t.kind === 'reponse_prospect' ? 'répondre à une demande de visite pour une annonce de l’agence avec les créneaux publiés' : 'répondre à l’annonceur au sujet de la visite (confirmation du créneau ou disponibilités du client)' });
+    } catch (err) {
+      return stop('a_valider', `Relecture impossible (${(err as Error).message.slice(0, 120)}).`);
+    }
+    rep.cout_usd += rel.cost;
+    if (!rel.ok || !rel.pret || rel.retirees.length) return stop('a_valider', `Relecture : ${rel.problemes.join(' ; ') || 'doute sur le texte'}.`);
+  }
+  if (!(await mail.ready(BOX_VISITES))) return stop('bloque_acces', 'Boîte visites@immo-rama.ch indisponible : aucun envoi depuis une autre adresse.');
+  // Même fil que l'e-mail reçu.
+  let inReplyTo: string | null = null;
+  if (t.controles?.mail_id) {
+    const { data: a } = await db.from('mailbox_emails').select('message_key').eq('id', t.controles.mail_id).maybeSingle();
+    const { data: b } = a ? { data: null } : await db.from('mail_messages').select('message_id').eq('id', t.controles.mail_id).maybeSingle();
+    inReplyTo = a?.message_key ?? b?.message_id ?? null;
+  }
+  const id = messageId('immo-rama.ch');
+  const raw = buildMailWithAttachments({ from: BOX_VISITES, fromName: 'Immo-rama.ch – Relocation', to, subject: t.objet, text: t.corps, id, inReplyTo, date: now, attachments: [] });
+  await db.from('steeve_actions').update({ statut: 'en_cours', note: 'Envoi en cours', updated_at: now.toISOString() }).eq('id', taskId);
+  await sendTracked(deps, { key: t.idempotency_key, box: BOX_VISITES, to: [to], raw, id, okStatut: t.controles?.attente_regie ? 'en_attente_regie' : 'fait', label: `réponse ${t.objet}` }, rep);
+}
+
 // ---------- 2c. pièces manquantes demandées au client (dans sa conversation) ----------
 
 async function handlePiece(deps: Required<OperatorDeps>, mode: Mode, taskId: string, rep: OperatorReport) {
@@ -474,6 +530,8 @@ export interface DraftCheck {
   controles: Record<string, unknown>;
   attachments: { nom: string; taille: number }[];
   cost: number;
+  /** Brouillon nettoyé (notes des routines retirées, objet sans marque interne) : l'e-mail est reconstruit pour l'envoi. */
+  rebuilt?: { subject: string; text: string; inReplyTo: string | null; attachments: { filename: string; contentType: string; bytes: Uint8Array }[] };
 }
 
 const FORBIDDEN_TEXT = /(<(?!https?:)[^<>@\n]{2,60}>|\[\s*(a|à) compl[eé]ter|note interne|ne pas envoyer|xxx|todo|lorem ipsum|\{\{|\}\})/i;
@@ -695,27 +753,44 @@ export async function checkDraft(raw: Uint8Array, ctx: { offres: any[]; noms: st
     ok, motif, recipients, subject, messageKey, controles: {}, attachments: attachments.map(({ nom, taille }: any) => ({ nom, taille })), cost: 0, ...extra,
   });
 
-  // Brouillon interne à compléter (convention des routines) ou sans destinataire : pas pour Steeve.
-  if (/^\s*\[?\s*(a|à) compl[eé]ter/i.test(subject) || /note interne/i.test(text) || recipients.length === 0) return res(false, undefined, { skip: true });
+  // Brouillon marqué par une routine (« À COMPLÉTER / NE PAS ENVOYER », notes internes) : Steeve le nettoie, puis
+  // le contrôle comme les autres ; il n'envoie jamais l'objet ni les notes d'origine.
+  const marked = INTERNAL_MARK.test(subject) || INTERNAL_MARK.test(text);
+  const cleanSubject = marked ? stripSubjectMarkers(subject) : subject;
+  if (marked && (!cleanSubject || INTERNAL_MARK.test(cleanSubject))) return res(false, 'Objet du brouillon encore marqué « à compléter » après nettoyage : à reprendre.');
   const from = String(parsed.from?.address ?? '').toLowerCase();
   if (from && from !== BOX_RELOCATION) return res(false, `Expéditeur ${from} au lieu de ${BOX_RELOCATION}.`);
 
   // a) Bon bien, bon client
-  const hay = normalize(`${subject} ${attachments.map((a: any) => a.nom).join(' ')} ${text.slice(0, 3000)}`);
+  const hay = normalize(`${cleanSubject} ${attachments.map((a: any) => a.nom).join(' ')} ${text.slice(0, 3000)}`);
   const matches = ctx.offres.filter((o) => {
     const sk = streetKey(o.adresse);
     if (!sk || !hay.includes(sk)) return false;
     const nameTokens = normalize(o.client_nom).split(' ').filter((t) => t.length >= 3);
     return nameTokens.length > 0 && nameTokens.every((t) => hay.includes(t));
   }).filter((o) => !ctx.onlyOffre || o.offre_id === ctx.onlyOffre);
-  if (matches.length === 0) return res(false, ctx.onlyOffre ? undefined : 'Bien ou client non reconnu dans le brouillon.', { skip: Boolean(ctx.onlyOffre) });
+  // Aucun dossier reconnu : brouillon sans destinataire (note, modèle…) ou pour un autre bien → ignoré sans alerte.
+  if (matches.length === 0) return res(false, ctx.onlyOffre || !recipients.length ? undefined : 'Bien ou client non reconnu dans le brouillon.', { skip: Boolean(ctx.onlyOffre) || !recipients.length });
   if (matches.length > 1) return res(false, 'Rapprochement ambigu : plusieurs biens ou clients correspondent.');
   const offre = matches[0];
   if (offre.deja_envoye) return res(false, 'Dossier déjà envoyé pour ce bien et ce client : brouillon en double.', { offre });
   if (!offre.premiere_visite || new Date(offre.premiere_visite) > ctx.now) return res(false, 'Visite pas encore effectuée : le dossier part après la visite.', { offre });
+  // Destinataire laissé vide par la routine : la seule adresse vérifiée de la régie de ce bien, sinon rien ne part.
+  if (!recipients.length) {
+    const regie = [...new Set((offre.emails_regie ?? []).map((e: string) => String(e).toLowerCase()).filter(isEmail))] as string[];
+    if (regie.length !== 1) return res(false, regie.length ? 'Destinataire vide et plusieurs adresses de régie possibles.' : 'Destinataire vide et aucune adresse vérifiée de la régie.', { offre });
+    recipients.push(regie[0]);
+  }
 
-  // c) Texte propre
-  if (FORBIDDEN_TEXT.test(`${subject}\n${text}`)) return res(false, 'Texte à corriger : marque interne ou champ à remplir dans le message.', { offre });
+  // c) Texte propre : relecture par le modèle (notes internes retirées ligne par ligne, rien n'est réécrit), puis règles.
+  if (!ctx.callModel) return res(false, 'Relecture impossible : clé de l\'API Anthropic absente.', { offre });
+  const rel = await relireMail(ctx.callModel, { objet: cleanSubject, texte: text, bien: offre.adresse, client: offre.client_nom, destinataires: recipients, but: 'envoi du dossier de candidature du client à la régie, avec le formulaire de demande de location et le dossier complet en pièces jointes' });
+  let relCost = rel.cost;
+  const cleanText = rel.texte;
+  if (!rel.pret) return res(false, `Brouillon pas prêt d'après ses notes : ${rel.problemes.join(' ; ') || 'il reste quelque chose à faire'}.`, { offre, cost: relCost });
+  if (!rel.ok) return res(false, `Relecture : ${rel.problemes.join(' ; ') || 'message à revoir'}.`, { offre, cost: relCost });
+  if (!cleanText.trim()) return res(false, 'Message vide après retrait des notes internes.', { offre, cost: relCost });
+  if (FORBIDDEN_TEXT.test(`${cleanSubject}\n${cleanText}`) || INTERNAL_MARK.test(`${cleanSubject}\n${cleanText}`)) return res(false, 'Texte à corriger : marque interne ou champ à remplir dans le message.', { offre, cost: relCost });
   const own = new Set([normalize(offre.client_nom), ...(offre.personnes ?? []).map((p: any) => normalize(p.nom))]);
   const foreign = ctx.noms.map(normalize).filter((n) => n && !own.has(n) && n.split(' ').length >= 2 && hay.includes(n));
   if (foreign.length) return res(false, 'Le brouillon mentionne un autre client.', { offre });
@@ -741,7 +816,9 @@ export async function checkDraft(raw: Uint8Array, ctx: { offres: any[]; noms: st
   for (const a of others) docs.push({ title: a === dossier ? 'Dossier complet' : `Pièce jointe : ${a.nom}`, bytes: new Uint8Array(a.content) });
   const personnes = (offre.personnes ?? []).filter((p: any) => p?.nom).map((p: any) => ({ role: String(p.role ?? 'client'), nom: String(p.nom) }));
   if (!personnes.length && offre.client_nom) personnes.push({ role: 'client', nom: offre.client_nom });
-  const { result: f, cost } = await checkDossierPdfs(ctx.callModel, docs, { adresse: offre.adresse, client: offre.client_nom, personnes: personnes.map((p: any) => `${p.nom} (${p.role})`), premiereVisite: offre.premiere_visite ?? null }, ctx.lessons);
+  const { result: f, cost: pdfCost } = await checkDossierPdfs(ctx.callModel, docs, { adresse: offre.adresse, client: offre.client_nom, personnes: personnes.map((p: any) => `${p.nom} (${p.role})`), premiereVisite: offre.premiere_visite ?? null }, ctx.lessons);
+  relCost += pdfCost;
+  const cost = relCost;
   const controles: Record<string, unknown> = { formulaire: form.nom, dossier: dossier?.nom ?? null, verification: f };
   if (!f) return res(false, 'Formulaire ou dossier illisible pour le contrôle.', { offre, cost, controles });
   const problems: string[] = [];
@@ -763,7 +840,13 @@ export async function checkDraft(raw: Uint8Array, ctx: { offres: any[]; noms: st
   if (!known.size) return res(false, 'Adresse de la régie inconnue : impossible de vérifier le destinataire.', { offre, cost, controles });
   if (unknown.length) return res(false, `Destinataire non vérifié : ${unknown.join(', ')}.`, { offre, cost, controles });
 
-  return res(true, undefined, { offre, cost, controles: { ...controles, a: true, b: true, c: true } });
+  const changed = cleanSubject !== subject || cleanText !== text.trim() || String(parsed.to?.[0]?.address ?? '') === '';
+  return res(true, undefined, {
+    offre, cost, subject: cleanSubject,
+    controles: { ...controles, a: true, b: true, c: true, nettoye: changed, lignes_retirees: rel.retirees },
+    ...(changed ? { rebuilt: { subject: cleanSubject, text: cleanText, inReplyTo: parsed.inReplyTo ? String(parsed.inReplyTo) : null,
+      attachments: attachments.map((a: any) => ({ filename: a.nom || 'piece.pdf', contentType: a.type || 'application/pdf', bytes: new Uint8Array(a.content) })) } } : {}),
+  });
 }
 
 async function handleDrafts(deps: Required<OperatorDeps>, mode: Mode, ctx: { lessons: string[] }, rep: OperatorReport, task?: { id: string; offre_id: string } | null) {
@@ -834,7 +917,11 @@ async function handleDrafts(deps: Required<OperatorDeps>, mode: Mode, ctx: { les
     if (!await journal(db, { ...base, source: task ? 'admin' : 'auto', statut: 'en_cours', note: 'Envoi en cours' }, key, task?.id ?? null)) continue;
     try {
       const id = messageId('immo-rama.ch');
-      const sentRaw = prepareDraftForSend(latin1(d.raw), { date: now, id });
+      // Brouillon nettoyé : e-mail reconstruit (objet et corps relus, mêmes pièces jointes) ; sinon le brouillon tel quel.
+      const sentRaw = check.rebuilt
+        ? buildMailWithAttachments({ from: BOX_RELOCATION, fromName: 'Immo-rama.ch – Relocation', to: check.recipients, subject: check.rebuilt.subject, text: check.rebuilt.text,
+            id, inReplyTo: check.rebuilt.inReplyTo, date: now, attachments: check.rebuilt.attachments })
+        : prepareDraftForSend(latin1(d.raw), { date: now, id });
       // Étape et Message-ID posés avant l'envoi : une coupure laisse une trace vérifiable.
       await db.from('steeve_actions').update({ etape: 'envoi', message_id: id, verrou_par: 'steeve', verrou_jusqu: new Date(now.getTime() + 10 * 60000).toISOString(), updated_at: now.toISOString() }).eq('idempotency_key', key);
       const proof = await mail.send(BOX_RELOCATION, check.recipients, sentRaw);
@@ -1124,6 +1211,8 @@ async function runTask(deps: Required<OperatorDeps>, mode: Mode, t: any, lessons
     await handleRechercheOffres(deps, mode, t.id, rep);
   } else if (t.kind === 'envoi_piece_regie') {
     await handlePiecesRegie(deps, mode, t.id, rep);
+  } else if (t.kind === 'reponse_annonceur' || t.kind === 'reponse_prospect') {
+    await handleReponse(deps, mode, t.id, rep);
   } else {
     await db.from('steeve_actions').update({ statut: 'a_faire', verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() }).eq('id', t.id);
   }
@@ -1134,7 +1223,9 @@ async function runTask(deps: Required<OperatorDeps>, mode: Mode, t: any, lessons
   }
 }
 
-const TASK_KINDS = ['demande_qr', 'relance_annonceur', 'envoi_dossier', 'demande_visite', 'demande_piece', 'recherche_offres', 'envoi_piece_regie'];
+const TASK_KINDS = ['demande_qr', 'relance_annonceur', 'envoi_dossier', 'demande_visite', 'demande_piece', 'recherche_offres', 'envoi_piece_regie', 'reponse_annonceur', 'reponse_prospect'];
+/** Tâches automatiques (lecture du courrier, balayage des visites) exécutées par Steeve à chaque passage. */
+const AUTO_KINDS = ['demande_visite', 'reponse_annonceur', 'reponse_prospect'];
 /** Tâches sans effet hors de l'application (messages au client) : pas limitées aux heures d'envoi aux régies. */
 const INTERNAL_KINDS = ['demande_piece', 'recherche_offres'];
 
@@ -1215,6 +1306,18 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
         .eq('kind', 'envoi_piece_regie').eq('statut', 'en_attente_client').lt('echeance', now.toISOString());
       const { data: tasks } = await db.from('steeve_actions').select('id, kind, offre_id, client_id').eq('statut', 'a_faire').eq('responsable', 'steeve')
         .eq('kind', 'envoi_piece_regie').order('created_at').limit(5);
+      for (const t of tasks ?? []) { if (!timeLeft()) break; await runTask(deps, rep.mode, t, lessons, rep); }
+    });
+
+    // 6 ter. Toutes les offres « intéressé » sans visite : demande de visite (mode autonome), puis tâches automatiques
+    // (demandes de visite, réponses de visite préparées par la lecture du courrier).
+    await step('visites_a_fixer', async () => {
+      if (rep.mode === 'autonome') {
+        const { data: b } = await db.rpc('steeve_balayage_visites', { p_limit: 8 });
+        rep.visites_lancees = Number(b?.demandes ?? 0);
+      }
+      const { data: tasks } = await db.from('steeve_actions').select('id, kind, offre_id, client_id').eq('statut', 'a_faire').eq('responsable', 'steeve')
+        .eq('source', 'auto').in('kind', AUTO_KINDS).order('created_at').limit(10);
       for (const t of tasks ?? []) { if (!timeLeft()) break; await runTask(deps, rep.mode, t, lessons, rep); }
     });
 

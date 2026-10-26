@@ -127,7 +127,7 @@ export function evaluatePieces(codes: string[], docs: DocCandidate[], lectures: 
 
 /** E-mail avec pièces jointes (réponse à la régie, même fil). */
 export function buildMailWithAttachments(opts: {
-  from: string; fromName: string; to: string; subject: string; text: string; id: string; inReplyTo?: string | null; date?: Date;
+  from: string; fromName: string; to: string | string[]; subject: string; text: string; id: string; inReplyTo?: string | null; date?: Date;
   attachments: { filename: string; contentType: string; bytes: Uint8Array }[];
 }): string {
   const enc = new TextEncoder();
@@ -136,7 +136,7 @@ export function buildMailWithAttachments(opts: {
   const boundary = `steeve-${crypto.randomUUID()}`;
   const head = [
     `From: ${word(opts.fromName)} <${opts.from}>`,
-    `To: <${opts.to}>`,
+    `To: ${(Array.isArray(opts.to) ? opts.to : [opts.to]).map((t) => `<${t.replace(/[<>\r\n,]/g, '')}>`).join(', ')}`,
     `Subject: ${word(opts.subject.replace(/[\r\n]+/g, ' ').slice(0, 250))}`,
     `Date: ${(opts.date ?? new Date()).toUTCString().replace('GMT', '+0000')}`,
     `Message-ID: ${opts.id}`,

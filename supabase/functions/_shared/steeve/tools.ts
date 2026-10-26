@@ -173,6 +173,19 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'donner_disponibilites',
+    description: "Transmet à l'annonceur les disponibilités du client pour une visite, quand l'annonceur les a demandées (Steeve l'a écrit au client dans la conversation). Avec les jours et heures tels que le client les donne. Steeve les envoie lui-même à l'annonceur (e-mail depuis visites@ ou chat Flatfox).",
+    input_schema: {
+      type: 'object',
+      properties: {
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        disponibilites: { type: 'string', description: 'Jours et heures donnés par le client, ex. « mardi 28.10 dès 17h ou jeudi 30.10 à 18h ».' },
+      },
+      required: ['bien', 'disponibilites'],
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'annuler_criteres',
     description: "Revient aux critères de recherche d'avant le dernier changement fait par Steeve (14 jours au plus), sur demande claire du client (« remets comme avant », « annule ce changement »). Dis ensuite ce qui a changé (avant → après).",
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
@@ -280,6 +293,8 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
       return await clientVisitDone(ctx, String(input?.bien ?? ''), input?.date ? String(input.date).trim() : '');
     case 'annuler_criteres':
       return await clientUndoCriteria(ctx);
+    case 'donner_disponibilites':
+      return await clientAvailability(ctx, String(input?.bien ?? ''), String(input?.disponibilites ?? '').slice(0, 400));
     case 'facture':
       return await clientInvoice(ctx, input?.action === 'renvoyer' ? 'renvoyer' : 'etat');
     case 'demande_mandat':
@@ -439,6 +454,8 @@ export async function requestPostulation(db: Db, clientId: string, bien: string)
     const msg = /visite/i.test(error.message ?? '') ? error.message : "La demande de postulation n'a pas pu être enregistrée.";
     return { content: msg, isError: true };
   }
+  // Demandée par le client : dossier en tête de la file de la routine Postulation et alerte immédiate à l'admin.
+  await db.rpc('steeve_postulation_urgente', { p_offre_id: found[0].id, p_client_id: clientId, p_par: 'client' });
   return {
     content: json({
       demande_enregistree: true,
@@ -583,6 +600,17 @@ async function clientVisitDone(ctx: ToolContext, bien: string, date: string): Pr
       suite: 'Visite notée effectuée. Demande-lui ce qu’il en a pensé ; s’il veut postuler, appelle demander_postulation.',
     }),
   };
+}
+
+async function clientAvailability(ctx: ToolContext, bien: string, dispo: string): Promise<ToolOutcome> {
+  if (dispo.trim().length < 4) return { content: 'Demande au client ses jours et heures disponibles.', isError: true };
+  const m = await matchOffer(ctx, bien);
+  if ('content' in m) return m;
+  const { data, error } = await ctx.db.rpc('steeve_client_disponibilites', { p_client_id: ctx.dossier.clientId, p_offre_id: m.id, p_texte: dispo });
+  if (error) return { content: "Les disponibilités n'ont pas pu être enregistrées.", isError: true };
+  if (!data?.ok) return { content: json({ transmises: false, motif: data?.motif }) };
+  if (data.par_equipe) return { content: json({ transmises: true, bien: m.adresse, suite: "Disponibilités notées : l'équipe les transmet à l'annonceur sur son portail. Ce n'est pas encore un rendez-vous : la visite est fixée quand l'annonceur répond, et le client est prévenu ici." }) };
+  return { content: json({ transmises: true, bien: m.adresse, suite: "Disponibilités transmises à l'annonceur (envoi entre 7 h et 20 h). Ce n'est pas encore un rendez-vous : la visite est fixée quand l'annonceur répond, et le client est prévenu ici." }) };
 }
 
 async function clientUndoCriteria(ctx: ToolContext): Promise<ToolOutcome> {
