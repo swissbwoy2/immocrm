@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import DOMPurify from 'dompurify';
 import { Loader2, Paperclip, Save, Send, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,6 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -64,6 +66,7 @@ export function MailComposer({ open, onOpenChange, boxes, init, onDone }: Props)
   const [subject, setSubject] = useState('');
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  const [withSignature, setWithSignature] = useState(true);
   const [busy, setBusy] = useState<'send' | 'draft' | 'upload' | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -77,14 +80,25 @@ export function MailComposer({ open, onOpenChange, boxes, init, onDone }: Props)
     setSubject(init.subject || '');
     setText(init.text || '');
     setAttachments(init.attachments || []);
+    setWithSignature(true);
   }, [open, init]);
 
   const box = boxes.find((b) => b.id === mailboxId);
 
+  const signatureHtml = withSignature && box?.signature_html ? box.signature_html : '';
+  const signaturePreview = useMemo(
+    () => (box?.signature_html ? DOMPurify.sanitize(box.signature_html, { FORBID_TAGS: ['script', 'style', 'iframe', 'form'] }) : ''),
+    [box?.signature_html],
+  );
+
+  /** Texte, puis signature, puis message cité (comme un logiciel de messagerie). */
   const buildHtml = () => {
     const body = textToHtml(text);
-    return init?.quotedHtml ? `${body}<br>${init.quotedHtml}` : body;
+    const signed = signatureHtml ? `${body}<br><br>${signatureHtml}` : body;
+    return init?.quotedHtml ? `${signed}<br>${init.quotedHtml}` : signed;
   };
+  /** Version texte seule possible uniquement sans signature ni citation (sinon dérivée du HTML). */
+  const plainText = () => (init?.quotedHtml || signatureHtml ? undefined : text);
 
   const payloadAttachments = () =>
     attachments.map((a) => (a.bucket ? { bucket: a.bucket, path: a.path, filename: a.filename, mime: a.mime } : { message_id: a.message_id, part: a.part }));
@@ -119,7 +133,8 @@ export function MailComposer({ open, onOpenChange, boxes, init, onDone }: Props)
         bcc: parseRecipients(bcc),
         subject,
         html: buildHtml(),
-        text: init?.quotedHtml ? undefined : text,
+        text: plainText(),
+        signature: false,
         attachments: payloadAttachments(),
         reply_to_message_id: init?.replyToMessageId || undefined,
         draft_message_id: init?.draftMessageId || undefined,
@@ -240,7 +255,21 @@ export function MailComposer({ open, onOpenChange, boxes, init, onDone }: Props)
           <div className="grid gap-1.5">
             <Label htmlFor="mail-body">Message</Label>
             <Textarea id="mail-body" value={text} onChange={(e) => setText(e.target.value)} rows={10} className="min-h-[200px] text-sm" />
-            {box?.signature_html && <p className="text-xs text-muted-foreground">La signature de {box.address} est ajoutée à l'envoi.</p>}
+            {box?.signature_html ? (
+              <div className="rounded-lg border border-border/70 bg-muted/20 p-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="mail-signature" className="text-xs font-medium text-muted-foreground">
+                    Signature de {box.address}
+                  </Label>
+                  <Switch id="mail-signature" checked={withSignature} onCheckedChange={setWithSignature} />
+                </div>
+                {withSignature && (
+                  <div className="mt-2 max-h-56 overflow-auto rounded-md bg-white p-3 [&_img]:max-w-full" dangerouslySetInnerHTML={{ __html: signaturePreview }} />
+                )}
+              </div>
+            ) : (
+              box && <p className="text-xs text-muted-foreground">Aucune signature pour {box.address} (réglages ⚙︎ de la boîte mail).</p>
+            )}
           </div>
           {init?.quotedHtml && (
             <details className="rounded-lg border border-border/70 bg-muted/30 p-3 text-xs">
