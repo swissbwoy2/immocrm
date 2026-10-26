@@ -3,7 +3,7 @@
 // (état réel, puis exécution de ce qui reste, avec les contrôles de Steeve opérateur et le journal).
 // deno-lint-ignore-file no-explicit-any
 import { costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type ToolDefinition } from './anthropic.ts';
-import { toPlainReply } from './engine.ts';
+import { selfErrorReply, toPlainReply } from './engine.ts';
 import { zurichToUtc } from './dates.ts';
 import { facturesDuClient, type AbaNinjaPort } from './abaninja.ts';
 
@@ -31,12 +31,19 @@ Dans ta conversation de la messagerie, tu as posté des demandes qui attendent l
 4. Confirme à l'admin en une ou deux lignes ce qui est fait (vérifié) et ce que tu as écrit à la personne.
 Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec personnes (nom), puis ecrire_a.
 
+# Règles absolues
+- Vérifie toujours dans tes outils avant de répondre ; jamais de mémoire ni d'après une réponse précédente. Tu ne dis jamais « je me suis trompé », « je me corrige », « erreur de ma part » : tu vérifies et tu donnes la bonne information (« J'ai vérifié : … »).
+- Message à une personne (ecrire_a) : uniquement ce que l'admin t'a dit et ce que tes outils ont confirmé. N'ajoute jamais un fait (« compte activé », « paiement reçu », « visite confirmée », « dossier envoyé ») que ni l'admin ni un outil n'a confirmé.
+- Litiges : aucun parti pris ; cadre = Code des obligations, loi, mandat signé.
+
 # Règles
 - Chaque chiffre, nom ou date vient d'un outil appelé pendant cette conversation. N'invente jamais. Si un outil ne renvoie pas l'information, dis-le.
 - Appelle les outils dont tu as besoin (plusieurs si utile) avant de répondre. Pour une question générale (« comment ça va ? », « quoi de neuf ? »), commence par kpi puis blocages.
 - Tu as le détail : offres (liste par client, statut ou étape du « Suivi des offres », avec dates et prochaine action), postulations (demandes en cours, file, blocages, envois) et visites (date, adresse, mode, coursier). Ne réponds jamais « ouvre la fiche dans l'application » ou « je n'ai que le total » : appelle l'outil de détail. « Suivi des offres » = offres avec suivi_auto ; « demande mon attention » = etape a_gerer, puis attente_annonceur en retard ; « faut-il fixer des visites » = offres etape a_gerer et attente_annonceur.
 - Tu lis les e-mails de l'application (outil emails : info@ avec les messages Flatfox des régies, visites@, relocation@). Pour savoir si une régie ou un annonceur a répondu, cherche avec l'adresse du bien (rue + numéro), puis le nom du client ; donne la date, qui a écrit et ce que dit le message. Ne dis jamais que tu n'as pas accès aux e-mails. Si la réponse change le dossier (refus, visite, pièces), dis ce que tu proposes de faire.
 - Visites : « valide le créneau » = fixer_visite avec la date donnée (puis ecrire_a au client si message_requis) ; « inscris-le » / visite groupée sur inscription Flatfox = inscrire_visite (la routine Chrome s'en charge). Tu ne réponds jamais que tu ne peux pas : choisis l'outil, et si l'offre est ambiguë, liste les dossiers possibles en une ligne chacun et demande lequel.
+- Une offre citée par adresse, lien ou numéro : trouver_offre (toutes les offres) avant de dire qu'elle n'existe pas ou de demander l'offre_id. « Postule pour X » : postuler. Paiement de l'acompte confirmé par l'admin : paiement_recu. Critères d'un client à changer : criteres_client. Réponses de visite en attente : reponses_visite, puis valider_reponse si l'admin dit de les envoyer.
+- Courriels : Steeve ne répond seul qu'aux e-mails de visite (créneau proposé accepté, disponibilités du client transmises, créneaux publiés d'une annonce Immo-Rama). Toute autre réponse : seulement si l'admin le demande.
 - Visite déclarée faite, créneau accepté, visite annulée : visite_statut. « Qui dois-je appeler ? », annonceurs sans adresse : a_appeler ; l'admin te donne l'e-mail ou le téléphone d'une régie : contact_annonceur (les demandes bloquées repartent seules).
 - « Réponses à vérifier » : mails_a_rattacher, puis rattacher_mail pour chaque e-mail (l'offre suggérée si l'admin dit « oui », ignorer s'il dit que c'est sans suite).
 - Avant d'affirmer qu'un dossier est « envoyé » : preuve_envoi. Noté déposé sans preuve et l'admin confirme qu'il n'est pas parti : postulation_pas_envoyee puis reprendre_dossier.
@@ -54,7 +61,7 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
  * Rappel envoyé à chaque tour : les réponses déjà publiées dans la conversation peuvent dater d'avant l'ajout d'un
  * outil ; sans ce rappel, le modèle répète « je n'ai pas accès aux e-mails » au lieu d'appeler l'outil.
  */
-export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites, visite_statut, a_appeler, contact_annonceur, mails_a_rattacher, rattacher_mail, preuve_envoi, factures (AbaNinja), traiter_demande_mandat, corriger_offre, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
+export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : trouver_offre (toutes les offres par adresse, lien ou numéro), postuler, paiement_recu, criteres_client, reponses_visite, valider_reponse, emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites, visite_statut, a_appeler, contact_annonceur, mails_a_rattacher, rattacher_mail, preuve_envoi, factures (AbaNinja), traiter_demande_mandat, corriger_offre, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
 
 export const ADMIN_TOOLS: ToolDefinition[] = [
   {
@@ -234,6 +241,47 @@ export const ADMIN_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'trouver_offre',
+    description: "Retrouve une offre par adresse (« Mochettaz 8c », « Rue de Cossonay 9 »), lien de l'annonce, numéro d'annonce (Flatfox, immobilier.ch…) ou référence, parmi TOUTES les offres (tous clients, tous statuts, toutes dates), éventuellement filtrée par client. À utiliser avant de dire qu'une offre n'existe pas. Rend offre_id, client, statut, prix, visites.",
+    input_schema: {
+      type: 'object',
+      properties: { recherche: { type: 'string', description: 'Adresse, lien, numéro ou référence tels que l’admin les donne.' }, client: { type: 'string' } },
+      required: ['recherche'],
+    },
+  },
+  {
+    name: 'criteres_client',
+    description: "Modifie les critères de recherche d'un client sur demande de l'admin (budget max CHF/mois, pièces minimum, régions/communes = liste complète, type de bien, souhaits). Avant/après tracé ; ensuite chercher_offres si l'admin veut des offres tout de suite.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        client_id: { type: 'string' }, budget_max: { type: 'number' }, pieces: { type: 'number' }, region_recherche: { type: 'string' },
+        type_bien: { type: 'string', enum: ['Appartement', 'Villa & maison', 'Maison', 'Studio', 'Chambre', 'Local commercial', 'Autre'] }, souhaits_particuliers: { type: 'string' },
+      },
+      required: ['client_id'],
+    },
+  },
+  {
+    name: 'paiement_recu',
+    description: "L'admin confirme avoir reçu l'acompte d'un client (Twint, virement, QR) : sa demande de mandat est marquée payée, comme « Marquer payé » de Factures AbaNinja. Seulement sur confirmation explicite de l'admin. Ne dis pas que le compte est activé si l'outil ne le dit pas.",
+    input_schema: { type: 'object', properties: { client_id: { type: 'string' } }, required: ['client_id'] },
+  },
+  {
+    name: 'postuler',
+    description: "« Postule pour X » : demande de postulation pour l'offre (mêmes règles que le bouton du client : visite effectuée), dossier mis en tête de la file de la routine Postulation (ChatGPT) et alerte immédiate à l'admin pour la lancer. Steeve contrôle et envoie ensuite le brouillon préparé. Visite pas encore notée effectuée : visite_statut d'abord.",
+    input_schema: { type: 'object', properties: { offre_id: { type: 'string' } }, required: ['offre_id'] },
+  },
+  {
+    name: 'reponses_visite',
+    description: "Réponses aux e-mails de visite préparées par Steeve : à valider (doute à la relecture), en attente des disponibilités du client, ou prêtes à partir. Avec destinataire, objet et texte.",
+    input_schema: { type: 'object', properties: { limite: { type: 'number' } } },
+  },
+  {
+    name: 'valider_reponse',
+    description: "L'admin dit d'envoyer une réponse de visite restée à valider (action_id de reponses_visite), avec un texte corrigé s'il en donne un. Steeve l'envoie depuis visites@ au passage suivant.",
+    input_schema: { type: 'object', properties: { action_id: { type: 'string' }, texte: { type: 'string' } }, required: ['action_id'] },
+  },
+  {
     name: 'visite_statut',
     description: "Corrige le statut d'une visite d'une offre : effectuee (visite passée réellement faite : débloque la postulation), confirmee (créneau proposé accepté / présence confirmée), annulee. Avec date si l'offre a plusieurs visites (heure de Zurich AAAA-MM-JJTHH:MM). Offre identifiée avec offres, visites ou etat_dossier.",
     input_schema: {
@@ -399,7 +447,25 @@ export async function runAdminTool(userDb: any, name: string, input: any, ctx: A
       return { content: `Action refusée : ${(err as Error).message.slice(0, 200)}`, isError: true };
     }
   }
-  if (name === 'visite_statut') {
+  if (name === 'trouver_offre') {
+    call = ['admin_steeve_trouver_offre', { p_recherche: String(input?.recherche ?? '').slice(0, 200), p_client: input?.client ? String(input.client).slice(0, 60) : null, p_limite: 20 }];
+  } else if (name === 'criteres_client') {
+    if (!uuid(input?.client_id)) return { content: 'client_id invalide (outil personnes ou client).', isError: true };
+    const changes: Record<string, unknown> = {};
+    for (const k of ['budget_max', 'pieces', 'region_recherche', 'type_bien', 'souhaits_particuliers']) if (input?.[k] !== undefined && input?.[k] !== null && input?.[k] !== '') changes[k] = input[k];
+    if (!Object.keys(changes).length) return { content: 'Aucun changement précisé.', isError: true };
+    call = ['admin_steeve_criteres', { p_client_id: input.client_id, p_changes: changes }];
+  } else if (name === 'paiement_recu') {
+    if (!uuid(input?.client_id)) return { content: 'client_id invalide.', isError: true };
+    call = ['admin_steeve_paiement_recu', { p_client_id: input.client_id }];
+  } else if (name === 'postuler') {
+    if (!uuid(input?.offre_id)) return { content: 'offre_id invalide (trouver_offre ou etat_dossier).', isError: true };
+    call = ['admin_steeve_postuler', { p_offre_id: input.offre_id }];
+  } else if (name === 'reponses_visite') call = ['admin_steeve_reponses_visite', { p_limite: num(input?.limite, 1, 40, 15) }];
+  else if (name === 'valider_reponse') {
+    if (!uuid(input?.action_id)) return { content: 'action_id invalide (outil reponses_visite).', isError: true };
+    call = ['admin_steeve_valider_reponse', { p_action_id: input.action_id, p_corps: input?.texte ? String(input.texte).slice(0, 4000) : null }];
+  } else if (name === 'visite_statut') {
     if (!uuid(input?.offre_id)) return { content: 'offre_id invalide.', isError: true };
     const statut = String(input?.statut ?? '');
     const date = input?.date ? zurichToUtc(String(input.date).slice(0, 16)) : null;
@@ -592,6 +658,7 @@ export async function handleAdminChat(opts: {
   const totals = { input_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, output_tokens: 0 };
   let cost = 0;
   const used: string[] = [];
+  let corrected = false;
   try {
     let text = '';
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
@@ -606,7 +673,18 @@ export async function handleAdminChat(opts: {
         continue;
       }
       const uses = resp.content.filter((b): b is Extract<ContentBlock, { type: 'tool_use' }> => b.type === 'tool_use');
-      if (!uses.length) break;
+      if (!uses.length) {
+        // Garde-fou : jamais « je me suis trompé » ; une seule réécriture.
+        const interdit = selfErrorReply(text);
+        if (interdit && !corrected && round < MAX_TOOL_ROUNDS) {
+          corrected = true;
+          messages.push({ role: 'assistant', content: resp.content });
+          messages.push({ role: 'user', content: `Ta réponse n'a pas été publiée : ${interdit} Réécris-la entièrement, sans mentionner cette consigne.` });
+          text = '';
+          continue;
+        }
+        break;
+      }
       messages.push({ role: 'assistant', content: resp.content });
       const results: ContentBlock[] = [];
       for (const use of uses) {

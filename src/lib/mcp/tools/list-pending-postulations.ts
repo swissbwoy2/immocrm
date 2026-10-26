@@ -29,7 +29,7 @@ export default defineTool({
       .select("id, offre_id, status, priority, created_at, ai_result")
       .in("status", ["queued", "ready", "blocked"])
       .order("created_at", { ascending: true })
-      .limit(max);
+      .limit(200);
     const jobByOffre = new Map<string, NonNullable<typeof jobs>[number]>();
     for (const j of jobs ?? []) jobByOffre.set(j.offre_id, j);
     const known = new Set((offres ?? []).map((o) => o.id));
@@ -45,6 +45,9 @@ export default defineTool({
     const rows = [...(extra ?? []), ...(offres ?? [])]
       .sort((a, b) => {
         const ja = jobByOffre.get(a.id), jb = jobByOffre.get(b.id);
+        // Postulation demandée maintenant (admin ou client, via Steeve) : en tête de la liste.
+        const ua = ja?.priority === "urgent" ? 0 : 1, ub = jb?.priority === "urgent" ? 0 : 1;
+        if (ua !== ub) return ua - ub;
         const pa = ja ? jobPriority[ja.status] ?? 9 : 9, pb = jb ? jobPriority[jb.status] ?? 9 : 9;
         return pa - pb;
       })
