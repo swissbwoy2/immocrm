@@ -11,7 +11,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useNotifications, Notification } from '@/hooks/useNotifications';
+import { useNotifications, Notification, notifBannersEnabled } from '@/hooks/useNotifications';
+import { toast } from 'sonner';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -56,7 +57,19 @@ const getNotificationIcon = (type: string): React.ElementType => {
 };
 
 export function NotificationBell() {
-  const { notifications, counts, recordClick, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  // Bannière à l'arrivée d'une notification (les appels ont leur propre écran de sonnerie).
+  const openRef = React.useRef<(n: Notification) => void>(() => {});
+  const showBanner = React.useCallback((n: Notification) => {
+    if (n.type === 'call_incoming' || n.type === 'call_invite') return;
+    if (!notifBannersEnabled()) return;
+    toast(n.title || 'Nouvelle notification', {
+      id: `notif-${n.id}`,
+      description: n.message || undefined,
+      duration: 8000,
+      action: { label: 'Voir', onClick: () => openRef.current(n) },
+    });
+  }, []);
+  const { notifications, counts, recordClick, markAsRead, markAllAsRead, deleteNotification } = useNotifications({ live: true, onNew: showBanner });
   const navigate = useNavigate();
   const location = useLocation();
   const { userRole } = useAuth();
@@ -95,6 +108,8 @@ export function NotificationBell() {
     setOpen(false);
     navigate(url);
   };
+
+  openRef.current = handleNotificationClick;
 
   const recentNotifications = notifications.slice(0, 10);
 
