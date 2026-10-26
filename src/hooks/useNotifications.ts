@@ -143,6 +143,16 @@ export const setNotifBannersEnabled = (on: boolean) => {
 /** Notifications déjà signalées (évite les doublons si deux cloches sont montées). */
 const announced = new Set<string>();
 
+/** Signal « les notifications ont changé » : cloche, page Notifications et badges se remettent à jour. */
+export const NOTIFICATIONS_CHANGED_EVENT = 'imr:notifications-changed';
+export const emitNotificationsChanged = (source?: string) => {
+  try {
+    window.dispatchEvent(new CustomEvent(NOTIFICATIONS_CHANGED_EVENT, { detail: { source } }));
+  } catch {
+    /* hors navigateur */
+  }
+};
+
 export const useNotifications = (options: UseNotificationsOptions = {}) => {
   const limit = options.limit === undefined ? 50 : options.limit;
   const live = options.live === true;
@@ -154,6 +164,8 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
   toastRef.current = toast;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const instanceId = useRef(Math.random().toString(36).slice(2));
+  const changed = useCallback(() => emitNotificationsChanged(instanceId.current), []);
 
   // Memoize counts calculation
   const counts = useMemo(() => calculateCounts(notifications), [notifications]);
@@ -168,14 +180,28 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       if (limit !== null) query = query.limit(limit);
-      const { data, error } = await query;
+      // Les non lues sont toujours chargées en entier : jamais « perdues » derrière la limite,
+      // et les compteurs de la cloche restent justes.
+      const [{ data, error }, { data: unreadRows }] = await Promise.all([
+        query,
+        limit !== null
+          ? supabase
+              .from('notifications')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('read', false)
+              .order('created_at', { ascending: false })
+              .limit(1000)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
 
       if (error) throw error;
 
-      const typedNotifications = (data || []).map(n => ({
-        ...n,
-        metadata: n.metadata as Record<string, any> | null
-      })) as Notification[];
+      const byId = new Map<string, any>();
+      for (const n of [...(data || []), ...((unreadRows as any[]) || [])]) byId.set(n.id, n);
+      const typedNotifications = [...byId.values()]
+        .map(n => ({ ...n, metadata: n.metadata as Record<string, any> | null }))
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()) as Notification[];
 
       setNotifications(typedNotifications);
     } catch (error) {
@@ -200,17 +226,19 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
       );
+      changed();
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
-  }, [user]);
+  }, [user, changed]);
 
   const recordClick = useCallback(async (notificationId: string) => {
     if (!user) return;
     const { error } = await supabase.rpc('communication_notification_click', { p_id: notificationId });
     if (error) { console.error('Notification click tracking unavailable'); await markAsRead(notificationId); return; }
     setNotifications(prev => prev.map(n => n.id === notificationId ? { ...n, read: true } : n));
-  }, [user, markAsRead]);
+    changed();
+  }, [user, markAsRead, changed]);
 
   const markAllAsRead = useCallback(async () => {
     if (!user) return;
@@ -225,10 +253,11 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       if (error) throw error;
 
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      changed();
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
-  }, [user]);
+  }, [user, changed]);
 
   const markTypeAsRead = useCallback(async (type: string) => {
     if (!user) return;
@@ -246,10 +275,11 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       setNotifications(prev => 
         prev.map(n => n.type === type ? { ...n, read: true } : n)
       );
+      changed();
     } catch (error) {
       console.error('Error marking type notifications as read:', error);
     }
-  }, [user]);
+  }, [user, changed]);
 
   const deleteNotification = useCallback(async (notificationId: string) => {
     if (!user) return;
@@ -264,14 +294,25 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       if (error) throw error;
 
       setNotifications(prev => prev.filter(n => n.id !== notificationId));
+      changed();
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
-  }, [user]);
+  }, [user, changed]);
 
   // Load initial notifications
   useEffect(() => {
     loadNotifications();
+  }, [loadNotifications]);
+
+  // Un autre écran a lu / supprimé / reçu une notification : on se remet à jour.
+  useEffect(() => {
+    const onChanged = (e: Event) => {
+      if ((e as CustomEvent).detail?.source === instanceId.current) return;
+      void loadNotifications();
+    };
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
   }, [loadNotifications]);
 
   // Réception en direct : un seul abonnement (nom de canal unique par instance) + relecture
@@ -285,6 +326,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}) => {
       if (!raw?.id || raw.user_id !== user.id) return;
       const n = { ...raw, metadata: (raw.metadata ?? null) as Record<string, any> | null } as Notification;
       setNotifications((prev) => (prev.some((p) => p.id === n.id) ? prev : [n, ...prev]));
+      if (!n.read) emitNotificationsChanged(instanceId.current);
       const fresh = new Date(n.created_at).getTime() >= startedAt - 5000;
       if (!n.read && fresh && !announced.has(n.id)) {
         announced.add(n.id);
