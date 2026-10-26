@@ -65,6 +65,7 @@ export interface OperatorReport {
   qr: number;
   relances: number;
   visites_lancees?: number;
+  retours_visites?: number;
   dossiers_envoyes: number;
   dossiers_a_blanc: number;
   bloques: number;
@@ -1019,15 +1020,25 @@ async function handleRechercheOffres(deps: Required<OperatorDeps>, mode: Mode, t
   if (t.source === 'client' && !dryRun) {
     const text = r.envoyees.length
       ? `J'ai trouvé ${r.envoyees.length === 1 ? 'une offre qui correspond' : `${r.envoyees.length} offres qui correspondent`} à tes critères : ${r.envoyees.length === 1 ? 'elle est' : 'elles sont'} dans ta messagerie et dans « Offres reçues ». Dis-moi ${r.envoyees.length === 1 ? 'si elle t\'intéresse' : 'lesquelles t\'intéressent'} et je demande une visite.` +
-        (r.en_reserve ? ` J'en ai d'autres en réserve : je te les envoie au fil de la journée (6 offres par jour au maximum).` : '')
+        (r.en_reserve ? ` J'en ai d'autres en réserve : je te les envoie au fil de la journée (12 offres par jour au maximum).` : '')
       : r.ok
-        ? `J'ai regardé les annonces disponibles maintenant : ${r.restant_jour <= 0 ? 'tu as déjà reçu tes 6 offres du jour, la suite arrive demain.' : 'aucune n\'est assez sûre pour tes critères (je préfère ne rien t\'envoyer plutôt qu\'une annonce qui ne correspond pas).'} Les recherches continuent plusieurs fois par jour et tu reçois les nouvelles offres dès qu'elles passent nos contrôles.`
+        ? (r.restant_jour <= 0
+          ? `Tu as déjà reçu tes 12 offres du jour : la suite arrive demain. Dis-moi lesquelles t'intéressent et je demande les visites.`
+          : `J'ai lu ${r.lues} annonce${r.lues > 1 ? 's' : ''} (Flatfox, immobilier.ch, Homegate et nos offres en cours) : aucune n'est dans tes critères en ce moment${raisons(r.ecartees)}. Les recherches continuent plusieurs fois par jour. Pour recevoir plus d'offres tout de suite, tu peux élargir la zone, le budget ou le nombre de pièces : dis-moi ce que tu acceptes et je relance.`)
         : `Je n'ai pas pu lancer la recherche : ${r.motif}`;
     const { data: conv } = await db.from('conversations').select('id').eq('client_id', String(t.client_id)).eq('conversation_type', 'client-agent').order('last_message_at', { ascending: false }).limit(1);
     if (conv?.[0]?.id) {
       await db.from('messages').insert({ conversation_id: conv[0].id, sender_id: 'steeve', sender_type: 'assistant', content: text, payload: { steeve_operateur: true, steeve_cle: `recherche:${taskId}` } });
     }
   }
+}
+
+/** « (surtout : 51 hors zone, 12 au-dessus du budget) » : les deux principales raisons, en mots simples. */
+function raisons(e: { raison: string; n: number }[]): string {
+  const map: Record<string, string> = { 'hors zone': 'hors de tes communes', 'au-dessus du plafond': 'au-dessus de ton budget', 'pièces hors critères': 'avec un autre nombre de pièces',
+    'déjà proposée': 'déjà proposées', 'type banni (temporaire, meublé ou échange)': 'meublées ou temporaires', 'type banni (texte)': 'en sous-location, colocation ou bail limité' };
+  const top = [...e].filter((x) => map[x.raison]).sort((a, b) => b.n - a.n).slice(0, 2);
+  return top.length ? ` (surtout : ${top.map((x) => `${x.n} ${map[x.raison]}`).join(', ')})` : '';
 }
 
 // ---------- pièces demandées par une régie (lot 8) ----------
@@ -1319,6 +1330,24 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       const { data: tasks } = await db.from('steeve_actions').select('id, kind, offre_id, client_id').eq('statut', 'a_faire').eq('responsable', 'steeve')
         .eq('source', 'auto').in('kind', AUTO_KINDS).order('created_at').limit(10);
       for (const t of tasks ?? []) { if (!timeLeft()) break; await runTask(deps, rep.mode, t, lessons, rep); }
+    });
+
+    // 6 quater. Visites passées sans retour du client : Steeve lui demande comment c'était et s'il veut postuler
+    // (une fois par visite, 8h–20h, mode autonome ; gros loyers d'abord). La réponse du client passe par sa conversation.
+    await step('retours_visites', async () => {
+      if (rep.mode !== 'autonome' || !inClientHours(now)) return;
+      const { data: list } = await db.rpc('steeve_visites_sans_retour', { p_limit: 10 });
+      let n = 0;
+      for (const v of list ?? []) {
+        const prenom = String(v.prenom ?? '').trim();
+        const content = v.est_deleguee
+          ? `Bonjour${prenom ? ` ${prenom}` : ''}, le compte rendu de la visite déléguée de ${v.adresse} (${v.le}) est dans ton espace. Le logement te plaît ? Si oui, dis-le-moi et je lance ta candidature tout de suite : un dossier qui part vite a plus de chances d'être retenu. Sinon, dis-moi ce qui ne va pas, j'affine ta recherche.`
+          : `Bonjour${prenom ? ` ${prenom}` : ''}, comment s'est passée la visite de ${v.adresse} (${v.le}) ? Le logement te plaît ? Si oui, dis-le-moi et je lance ta candidature tout de suite : un dossier qui part vite a plus de chances d'être retenu. Sinon, dis-moi ce qui ne t'a pas plu, j'affine ta recherche.`;
+        const { error } = await db.from('messages').insert({ conversation_id: v.conversation_id, sender_id: 'steeve', sender_type: 'assistant', content,
+          payload: { steeve_operateur: true, steeve_cle: `retour_visite:${v.visite_id}`, offre_id: v.offre_id } });
+        if (!error) n++;
+      }
+      rep.retours_visites = n;
     });
 
     // 2. Demandes de formulaire Flatfox (chat + e-mail).

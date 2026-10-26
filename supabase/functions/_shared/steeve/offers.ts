@@ -1,5 +1,5 @@
 // Steeve cherche et envoie des offres à UN client, tout de suite, avec le mode d'emploi des routines d'offres
-// (logisorama-auto-*) : clients servis, plafond CC (revenus ÷ 3), 6 offres par jour toutes sources, critères écrits
+// (logisorama-auto-*) : clients servis, plafond CC (revenus ÷ 3), 12 offres par jour toutes sources, critères écrits
 // prouvés, types bannis, score /100 (80 avec date de visite, 90 sans), aucun doublon, offre + message au format
 // officiel, visite enregistrée si l'annonce donne une date future.
 // Sources lues côté serveur : l'API publique de Flatfox (JSON), et les annonces déjà en base (trouvées par les routines
@@ -9,12 +9,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON de l'API Flatfox et de la base, validées champ par champ */
 import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { buildOffreMessage } from '../offre-message.ts';
-import { immobilierCommune, parseHomegate, parseImmobilierFiche, parseImmobilierList, urlsRecherche } from './portails.ts';
+import { cantonKey, cantonOf, immobilierCommune, parseHomegate, parseImmobilierFiche, parseImmobilierList, urlsRecherche } from './portails.ts';
 
 export const OFFERS_AGENT_ID = 'ca53c5a5-6a41-4216-a93b-4d3238ad13a6'; // Administrateur : agent des offres automatiques
 const FLATFOX = 'https://flatfox.ch';
 const EVAL_MODEL = ACTION_MODEL;
-export const MAX_PER_DAY = 6;
+/** Objectif de l'admin (26.10.2026) : 6 à 12 offres par jour et par client, toutes sources ; plafond à 12. */
+export const MAX_PER_DAY = 12;
 const MAX_EVAL = 16;
 /** Annonces déjà en base : proposées à un autre client depuis 14 jours au plus. */
 const BASE_DAYS = 14;
@@ -68,7 +69,7 @@ async function baseListings(db: any, fetchFn: typeof fetch, clientId: string, cr
     const prix = Number(o.prix);
     const rooms = parseFloat(String(o.pieces ?? ''));
     const city = cityOfAddress(o.adresse);
-    if (!crit.communes.some((x) => city === x || city.startsWith(`${x} `))) continue; // hors zone : non compté (base entière)
+    if (!inZone(city, null, crit)) continue; // hors zone : non compté (base entière)
     if (!(prix > 0) || prix > crit.plafond) continue;
     if (crit.piecesMin && (!Number.isFinite(rooms) || rooms < crit.piecesMin || rooms > crit.piecesMin + 1)) continue;
     if ((category === 'HOUSE') !== /maison|villa/i.test(String(o.type_bien ?? ''))) continue;
@@ -145,8 +146,13 @@ const AGGLO_ZONES: Record<string, [number, number, number, number]> = {
  * Zone de recherche : communes acceptées (agglomération entière si « et environs ») et communes à interroger,
  * avec le rectangle de l'agglomération quand il est connu.
  */
-export function zoneOf(region: string | null | undefined): { communes: string[]; recherches: { commune: string; bbox: [number, number, number, number] | null }[] } {
+export function zoneOf(region: string | null | undefined): { communes: string[]; cantons: string[]; recherches: { commune: string; bbox: [number, number, number, number] | null }[] } {
   const base = communesOf(region);
+  // Canton entier : « Canton de Vaud (partout) », « tout le canton de Vaud », « Vaud » seul, « VD ».
+  const r = norm(region);
+  const cantons = new Set<string>();
+  for (const m of r.matchAll(/\bcanton (?:de |du |d )?(vaud|geneve|fribourg|neuchatel|valais|jura|berne)\b/g)) cantons.add(m[1]);
+  if (!base.length) for (const t of r.split(/[,;/+()]+|\bet\b|\bou\b/)) { const k = cantonKey(t.replace(/\b(partout|tout|toute|le|la|canton|de|du|d)\b/g, '').trim()); if (k) cantons.add(k); }
   const environs = WITH_SURROUNDINGS.test(norm(region));
   const communes = new Set<string>();
   const recherches: { commune: string; bbox: [number, number, number, number] | null }[] = [];
@@ -157,7 +163,16 @@ export function zoneOf(region: string | null | undefined): { communes: string[];
       recherches.push({ commune: c, bbox: AGGLO_ZONES[c] ?? null });
     } else recherches.push({ commune: c, bbox: null });
   }
-  return { communes: [...communes], recherches };
+  return { communes: [...communes], cantons: [...cantons], recherches };
+}
+
+/** Dans la zone : commune de la recherche, ou canton entier demandé (canton lu dans l'annonce ou déduit de la commune). */
+export function inZone(city: string, canton: string | null, c: Crit): boolean {
+  const n = norm(city).replace(/\s+(vd|ge|fr|vs|ne|ju|be)$/, '');
+  if (c.communes.some((x) => n === x || n.startsWith(`${x} `))) return true;
+  if (!c.cantons?.length) return false;
+  const k = canton ?? cantonOf(n);
+  return !!k && c.cantons.includes(k);
 }
 
 /** Commune d'une adresse « Rue X 5, 1004 Lausanne » → « lausanne ». */
@@ -224,15 +239,14 @@ export const roomsOf = (l: any): number | null => { const n = parseFloat(String(
 export const linkOf = (l: any) => l._lien ? String(l._lien) : l._base ? String(l._base.lien_annonce) : `${FLATFOX}${String(l.url || `/fr/${l.pk}/`).replace(/^\/[a-z]{2}\//, '/fr/')}`;
 export const addressOf = (l: any) => l._base ? String(l._base.adresse) : [l.street, [l.zipcode, l.city].filter(Boolean).join(' ')].filter((x) => String(x ?? '').trim()).join(', ') || String(l.public_address ?? '');
 
-export interface Crit { communes: string[]; plafond: number; piecesMin: number | null; typeBien: string | null }
+export interface Crit { communes: string[]; cantons?: string[]; plafond: number; piecesMin: number | null; typeBien: string | null }
 
 /** Règles fermes vérifiables sans lire le texte (le reste est lu par Claude). */
 export function hardReason(l: any, c: Crit): string | null {
   if (String(l.offer_type ?? 'RENT') !== 'RENT') return 'pas une location';
   if (l.reserved || (l.status && l.status !== 'act')) return 'annonce plus active';
   if (l.is_temporary || l.is_furnished || l.is_swap) return 'type banni (temporaire, meublé ou échange)';
-  const city = norm(l.city);
-  if (!c.communes.some((x) => city === x || city.startsWith(`${x} `))) return 'hors zone';
+  if (!inZone(String(l.city ?? ''), l._canton ?? null, c)) return 'hors zone';
   const rent = rentOf(l);
   if (!rent) return 'loyer inconnu';
   if (rent > c.plafond) return 'au-dessus du plafond';
@@ -258,7 +272,7 @@ const EVAL_TOOL = {
           properties: {
             pk: { type: 'integer' },
             score: { type: 'integer', description: 'Score /100 (barème donné).' },
-            envoyer: { type: 'boolean', description: 'false si une exigence écrite du client n’est pas prouvée, un type banni, un motif de refus répété, ou un doute.' },
+            envoyer: { type: 'boolean', description: 'true par défaut ; false seulement si l’annonce contredit clairement une exigence écrite du client, si c’est un type banni, ou si un motif de refus répété s’applique clairement.' },
             raison: { type: 'string', description: 'Raison courte (≤ 120 caractères).' },
             date_visite: { type: 'string', description: 'Date et heure de visite écrites dans l’annonce, format AAAA-MM-JJTHH:MM (heure suisse), sinon chaîne vide. Jamais inventée.' },
           },
@@ -271,12 +285,12 @@ const EVAL_TOOL = {
 };
 
 const RULES = [
-  "Critères écrits respectés à la lettre : zone, budget (loyer charges comprises ≤ plafond), pièces, type de bien.",
-  "Toute exigence affirmative du client (état neuf ou rénové, surface minimale, étage, ascenseur, balcon, baignoire, parking, cuisine, quartier, distance, date d'entrée, animaux) doit être PROUVÉE par le texte ou les équipements de l'annonce ; sinon envoyer = false. Les préférences (« de préférence », « si possible ») ne sont pas bloquantes.",
+  "Zone, budget (loyer charges comprises ≤ plafond), pièces et types bannis sont déjà vérifiés avant toi.",
+  "C'est le client qui tranche (règle de l'admin du 26.10.2026) : envoyer = true par défaut. envoyer = false SEULEMENT si l'annonce CONTREDIT clairement une exigence écrite du client (il exige un balcon et l'annonce dit sans balcon ; animaux interdits alors qu'il a un animal ; entrée impossible avant une date trop tardive qu'il a refusée), si c'est un type banni, ou si un motif de refus donné 2 fois ou plus par le client s'applique clairement. Une information absente ou non prouvée n'empêche pas l'envoi : elle baisse seulement le score.",
   "Types bannis : sous-location, colocation, chambre, meublé, bail à durée déterminée ou à terme fixe, logement senior/AVS/AI/APG, logement protégé, conciergerie imposée. Subventionné banni sauf si le client le mentionne.",
-  "Barème /100 : zone 20, budget 20, pièces/surface/type 15, disponibilité 10, exigences et préférences écrites 15, solvabilité (marge sous le plafond) 10, fraîcheur 5, contact identifiable 5 ; +10 si l'annonce donne une date de visite future. Information manquante = points perdus, ne jamais supposer.",
-  "Profil appris : ressemblance aux offres que le client a aimées = bonus ; un motif de refus donné 2 fois ou plus = envoyer false.",
-  "Qualité avant quantité : il vaut mieux ne rien envoyer qu'une annonce douteuse.",
+  "Barème /100 (sert à l'ordre d'envoi) : zone 20, budget 20, pièces/surface/type 15, disponibilité 10, exigences et préférences écrites 15, solvabilité (marge sous le plafond) 10, fraîcheur 5, contact identifiable 5 ; +10 si l'annonce donne une date de visite future. Information manquante = points perdus, ne jamais supposer.",
+  "Profil appris : ressemblance aux offres que le client a aimées = bonus.",
+  "Les meilleures annonces partent en premier ; le client reçoit tout ce qui est conforme et décide lui-même.",
 ];
 
 export async function evaluateListings(callModel: CallModel, client: Record<string, unknown>, listings: any[], profil: { aimees: string[]; refus: string[] }, nowIso: string) {
@@ -346,7 +360,7 @@ const MAX_IMMO_FICHES = 10;
  * ou bloqué : ignoré (la recherche continue avec les autres sources).
  */
 async function portalListings(fetchFn: typeof fetch, crit: Crit, category: string, now: Date, deja: (lien: string, adresse: string) => boolean, reasons: Record<string, number>): Promise<{ list: any[]; lues: number }> {
-  const urls = urlsRecherche({ communes: crit.communes, plafond: crit.plafond, pieces: crit.piecesMin, maison: category === 'HOUSE' });
+  const urls = urlsRecherche({ communes: crit.communes, cantons: crit.cantons ?? [], plafond: crit.plafond, pieces: crit.piecesMin, maison: category === 'HOUSE' });
   const out: any[] = [];
   let lues = 0;
   const get = async (url: string) => {
@@ -374,8 +388,7 @@ async function portalListings(fetchFn: typeof fetch, crit: Crit, category: strin
     const html = await get(u.url);
     if (!html) { reasons['immobilier.ch indisponible'] = (reasons['immobilier.ch indisponible'] ?? 0) + 1; continue; }
     for (const lien of parseImmobilierList(html)) {
-      const commune = immobilierCommune(lien);
-      if (!crit.communes.some((x) => commune === x || commune.startsWith(`${x} `))) continue; // hors zone (district plus large)
+      if (!inZone(immobilierCommune(lien), cantonKey(String(lien).split('/')[6] ?? ''), crit)) continue; // hors zone (district plus large)
       if (deja(lien, '')) { reasons['déjà proposée'] = (reasons['déjà proposée'] ?? 0) + 1; continue; }
       if (fiches >= MAX_IMMO_FICHES) break;
       fiches++;
@@ -410,7 +423,7 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
   }
   const zone = zoneOf(c.region_recherche);
   const communes = zone.communes;
-  if (!communes.length) return fail('Aucune commune dans la recherche : demande au client où il cherche.');
+  if (!communes.length && !zone.cantons.length) return fail('Aucune commune dans la recherche : demande au client où il cherche.');
   const budget = Number(c.budget_max) || 0;
   if (budget < 300) return fail('Budget absent ou incohérent : à préciser.');
   const { data: cands } = await db.from('client_candidates').select('type, revenus_mensuels, prenom, nom').eq('client_id', clientId);
@@ -426,7 +439,7 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
   const plafond = revenus > 0 ? Math.min(budget, Math.floor(revenus / 3)) : budget;
   if (plafond <= 350) return fail('Plafond de loyer trop bas (revenus ÷ 3) : critères à revoir avec l’agent.');
 
-  // Plafond du jour : 6 offres automatiques par client, toutes sources.
+  // Plafond du jour : 12 offres automatiques par client, toutes sources.
   const { count: today } = await db.from('offres').select('id', { count: 'exact', head: true })
     .eq('client_id', clientId).eq('envoi_auto', true).gte('date_envoi', zurichMidnightUtc(now).toISOString());
   res.restant_jour = Math.max(0, MAX_PER_DAY - (today ?? 0));
@@ -439,7 +452,7 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
   const prevAddr = new Set((prev ?? []).map((o: any) => norm(o.adresse)).filter((a: string) => /\d/.test(a)));
 
   const category = /maison|villa/i.test(String(c.type_bien ?? '')) ? 'HOUSE' : 'APARTMENT';
-  const crit: Crit = { communes, plafond, piecesMin: Number(c.pieces) > 0 ? Number(c.pieces) : null, typeBien: c.type_bien ?? null };
+  const crit: Crit = { communes, cantons: zone.cantons, plafond, piecesMin: Number(c.pieces) > 0 ? Number(c.pieces) : null, typeBien: c.type_bien ?? null };
   const reasons: Record<string, number> = {};
   const keep: any[] = [];
   const byPk = new Set<number>();
@@ -458,7 +471,8 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
       keep.push(l);
     }
   }
-  if (zonesSansCarte.length === zone.recherches.length) return fail('Zone trop vague pour chercher (ex. un canton entier) : demande au client les communes précises.');
+  // Canton entier : pas de rectangle Flatfox, les portails sont lus par leur code de canton.
+  if (zone.recherches.length && zonesSansCarte.length === zone.recherches.length && !zone.cantons.length) return fail('Zone trop vague pour chercher (ex. un canton entier) : demande au client les communes précises.');
   // Annonces déjà en base (immobilier.ch, Homegate… trouvées par les routines), encore en ligne.
   const deja = (lien: string, adresse: string) => prevLinks.has(String(lien).match(/(\d{6,})/)?.[1] ?? '') || (/\d/.test(adresse) && prevAddr.has(norm(adresse)));
   const fromBase = await baseListings(db, fetchFn, clientId, crit, category, now, deja, reasons);
@@ -504,12 +518,12 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
   const ranked = ev.annonces.map((e: any) => {
     const l = short.find((x) => Number(x.pk) === Number(e.pk));
     const visite = l ? visitInstant(e.date_visite, now) : null;
-    const seuil = visite ? 80 : 90;
-    return { l, e, visite, ok: !!l && e.envoyer === true && Number(e.score) >= seuil };
+    // Le client tranche : tout ce qui passe les critères fermes part, sauf contradiction claire signalée par Claude.
+    return { l, e, visite, ok: !!l && e.envoyer !== false };
   }).filter((x: any) => x.ok)
     .sort((a: any, b: any) => (Number(!!b.visite) - Number(!!a.visite)) || (Number(b.e.score) - Number(a.e.score)));
   const refused = ev.annonces.length - ranked.length;
-  if (refused > 0) res.ecartees.push({ raison: 'sous le seuil de qualité ou exigence non prouvée', n: refused });
+  if (refused > 0) res.ecartees.push({ raison: 'contredit une exigence écrite du client ou type banni', n: refused });
   const chosen = ranked.slice(0, max);
   res.en_reserve = Math.max(0, ranked.length - chosen.length);
 
@@ -561,6 +575,6 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
     res.envoyees.push(sent);
   }
   res.ok = true;
-  if (!res.envoyees.length) res.motif = 'Aucune annonce assez sûre pour être envoyée (qualité avant quantité).';
+  if (!res.envoyees.length) res.motif = 'Les annonces lues contredisent ses exigences écrites (motifs dans ecartees).';
   return res;
 }

@@ -117,7 +117,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'chercher_offres',
-    description: "Lance TOUT DE SUITE une recherche d'offres de location pour ce client, avec ses critères enregistrés et le mode d'emploi des routines d'offres (zone, plafond de loyer, pièces, exigences écrites prouvées, aucun doublon, 6 offres par jour au maximum). Les offres conformes arrivent dans sa messagerie et dans « Offres reçues » en quelques minutes, et tu lui écris le résultat. À utiliser quand il demande des offres, un logement, « envoie-moi … » ; après modifier_criteres la recherche part déjà toute seule. Si sa demande contient de NOUVEAUX critères, appelle d'abord modifier_criteres. Ne promets jamais un nombre d'offres.",
+    description: "Lance TOUT DE SUITE une recherche d'offres de location pour ce client, avec ses critères enregistrés et le mode d'emploi des routines d'offres (zone ou canton entier, plafond de loyer, pièces, types bannis, aucun doublon, 12 offres par jour au maximum ; tout ce qui est conforme part, le client tranche). Les offres conformes arrivent dans sa messagerie et dans « Offres reçues » en quelques minutes, et tu lui écris le résultat. À utiliser quand il demande des offres, un logement, « envoie-moi … » ; après modifier_criteres la recherche part déjà toute seule. Si sa demande contient de NOUVEAUX critères, appelle d'abord modifier_criteres. Ne promets jamais un nombre d'offres.",
     input_schema: { type: 'object', properties: { precision: { type: 'string', description: 'Ce que le client a demandé, en quelques mots.' } } },
   },
   {

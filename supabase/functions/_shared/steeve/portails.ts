@@ -75,13 +75,17 @@ export function districtOf(commune: string): Lieu | null {
   return DISTRICTS.find((d) => d.communes.includes(c) || norm(d.nom) === c) ?? null;
 }
 
-function cantonOf(commune: string): string | null {
+export function cantonOf(commune: string): string | null {
   const c = communeKey(commune);
   const d = districtOf(c);
   if (d) return d.canton;
   for (const [k, v] of Object.entries(CANTONS)) if (k === c || (v.communes ?? []).includes(c)) return k;
   return null;
 }
+
+const REGION_CANTON: Record<string, string> = { vd: 'vaud', vaud: 'vaud', ge: 'geneve', geneve: 'geneve', fr: 'fribourg', fribourg: 'fribourg', ne: 'neuchatel', neuchatel: 'neuchatel', vs: 'valais', valais: 'valais', ju: 'jura', jura: 'jura', be: 'berne', berne: 'berne', bern: 'berne' };
+/** Canton d'une abréviation ou d'un nom de canton (« VD », « Vaud », « Genève ») ; null si inconnu. */
+export const cantonKey = (s: unknown): string | null => REGION_CANTON[norm(s)] ?? null;
 
 /** Jeton Homegate d'une commune (« Chavannes-près-Renens » → geo-city-chavannes-pres-renens). */
 export const homegateCity = (commune: string) => `geo-city-${communeKey(commune).replace(/\s+/g, '-')}`;
@@ -92,9 +96,16 @@ export interface ZonePortails { immobilier: { code: string; zone: string }[]; ho
  * Codes à interroger pour une liste de communes : le district quand il est connu (une seule page pour toute la zone),
  * sinon le canton pour immobilier.ch et la commune pour Homegate.
  */
-export function zonePortails(communes: string[]): ZonePortails {
+export function zonePortails(communes: string[], cantons: string[] = []): ZonePortails {
   const im = new Map<string, string>();
   const hg = new Map<string, string>();
+  // Canton entier (« Canton de Vaud (partout) ») : une recherche pour tout le canton sur chaque portail.
+  for (const k of cantons) {
+    const c = CANTONS[k];
+    if (!c) continue;
+    im.set(c.immobilier, `canton ${c.nom}`);
+    if (c.homegate) hg.set(c.homegate, `canton ${c.nom}`);
+  }
   for (const c of communes) {
     const d = districtOf(c);
     if (d) {
@@ -119,8 +130,8 @@ export function zonePortails(communes: string[]): ZonePortails {
 export interface UrlRecherche { portail: 'immobilier.ch' | 'homegate'; zone: string; url: string }
 
 /** Adresses de recherche prêtes (location) : prix maximal, pièces minimales, tri par date sur Homegate. */
-export function urlsRecherche(o: { communes: string[]; plafond?: number | null; pieces?: number | null; maison?: boolean }): UrlRecherche[] {
-  const z = zonePortails(o.communes);
+export function urlsRecherche(o: { communes: string[]; cantons?: string[]; plafond?: number | null; pieces?: number | null; maison?: boolean }): UrlRecherche[] {
+  const z = zonePortails(o.communes, o.cantons ?? []);
   const px = o.plafond && o.plafond > 0 ? Math.floor(o.plafond) : null;
   const pc = o.pieces && o.pieces > 0 ? o.pieces : null;
   const out: UrlRecherche[] = [];
@@ -154,7 +165,7 @@ export function parseHomegate(html: string): any[] {
     const id = String(it?.id ?? l.id ?? '');
     const cats: string[] = (l.categories ?? []).map(String);
     return {
-      _source: 'homegate', _id: id, _lien: `https://www.homegate.ch/louer/${id}`,
+      _source: 'homegate', _id: id, _lien: `https://www.homegate.ch/louer/${id}`, _canton: cantonKey(a.region),
       offer_type: l.offerType === 'RENT' ? 'RENT' : String(l.offerType ?? ''), status: 'act',
       street: a.street ?? null, zipcode: a.postalCode ?? null, city: a.locality ? titleCase(String(a.locality)) : null,
       rent_gross: gross, rent_charges: Number(rent.extra) || null, number_of_rooms: l.characteristics?.numberOfRooms != null ? String(l.characteristics.numberOfRooms) : null,
@@ -192,7 +203,7 @@ export function parseImmobilierFiche(html: string, url: string): any | null {
     const charges = ch ? Number(ch[1].replace(/['’]/g, '')) : null;
     const id = String(j.sku ?? url.match(/-(\d{6,})$/)?.[1] ?? '');
     return {
-      _source: 'immobilier.ch', _id: id, _lien: url, _regie: j.brand?.name ?? null,
+      _source: 'immobilier.ch', _id: id, _lien: url, _regie: j.brand?.name ?? null, _canton: cantonKey(ad.addressRegion) ?? cantonKey(String(url).split('/')[6] ?? ''),
       offer_type: 'RENT', status: 'act', street: ad.streetAddress ?? null, zipcode: ad.postalCode ?? null, city: ad.addressLocality ?? null,
       // Loyer charges comprises : net + charges ; sans charges connues, le net seul (l'évaluation le sait : charges inconnues).
       rent_gross: net ? net + (charges ?? 0) : null, rent_charges: charges, number_of_rooms: ab.numberOfRooms != null ? String(ab.numberOfRooms) : null,

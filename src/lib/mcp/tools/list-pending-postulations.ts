@@ -48,6 +48,10 @@ export default defineTool({
         // Postulation demandée maintenant (admin ou client, via Steeve) : en tête de la liste.
         const ua = ja?.priority === "urgent" ? 0 : 1, ub = jb?.priority === "urgent" ? 0 : 1;
         if (ua !== ub) return ua - ub;
+        // Gros loyers d'abord (objectif de l'admin) : studio > 1300, 2,5 p. > 1600, 3,5 p. > 2300, 4,5 p. et plus > 2700.
+        const gros = (o: { prix?: number | null; pieces?: number | null }) => { const p = Number(o.pieces) || 0, x = Number(o.prix) || 0; return x > (p < 2 ? 1300 : p < 3 ? 1600 : p < 4 ? 2300 : 2700) ? 0 : 1; };
+        const ga = gros(a), gb = gros(b);
+        if (ga !== gb) return ga - gb;
         const pa = ja ? jobPriority[ja.status] ?? 9 : 9, pb = jb ? jobPriority[jb.status] ?? 9 : 9;
         return pa - pb;
       })
