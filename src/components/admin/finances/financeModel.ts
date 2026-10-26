@@ -5,6 +5,7 @@
  * Aucune donnée n'est écrite ici : tout est calculé à partir de ce qui est déjà chargé.
  */
 import { differenceInDays, format, startOfMonth, startOfYear, subMonths, endOfMonth } from 'date-fns';
+import { chfSuisse, nombreSuisse } from '@/lib/montantSuisse';
 
 export type Ton = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'muted';
 
@@ -17,17 +18,15 @@ export const TON_TEXTE: Record<Ton, string> = {
   muted: 'text-muted-foreground',
 };
 
-const nf0 = new Intl.NumberFormat('de-CH', { maximumFractionDigits: 0 });
-const nf2 = new Intl.NumberFormat('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /** « CHF 12’400 » (apostrophe suisse, sans décimales). */
 export function chf(n: number | null | undefined): string {
-  return `CHF ${nf0.format(Number(n) || 0)}`;
+  return chfSuisse(n);
 }
 
 /** « 12’400.00 » (registre comptable, deux décimales) ; « — » si vide. */
 export function montant2(n: number | null | undefined): string {
-  return n == null ? '—' : nf2.format(Number(n));
+  return n == null ? '—' : nombreSuisse(n, 2);
 }
 
 /** Date JJ.MM.AAAA ; « — » si vide ou invalide. */

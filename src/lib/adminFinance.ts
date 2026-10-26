@@ -1,3 +1,4 @@
+import { chfSuisse } from './montantSuisse';
 /**
  * Calculs financiers du tableau de bord admin (fonctions pures, aucune requête).
  *
@@ -58,8 +59,7 @@ const num = (v: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-export const formatCHF = (n: number) =>
-  `CHF ${Math.round(n).toLocaleString('fr-CH').replace(/ | /g, "'")}`;
+export const formatCHF = (n: number) => chfSuisse(Math.round(n));
 
 /* ---------- Données brutes ---------- */
 

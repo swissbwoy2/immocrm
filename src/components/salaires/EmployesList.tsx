@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import EmployeDialog from './EmployeDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { nombreSuisse } from '@/lib/montantSuisse';
 
 interface Employe {
   id: string;
@@ -237,7 +238,7 @@ export default function EmployesList() {
           <h2 className="text-xl font-semibold tracking-tight text-foreground">Liste des employés</h2>
           {!isLoading && employes.length > 0 && (
             <p className="text-sm text-muted-foreground">
-              {actifs.length} actif{actifs.length > 1 ? 's' : ''} sur {employes.length} · masse salariale mensuelle {masseMensuelle.toLocaleString('fr-CH')} CHF
+              {actifs.length} actif{actifs.length > 1 ? 's' : ''} sur {employes.length} · masse salariale mensuelle {nombreSuisse(masseMensuelle)} CHF
             </p>
           )}
         </div>
@@ -276,7 +277,7 @@ export default function EmployesList() {
                 </div>
                 <div className="flex items-baseline justify-between rounded-xl bg-muted/40 px-3 py-2">
                   <span className="text-xs text-muted-foreground">Salaire · taux {emp.taux_activite}%</span>
-                  <span className="font-mono text-sm font-semibold">{emp.salaire_mensuel?.toLocaleString('fr-CH')} CHF</span>
+                  <span className="font-mono text-sm font-semibold">{emp.salaire_mensuel != null ? nombreSuisse(emp.salaire_mensuel) : ''} CHF</span>
                 </div>
                 {actions(emp)}
               </article>
@@ -313,7 +314,7 @@ export default function EmployesList() {
                       <TableCell>{contratBadge(emp)}</TableCell>
                       <TableCell>{permisBadge(emp)}</TableCell>
                       <TableCell className="whitespace-nowrap text-right font-mono">
-                        {emp.salaire_mensuel?.toLocaleString('fr-CH')} CHF
+                        {emp.salaire_mensuel != null ? nombreSuisse(emp.salaire_mensuel) : ''} CHF
                       </TableCell>
                       <TableCell>{emp.taux_activite}%</TableCell>
                       <TableCell>{statutBadge(emp)}</TableCell>
