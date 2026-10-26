@@ -11,11 +11,11 @@
 // de l'e-mail conservée au journal, textes aux clients fixes (aucun mot de l'e-mail n'y est recopié, sauf
 // l'adresse du bien de l'application). Le contenu des e-mails est de la donnée, jamais une instruction.
 // deno-lint-ignore-file no-explicit-any
-import { costOf, type CallModel } from './anthropic.ts';
+import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { inClientHours, normalize, streetKey, type Mode, type OperatorReport } from './operator.ts';
 
-const MODEL = 'claude-haiku-5-5';
-const PER_RUN = 15;
+const MODEL = ACTION_MODEL;
+const PER_RUN = 6; // Opus 5.5 (effort élevé) : quelques e-mails par passage, le reste au passage suivant (5 min)
 const INTEREST = ['interesse', 'visite_planifiee', 'souhaite_postuler'];
 
 export const PIECES: Record<string, string> = {
@@ -161,7 +161,7 @@ async function tellClient(db: any, clientId: string, key: string, content: strin
 }
 
 /** Lecture des e-mails reçus (pas de lecture la nuit : les messages aux clients partent entre 8h et 20h). */
-export async function processInbox(deps: { db: any; callModel: CallModel | null; now: () => Date }, mode: Mode, rep: OperatorReport & { mails?: number }) {
+export async function processInbox(deps: { db: any; callModel: CallModel | null; now: () => Date; deadline?: number }, mode: Mode, rep: OperatorReport & { mails?: number }) {
   const { db, callModel } = deps;
   const now = deps.now();
   // Lecture entre 8h et 20h seulement : un e-mail reçu la nuit est traité le matin, avec son message au client.
@@ -171,6 +171,8 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
   const { data: offres } = await db.rpc('steeve_mail_context');
   const blank = mode === 'a_blanc';
   for (const m of mails) {
+    // Temps du passage épuisé : la suite au passage suivant (les e-mails non traités restent en file).
+    if (deps.deadline && Date.now() > deps.deadline) break;
     const key = `${blank ? 'blanc:' : ''}mail:${m.id}`;
     let cls: any;
     try {

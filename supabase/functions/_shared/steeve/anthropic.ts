@@ -12,9 +12,19 @@ export interface ModelPricing {
 const PRICING: Record<string, ModelPricing> = {
   'claude-haiku-5-5': { input: 0.10, cacheWrite: 0.125, cacheRead: 0.01, output: 0.50 },
   'claude-sonnet-5-5': { input: 2, cacheWrite: 2.5, cacheRead: 0.10, output: 10 },
+  'claude-opus-5-5': { input: 4, cacheWrite: 5, cacheRead: 0.20, output: 20 },
 };
 // Modèle inconnu : on compte au tarif le plus élevé connu, pour ne jamais sous-estimer la dépense.
-const FALLBACK_PRICING = PRICING['claude-sonnet-5-5'];
+const FALLBACK_PRICING = PRICING['claude-opus-5-5'];
+
+/**
+ * Modèle des ACTIONS de Steeve (décision de l'admin du 26.10.2026 : « Opus 5.5 élevé, comme les routines ») :
+ * contrôle des dossiers, évaluation des offres, lecture des pièces, classement des e-mails, triage des postulations.
+ */
+export const ACTION_MODEL = 'claude-opus-5-5';
+export const ACTION_EFFORT: Effort = 'high';
+
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
 export interface Usage {
   input_tokens: number;
@@ -101,6 +111,8 @@ export interface ModelRequest {
   max_tokens: number;
   /** Force l'appel d'un outil (réponse structurée). */
   tool_choice?: { type: 'tool'; name: string } | { type: 'auto' } | { type: 'any' };
+  /** Niveau d'effort (output_config.effort) ; par défaut « high » pour Opus et Sonnet. */
+  effort?: Effort;
 }
 
 export interface ModelResponse {
@@ -112,29 +124,62 @@ export interface ModelResponse {
 export type CallModel = (req: ModelRequest) => Promise<ModelResponse>;
 
 /**
- * Réglage de réflexion par modèle. Haiku 5.5 : désactivée (sinon active par défaut, et Steeve épuisait max_tokens à
- * réfléchir). Sonnet / Opus 5.5 refusent « disabled » (erreur 400 du 26.10.2026) : la forme sans réflexion préalable
- * est « between_tools » — de courtes notes entre deux appels d'outils, renvoyées en blocs « thinking » (ignorés par
- * textOf, conservés tels quels dans l'historique des tours d'outils).
+ * Réglage de réflexion par modèle (documentation « effort » relevée le 26.10.2026) :
+ * - Haiku 5.5 : réflexion désactivée (sinon active par défaut et ses jetons épuisaient max_tokens) ;
+ * - Sonnet 5.5 : « disabled » est refusé (400) ; « between_tools » = notes courtes entre deux outils, effort high ;
+ * - Opus 5.5 : réflexion adaptative toujours active (ni « disabled » ni « between_tools ») : champ omis.
  */
-export function thinkingFor(model: string): { type: 'disabled' } | { type: 'between_tools' } {
-  return /sonnet|opus|fable|mythos/i.test(model) ? { type: 'between_tools' } : { type: 'disabled' };
+export function thinkingFor(model: string): { type: 'disabled' } | { type: 'between_tools' } | undefined {
+  if (/opus|fable|mythos/i.test(model)) return undefined;
+  return /sonnet/i.test(model) ? { type: 'between_tools' } : { type: 'disabled' };
+}
+
+const isOpus = (model: string) => /opus|fable|mythos/i.test(model);
+
+/**
+ * Corps de la requête selon le modèle : réflexion, effort, place pour la réflexion dans max_tokens (elle y compte),
+ * et, sur Opus (réflexion toujours active, incompatible avec un outil imposé), outil demandé par consigne au lieu
+ * d'être imposé. Durée d'attente adaptée au modèle.
+ */
+export function buildRequest(req: ModelRequest): { body: Record<string, unknown>; timeoutMs: number } {
+  const { effort, ...rest } = req;
+  const body: Record<string, unknown> = { ...rest };
+  if (!req.tools.length) delete body.tools;
+  const thinking = thinkingFor(req.model);
+  if (thinking) body.thinking = thinking;
+  if (isOpus(req.model)) {
+    body.output_config = { effort: effort ?? ACTION_EFFORT };
+    body.max_tokens = Math.max(req.max_tokens, 32_000);
+    if (req.tool_choice && req.tool_choice.type !== 'auto') {
+      const name = req.tool_choice.type === 'tool' ? req.tool_choice.name : null;
+      body.tool_choice = { type: 'auto' };
+      body.system = [...req.system, { type: 'text', text: name
+        ? `Réponds uniquement en appelant l'outil ${name}, une seule fois, sans texte autour.`
+        : 'Réponds uniquement en appelant un de tes outils.' }];
+    }
+    return { body, timeoutMs: 180_000 };
+  }
+  if (/sonnet/i.test(req.model)) {
+    body.output_config = { effort: effort ?? 'high' };
+    body.max_tokens = Math.max(req.max_tokens, 4_000);
+    return { body, timeoutMs: 90_000 };
+  }
+  return { body, timeoutMs: 45_000 };
 }
 
 /** Appel réel à l'API. La clé reste côté serveur (secret ANTHROPIC_API_KEY). */
 export function anthropicCaller(apiKey: string): CallModel {
   return async (req) => {
+    const { body, timeoutMs } = buildRequest(req);
     const res = await fetch('https://api.anthropic.com/v1/messages', {
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(timeoutMs),
       method: 'POST',
       headers: {
         'content-type': 'application/json',
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      // Sans outil (site public) : le champ est omis.
-      // Réflexion coupée (ses jetons comptent dans max_tokens) : voir thinkingFor.
-      body: JSON.stringify({ ...(req.tools.length ? req : { ...req, tools: undefined }), thinking: thinkingFor(req.model) }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) {
       const detail = (await res.text()).slice(0, 500);
