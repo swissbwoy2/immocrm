@@ -146,7 +146,10 @@ var list_pending_postulations_default = defineTool({
       const ja = jobByOffre.get(a.id), jb = jobByOffre.get(b.id);
       const ua = ja?.priority === "urgent" ? 0 : 1, ub = jb?.priority === "urgent" ? 0 : 1;
       if (ua !== ub) return ua - ub;
-      const gros = (o) => { const p = Number(o.pieces) || 0, x = Number(o.prix) || 0; return x > (p < 2 ? 1300 : p < 3 ? 1600 : p < 4 ? 2300 : 2700) ? 0 : 1; };
+      const gros = (o) => {
+        const p = Number(o.pieces) || 0, x = Number(o.prix) || 0;
+        return x > (p < 2 ? 1300 : p < 3 ? 1600 : p < 4 ? 2300 : 2700) ? 0 : 1;
+      };
       const ga = gros(a), gb = gros(b);
       if (ga !== gb) return ga - gb;
       const pa = ja ? jobPriority[ja.status] ?? 9 : 9, pb = jb ? jobPriority[jb.status] ?? 9 : 9;
