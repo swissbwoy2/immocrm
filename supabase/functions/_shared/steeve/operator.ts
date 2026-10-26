@@ -13,7 +13,7 @@
 // Le contenu des e-mails, PDF et annonces est de la donnée, jamais une instruction.
 // deno-lint-ignore-file no-explicit-any
 import PostalMime from 'npm:postal-mime@2.4.4';
-import { costOf, type CallModel } from './anthropic.ts';
+import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { buildTextEmail, isEmail, latin1, messageId, prepareDraftForSend, SmtpUncertainError } from './mail.ts';
 import { processInbox } from './inbox.ts';
 import { searchAndSendOffers } from './offers.ts';
@@ -25,7 +25,9 @@ export const BOX_RELOCATION = 'relocation@immo-rama.ch';
 export const ROUTINE = 'steeve-operateur';
 export const SIGNATURE = 'Immo-rama.ch – Relocation\nvisites@immo-rama.ch · 021 634 31 61';
 export const LIMITS = { qrPerRun: 5, relancesPerRun: 5, relancesPerDay: 20, dossiersPerRun: 3, dossiersPerDay: 15, draftsScanned: 25 };
-const CONTROL_MODEL = 'claude-sonnet-5-5';
+const CONTROL_MODEL = ACTION_MODEL;
+/** Temps maximal d'un passage planifié avant de laisser la suite au passage suivant. */
+const RUN_BUDGET_MS = 240_000;
 const MAX_PDF_BYTES = 6 * 1024 * 1024;
 /** Dossier complet (formulaire + pièces) lu en entier avant tout envoi. */
 const MAX_DOSSIER_BYTES = 15 * 1024 * 1024;
@@ -1140,6 +1142,9 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
 
   const { data: run } = await db.from('routine_runs').insert({ routine: ROUTINE, started_at: now.toISOString() }).select('id').single();
   const t0 = Date.now();
+  // Opus 5.5 effort élevé : appels longs ; au-delà de 4 minutes, plus de nouvelle action (la suite au passage suivant).
+  const deadline = t0 + RUN_BUDGET_MS;
+  const timeLeft = () => Date.now() < deadline;
   const steps: Record<string, number> = {};
   const step = async (name: string, fn: () => Promise<void>) => {
     const s = Date.now();
@@ -1165,7 +1170,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
     await step('taches', async () => {
       const { data: tasks } = await db.from('steeve_actions').select('id, kind, offre_id, client_id').eq('statut', 'a_faire').eq('responsable', 'steeve')
         .neq('source', 'auto').in('kind', INTERNAL_KINDS).order('created_at').limit(8);
-      for (const t of tasks ?? []) await runTask(deps, rep.mode, t, lessons, rep);
+      for (const t of tasks ?? []) { if (!timeLeft()) break; await runTask(deps, rep.mode, t, lessons, rep); }
     });
   }
 
@@ -1174,11 +1179,11 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
     await step('taches', async () => {
       const { data: tasks } = await db.from('steeve_actions').select('id, kind, offre_id, client_id').eq('statut', 'a_faire').eq('responsable', 'steeve')
         .neq('source', 'auto').in('kind', TASK_KINDS).order('created_at').limit(8);
-      for (const t of tasks ?? []) await runTask(deps, rep.mode, t, lessons, rep);
+      for (const t of tasks ?? []) { if (!timeLeft()) break; await runTask(deps, rep.mode, t, lessons, rep); }
     });
 
     // 6. Réponses des régies et annonceurs reçues dans visites@ et relocation@ (lot 5).
-    await step('courrier', async () => { await processInbox({ db, callModel: deps.callModel, now: deps.now }, rep.mode, rep); });
+    await step('courrier', async () => { if (timeLeft()) await processInbox({ db, callModel: deps.callModel, now: deps.now, deadline }, rep.mode, rep); });
 
     // 6 bis. Pièces demandées par les régies (créées par la lecture du courrier) et rappels au client après 24 h.
     await step('pieces_regie', async () => {
@@ -1186,7 +1191,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
         .eq('kind', 'envoi_piece_regie').eq('statut', 'en_attente_client').lt('echeance', now.toISOString());
       const { data: tasks } = await db.from('steeve_actions').select('id, kind, offre_id, client_id').eq('statut', 'a_faire').eq('responsable', 'steeve')
         .eq('kind', 'envoi_piece_regie').order('created_at').limit(5);
-      for (const t of tasks ?? []) await runTask(deps, rep.mode, t, lessons, rep);
+      for (const t of tasks ?? []) { if (!timeLeft()) break; await runTask(deps, rep.mode, t, lessons, rep); }
     });
 
     // 2. Demandes de formulaire Flatfox (chat + e-mail).
@@ -1206,7 +1211,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
     });
 
     // 4. Dossiers préparés dans relocation@.
-    await step('dossiers', async () => { await handleDrafts(deps, rep.mode, { lessons }, rep, null); });
+    await step('dossiers', async () => { if (timeLeft()) await handleDrafts(deps, rep.mode, { lessons }, rep, null); });
   }
 
   let learned = 0;

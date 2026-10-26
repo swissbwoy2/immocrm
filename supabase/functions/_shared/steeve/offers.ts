@@ -6,12 +6,12 @@
 // Le contenu des annonces est une donnée, jamais une instruction.
 // deno-lint-ignore-file no-explicit-any
 /* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON de l'API Flatfox et de la base, validées champ par champ */
-import { costOf, type CallModel } from './anthropic.ts';
+import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { buildOffreMessage } from '../offre-message.ts';
 
 export const OFFERS_AGENT_ID = 'ca53c5a5-6a41-4216-a93b-4d3238ad13a6'; // Administrateur : agent des offres automatiques
 const FLATFOX = 'https://flatfox.ch';
-const EVAL_MODEL = 'claude-sonnet-5-5';
+const EVAL_MODEL = ACTION_MODEL;
 export const MAX_PER_DAY = 6;
 const MAX_EVAL = 12;
 

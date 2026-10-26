@@ -1,3 +1,4 @@
+import { chfSuisse } from './montantSuisse';
 /**
  * Calcul de la tenue des charges bancaire suisse.
  * Tous les taux proviennent de purchase_financing_settings — JAMAIS hardcodés.
@@ -161,7 +162,7 @@ export function computeFinancing(input: FinancingInput, s: FinancingSettings): F
   };
 }
 
-export const formatCHF = (v: number) => `CHF ${Math.round(v).toLocaleString('fr-CH')}`;
+export const formatCHF = (v: number) => chfSuisse(Math.round(v));
 
 // ---------- Statut bancaire (valeurs uniques, sans accent) ----------
 export type StatutBancaire = 'a_evaluer' | 'en_analyse' | 'prevalide' | 'valide' | 'refuse' | 'bloque';
