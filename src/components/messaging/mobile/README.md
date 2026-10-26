@@ -1,18 +1,18 @@
 # Mobile messaging primitives
 
-The Immo-rama mobile chat visual layer is applied via the `.imr-chat` scope on
-`MessagingLayout`'s root element (see `src/components/MessagingLayout.tsx`) and
-scoped CSS overrides in `src/index.css` (media `(max-width: 1023px)`).
+La messagerie suit le design de l'app (tokens primary / muted / background), sans dégradé ni motif.
 
-This keeps 100% of the existing state, handlers and message-specific rendering
-(offer card + candidature buttons, video player, compte-rendu, tabs, stories,
-send handler) in the three role pages while restyling the mobile surface with
-the Immo palette (green `hsl(158 55% 38%)`, sky-blue `hsl(200 70% 45%)`).
+- `MessengerSplitLayout` (`../MessengerSplitLayout.tsx`) : ossature commune.
+  ≥ 768 px → deux panneaux (liste 340-380 px | conversation) ; < 768 px → `MobileMessenger`.
+  Remplit son parent (`h-full`) : pas de calcul de hauteur de viewport (le shell mobile est ancré au viewport dynamique).
+- `MobileMessenger.tsx` : un panneau à la fois, en-tête `ChatHeader` (retour, avatar, statut, appels) avec zone sûre iOS,
+  glisser vers la droite pour revenir, mode immersif quand une conversation est ouverte.
+- `MobileChatInputBar.tsx` : alias de `PremiumChatInput` (zone sûre basse incluse).
+- `MobileConversationHeader.tsx` : en-tête mobile simple (non utilisé par les pages actuelles).
 
-Extractable primitives (thin wrappers used inside the scope) live here:
+La classe `.imr-chat` reste posée pour son garde-fou anti débordement horizontal ; ses anciennes couleurs
+mobiles (vert forcé dans `src/index.css`) sont neutralisées par `IMR_CHAT_NEUTRAL_STYLE` (`../messengerTheme.ts`).
 
-- `MobileChatInputBar.tsx` — wraps `PremiumChatInput` and applies mobile spacing.
-- `MobileConversationHeader.tsx` — sticky mobile chat header with back arrow.
-
-Desktop rendering is strictly unchanged: the CSS overrides only trigger under
-`(max-width: 1023px)`.
+Briques de la colonne conversations : `../ConversationListParts.tsx`
+(`ConversationListHeader`, `ConversationSearchField`, `ConversationFilterPills`, `ConversationItemsList`,
+`ConversationListEmpty`, `ChatEmptyState`).

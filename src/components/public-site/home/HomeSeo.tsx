@@ -21,7 +21,7 @@ export function HomeSeo() {
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls="seo-local"
-          className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-lg bg-white px-6 text-[16px] font-medium text-foreground ring-1 ring-inset ring-foreground/80 transition-colors duration-150 hover:bg-[var(--home-surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
+          className="inline-flex h-12 cursor-pointer items-center gap-2 rounded-full imr-lg-glass px-6 text-[16px] font-medium text-foreground active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground focus-visible:ring-offset-2"
         >
           {open ? 'Réduire' : 'Lire la suite'}
           <ChevronDown className={cn('h-5 w-5 transition-transform duration-200 motion-reduce:transition-none', open && 'rotate-180')} aria-hidden="true" />

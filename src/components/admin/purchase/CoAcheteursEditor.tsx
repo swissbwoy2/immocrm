@@ -109,8 +109,8 @@ function CoAcheteurDialog({ initial, onSubmit, trigger }: { initial?: CoAcheteur
           <Field label="Fonds propres (CHF)"><Input type="number" value={c.fonds_propres ?? ''} onChange={(e) => setC((p) => ({ ...p, fonds_propres: e.target.value === '' ? null : Number(e.target.value) }))} /></Field>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
-          <Button className="bg-gradient-to-r from-primary to-primary/80" disabled={saving} onClick={async () => {
+          <Button variant="ghost" className="rounded-full" onClick={() => setOpen(false)}>Annuler</Button>
+          <Button className="rounded-full" disabled={saving} onClick={async () => {
             setSaving(true);
             try { await onSubmit(c); setOpen(false); }
             catch (e: any) { toast.error(e?.message || 'Erreur'); }

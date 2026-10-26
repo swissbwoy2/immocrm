@@ -10,6 +10,7 @@ import {
   hasPersistedAuthEntry,
 } from '@/lib/authSession';
 import { purgePersistedAuth, withAuthStorageRemoval, mirrorSession } from '@/lib/authStorageGuard';
+import { clearAllMessageDrafts } from '@/hooks/useMessageDraft';
 
 type UserRole = 'admin' | 'agent' | 'client' | 'apporteur' | 'proprietaire' | 'coursier' | 'agent_ia' | 'closeur' | 'automation_operator' | 'candidat';
 
@@ -265,16 +266,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     authLog('deconnexion.manuelle', { session_presente: !!session });
     try {
       await withAuthStorageRemoval(async () => {
-        const { error } = await supabase.auth.signOut({ scope: 'global' });
-        if (error) {
-          console.warn('Global signout failed, trying local:', error.message);
-          await supabase.auth.signOut({ scope: 'local' });
-        }
+        // Déconnexion de CET appareil uniquement : une déconnexion « global » fermait aussi
+        // la session du même compte sur tous les autres appareils (téléphone, ordinateur, routines).
+        const { error } = await supabase.auth.signOut({ scope: 'local' });
+        if (error) console.warn('Local signout failed (cleanup continues):', error.message);
       });
     } catch (error) {
       console.warn('SignOut error (continuing with local cleanup):', error);
     } finally {
       purgePersistedAuth('deconnexion_manuelle');
+      clearAllMessageDrafts();
       setUser(null);
       setSession(null);
       setUserRole(null);

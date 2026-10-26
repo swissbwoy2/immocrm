@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getCorrectNotificationLink, detectRoleFromPath } from "@/lib/notificationLinks";
@@ -8,6 +8,16 @@ import { Capacitor } from "@capacitor/core";
 import { useAuth } from "@/contexts/AuthContext";
 
 // This hook handles push notifications for native iOS/Android
+
+/** Compte pour lequel l'enregistrement a déjà été lancé (une fois par ouverture de l'app). */
+let initializedFor: string | null = null;
+
+/** Journal d'enregistrement (diagnostic) : autorisation, jeton reçu, erreurs. Jamais bloquant. */
+export function logPushStep(userId: string, platform: string, etape: string, detail?: string) {
+  void (supabase.from("push_registration_log" as any) as any)
+    .insert({ user_id: userId, platform, etape, detail: detail ?? null })
+    .then(() => undefined, () => undefined);
+}
 
 interface PushNotificationToken {
   value: string;
@@ -25,7 +35,7 @@ interface PushNotificationActionPerformed {
 
 export function usePushNotifications() {
   const navigate = useNavigate();
-  const { userRole } = useAuth();
+  const { userRole, user } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [isSupported, setIsSupported] = useState(false);
   const [registrationError, setRegistrationError] = useState<string | null>(null);
@@ -55,14 +65,16 @@ export function usePushNotifications() {
       if (error) {
         console.error("[Push] Error registering token:", error);
         setRegistrationError(`DB Error: ${error.message}`);
-      } else {
-        console.log("[Push] Token registered successfully in database");
-        setToken(pushToken);
-        setRegistrationError(null);
+        return false;
       }
+      console.log("[Push] Token registered successfully in database");
+      setToken(pushToken);
+      setRegistrationError(null);
+      return true;
     } catch (err) {
       console.error("[Push] Failed to register token:", err);
       setRegistrationError(`Exception: ${String(err)}`);
+      return false;
     }
   }, [platform]);
 
@@ -100,101 +112,66 @@ export function usePushNotifications() {
     navigate(url);
   }, [navigate, userRole]);
 
-  const initializePushNotifications = useCallback(async () => {
-    console.log("[Push] Initializing...");
-    console.log("[Push] Is native platform:", isNative);
-    console.log("[Push] Platform:", platform);
+  // Gestionnaires lus via des refs : un changement de rôle ne relance pas l'enregistrement.
+  const actionRef = useRef(handleNotificationAction);
+  actionRef.current = handleNotificationAction;
+  const receivedRef = useRef(handleNotificationReceived);
+  receivedRef.current = handleNotificationReceived;
+  const registerRef = useRef(registerToken);
+  registerRef.current = registerToken;
 
-    if (!isNative) {
-      console.log("[Push] Not a native platform, skipping push notification setup");
-      return;
-    }
+  const initializePushNotifications = useCallback(async (userId: string) => {
+    if (!isNative) return;
+    const log = (etape: string, detail?: string) => logPushStep(userId, platform, etape, detail);
 
     try {
-      // Dynamic import to avoid errors when not installed
       const { PushNotifications } = await import("@capacitor/push-notifications");
-      
-      console.log("[Push] PushNotifications plugin loaded");
 
-      // Check if push notifications are supported
-      const permResult = await PushNotifications.checkPermissions();
-      console.log("[Push] Current permission status:", permResult.receive);
-      setPermissionStatus(permResult.receive);
-      
-      if (permResult.receive === "prompt") {
-        console.log("[Push] Requesting permissions...");
-        const requestResult = await PushNotifications.requestPermissions();
-        console.log("[Push] Permission request result:", requestResult.receive);
-        setPermissionStatus(requestResult.receive);
-        
-        if (requestResult.receive !== "granted") {
-          console.log("[Push] Permission denied by user");
-          toast.error("Notifications refusées", {
-            description: "Vous ne recevrez pas les alertes push. Vous pouvez activer les notifications dans les réglages de votre appareil.",
-          });
-          return;
-        }
+      // Les écouteurs sont branchés AVANT toute vérification d'autorisation : si l'utilisateur
+      // autorise plus tard (Paramètres › « Activer sur ce téléphone »), le jeton reçu est quand
+      // même enregistré. Avant, un refus initial laissait l'app sans écouteur → jeton perdu.
+      await PushNotifications.removeAllListeners();
+      await PushNotifications.addListener("registration", (pushToken: PushNotificationToken) => {
+        void registerRef.current(pushToken.value, userId).then((ok) =>
+          log(ok ? "jeton_enregistre" : "jeton_refuse_base", ok ? `longueur ${pushToken.value.length}` : undefined),
+        );
+      });
+      await PushNotifications.addListener("registrationError", (error: any) => {
+        const detail = error?.error || JSON.stringify(error);
+        setRegistrationError(`Registration failed: ${detail}`);
+        log("erreur_enregistrement", String(detail).slice(0, 500));
+      });
+      await PushNotifications.addListener("pushNotificationReceived", (n: any) => receivedRef.current(n));
+      await PushNotifications.addListener("pushNotificationActionPerformed", (a: any) => actionRef.current(a));
+
+      let perm = await PushNotifications.checkPermissions();
+      setPermissionStatus(perm.receive);
+      if (perm.receive === "prompt" || perm.receive === "prompt-with-rationale") {
+        perm = await PushNotifications.requestPermissions();
+        setPermissionStatus(perm.receive);
       }
-
-      if (permResult.receive === "denied") {
-        console.log("[Push] Permissions were previously denied");
+      if (perm.receive !== "granted") {
         setRegistrationError("Permissions denied");
+        log("autorisation_refusee", perm.receive);
         return;
       }
 
       setIsSupported(true);
-      console.log("[Push] Push notifications supported");
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log("[Push] No authenticated user, skipping token registration");
-        return;
-      }
-      console.log("[Push] User authenticated:", user.id);
-
-      // IMPORTANT: attach listeners BEFORE calling register()
-      // Listen for registration success
-      await PushNotifications.addListener("registration", (pushToken: PushNotificationToken) => {
-        console.log("[Push] Registration successful, token received");
-        console.log("[Push] Token length:", pushToken.value.length);
-        registerToken(pushToken.value, user.id);
-      });
-
-      // Listen for registration errors
-      await PushNotifications.addListener("registrationError", (error: any) => {
-        console.error("[Push] Registration error:", error);
-        setRegistrationError(`Registration failed: ${JSON.stringify(error)}`);
-        
-        // Show toast for debugging on device
-        toast.error("Erreur notification push", {
-          description: `Registration error: ${error.error || JSON.stringify(error)}`,
-        });
-      });
-
-      // Listen for push notifications received (foreground)
-      await PushNotifications.addListener("pushNotificationReceived", handleNotificationReceived);
-
-      // Listen for notification actions (tap)
-      await PushNotifications.addListener("pushNotificationActionPerformed", handleNotificationAction);
-
-      console.log("[Push] All listeners registered");
-
-      // Register with Apple / Google (after listeners are ready)
+      log("autorisation_ok");
       await PushNotifications.register();
-      console.log("[Push] Registration initiated");
-
     } catch (error) {
-      // Push notifications not available (web or plugin not installed)
-      console.log("[Push] Not available:", error);
       setIsSupported(false);
       setRegistrationError(`Init failed: ${String(error)}`);
+      log("indisponible", String(error).slice(0, 500));
     }
-  }, [isNative, platform, registerToken, handleNotificationReceived, handleNotificationAction]);
+  }, [isNative, platform]);
 
   useEffect(() => {
-    initializePushNotifications();
-  }, [initializePushNotifications]);
+    if (!isNative || !user?.id) return;
+    if (initializedFor === user.id) return;
+    initializedFor = user.id;
+    void initializePushNotifications(user.id);
+  }, [isNative, user?.id, initializePushNotifications]);
 
   const unregisterToken = useCallback(async () => {
     if (!token) return;

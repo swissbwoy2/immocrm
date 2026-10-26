@@ -1,7 +1,7 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Banknote, TrendingUp, Wallet, AlertCircle, CheckCircle2, Building2 } from 'lucide-react';
-import { FinancingComputed, FinancingSettings, formatCHF } from '@/lib/purchaseFinancing';
+import { FinancingComputed, FinancingSettings, formatCHF, STATUTS_BANCAIRES, TONE_STATUT_BANCAIRE, normaliserStatutBancaire } from '@/lib/purchaseFinancing';
 
 interface AchatFinancingCardProps {
   computed: FinancingComputed | null;
@@ -9,13 +9,7 @@ interface AchatFinancingCardProps {
   statutBancaire?: string | null;
 }
 
-const STATUT_BANCAIRE_LABEL: Record<string, { label: string; color: string }> = {
-  a_evaluer:        { label: 'À évaluer', color: 'bg-muted text-muted-foreground' },
-  en_cours:         { label: 'En cours d\'analyse', color: 'bg-amber-100 text-amber-700' },
-  validation_orale: { label: 'Validation orale reçue', color: 'bg-primary/10 text-primary' },
-  valide:           { label: 'Validation bancaire confirmée', color: 'bg-emerald-100 text-emerald-700' },
-  refuse:           { label: 'Refusé', color: 'bg-red-100 text-red-700' },
-};
+
 
 export function AchatFinancingCard({ computed, settings, statutBancaire }: AchatFinancingCardProps) {
   if (!computed) {
@@ -29,7 +23,8 @@ export function AchatFinancingCard({ computed, settings, statutBancaire }: Achat
     );
   }
 
-  const sb = STATUT_BANCAIRE_LABEL[statutBancaire || 'a_evaluer'] || STATUT_BANCAIRE_LABEL.a_evaluer;
+  const sbDef = STATUTS_BANCAIRES.find((x) => x.value === normaliserStatutBancaire(statutBancaire))!;
+  const sb = { label: sbDef.label, color: TONE_STATUT_BANCAIRE[sbDef.tone] };
 
   return (
     <Card className="p-6 border-primary/20">

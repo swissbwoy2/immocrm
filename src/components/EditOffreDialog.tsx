@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { isoToZurichInput, isoToZurichTimeInput, zurichDateTimeToIso, zurichInputToIso } from '@/lib/dateZurich';
 import {
   Dialog,
   DialogContent,
@@ -22,24 +23,11 @@ interface VisiteData {
   statut: string;
 }
 
-// Convert ISO date to datetime-local format
-const formatDateTimeLocal = (isoDate: string): string => {
-  const date = new Date(isoDate);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-};
+// ISO (UTC) → "yyyy-MM-ddTHH:mm" en heure suisse (champ datetime-local)
+const formatDateTimeLocal = (isoDate: string): string => isoToZurichInput(isoDate);
 
-// Extract time from ISO date (HH:mm format)
-const extractTime = (isoDate: string): string => {
-  const date = new Date(isoDate);
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${hours}:${minutes}`;
-};
+// ISO → "HH:mm" en heure suisse
+const extractTime = (isoDate: string): string => isoToZurichTimeInput(isoDate);
 
 interface EditOffreDialogProps {
   open: boolean;
@@ -164,13 +152,16 @@ export function EditOffreDialog({ open, onOpenChange, offre, onSuccess }: EditOf
         let endDate = null;
         if (visite.date_visite_fin && visite.date_visite) {
           const dateOnly = visite.date_visite.split('T')[0];
-          endDate = new Date(`${dateOnly}T${visite.date_visite_fin}`).toISOString();
+          endDate = zurichDateTimeToIso(dateOnly, visite.date_visite_fin);
         }
+        // Saisie en heure suisse → instant ISO ; sans heure valide, on ne touche pas la visite.
+        const debutIso = zurichInputToIso(visite.date_visite);
+        if (!debutIso) continue;
         
         await supabase
           .from('visites')
           .update({
-            date_visite: new Date(visite.date_visite).toISOString(),
+            date_visite: debutIso,
             date_visite_fin: endDate
           })
           .eq('id', visite.id);
@@ -403,12 +394,12 @@ export function EditOffreDialog({ open, onOpenChange, offre, onSuccess }: EditOf
             </h4>
 
             <div className="space-y-2">
-              <Label htmlFor="commentaires">Notes internes</Label>
+              <Label htmlFor="commentaires">Note de suivi (visible par le client)</Label>
               <Textarea
                 id="commentaires"
                 value={formData.commentaires}
                 onChange={(e) => setFormData({ ...formData, commentaires: e.target.value })}
-                placeholder="Notes et commentaires pour le suivi..."
+                placeholder="Ex. Visite du 20.10.2026 passée : annonceur recontacté pour une nouvelle date, en attente."
                 rows={3}
               />
             </div>

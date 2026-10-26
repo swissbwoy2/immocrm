@@ -163,6 +163,42 @@ export function computeFinancing(input: FinancingInput, s: FinancingSettings): F
 
 export const formatCHF = (v: number) => `CHF ${Math.round(v).toLocaleString('fr-CH')}`;
 
+// ---------- Statut bancaire (valeurs uniques, sans accent) ----------
+export type StatutBancaire = 'a_evaluer' | 'en_analyse' | 'prevalide' | 'valide' | 'refuse' | 'bloque';
+
+export const STATUTS_BANCAIRES: { value: StatutBancaire; label: string; tone: 'muted' | 'amber' | 'primary' | 'success' | 'danger' }[] = [
+  { value: 'a_evaluer', label: 'À évaluer', tone: 'muted' },
+  { value: 'en_analyse', label: 'En analyse chez la banque', tone: 'amber' },
+  { value: 'prevalide', label: 'Prévalidé', tone: 'primary' },
+  { value: 'valide', label: 'Validation bancaire confirmée', tone: 'success' },
+  { value: 'refuse', label: 'Refusé', tone: 'danger' },
+  { value: 'bloque', label: 'Bloqué', tone: 'danger' },
+];
+
+/** Ramène les anciennes valeurs (accents, synonymes) à la valeur unique. */
+export function normaliserStatutBancaire(v?: string | null): StatutBancaire {
+  const s = (v || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  if (s === 'en_analyse' || s === 'en_cours') return 'en_analyse';
+  if (s === 'prevalide' || s === 'validation_orale') return 'prevalide';
+  if (s === 'valide') return 'valide';
+  if (s === 'refuse') return 'refuse';
+  if (s === 'bloque') return 'bloque';
+  return 'a_evaluer';
+}
+
+export function libelleStatutBancaire(v?: string | null): string {
+  const n = normaliserStatutBancaire(v);
+  return STATUTS_BANCAIRES.find((x) => x.value === n)?.label ?? 'À évaluer';
+}
+
+export const TONE_STATUT_BANCAIRE: Record<string, string> = {
+  muted: 'bg-muted text-muted-foreground',
+  amber: 'bg-amber-100 text-amber-700',
+  primary: 'bg-primary/10 text-primary',
+  success: 'bg-emerald-100 text-emerald-700',
+  danger: 'bg-red-100 text-red-700',
+};
+
 // 17 étapes du parcours achat
 export interface AchatStep {
   key: string;
@@ -172,7 +208,7 @@ export interface AchatStep {
 }
 
 export const ACHAT_STEPS: AchatStep[] = [
-  { key: 'acompte_paye',          label: 'Acompte payé (CHF 2\u00A0499)',           ordre: 1,  group: 'activation' },
+  { key: 'acompte_paye',          label: 'Acompte payé (CHF 2\u00A0500)',           ordre: 1,  group: 'activation' },
   { key: 'mandat_signe',          label: 'Mandat d\'accompagnement signé',           ordre: 2,  group: 'activation' },
   { key: 'kickoff',               label: 'Rendez-vous de cadrage avec votre conseiller', ordre: 3, group: 'activation' },
   { key: 'documents_financement', label: 'Documents financiers transmis',            ordre: 4,  group: 'financement' },
@@ -216,3 +252,20 @@ export function computeProgression(dateDebut: string | null | undefined, dureeJo
   const tempsRestantLabel = `${jourRestant}j ${heuresRestantes}h ${minutesRestantes}m`;
   return { jourActuel, dureeJours, pourcentage, jourRestant, heuresRestantes, minutesRestantes, tempsRestantLabel };
 }
+
+
+// ---------- Libellés des statuts du dossier d'achat (affichage) ----------
+export const LIBELLE_STATUT_PROJET: Record<string, string> = {
+  en_attente_activation: "En attente d'activation", actif: 'Actif', en_pause: 'En pause',
+  reussi: 'Réussi — clés remises', cloture: 'Clôturé', annule: 'Annulé',
+};
+export const LIBELLE_STATUT_MANDAT: Record<string, string> = { a_signer: 'À signer', signe: 'Signé', resilie: 'Résilié' };
+export const LIBELLE_STATUT_ACOMPTE: Record<string, string> = { a_payer: 'À payer', paye: 'Payé', rembourse: 'Remboursé' };
+export const LIBELLE_STATUT_NEGOCIATION: Record<string, string> = {
+  en_preparation: 'En préparation', envoyee: 'Envoyée au vendeur', contre_offre: 'Contre-offre reçue',
+  acceptee: 'Acceptée', refusee: 'Refusée',
+};
+export const LIBELLE_STATUT_NOTAIRE: Record<string, string> = {
+  a_planifier: 'À planifier', rdv_planifie: 'RDV planifié', signe: 'Acte signé', cles_remises: 'Clés remises',
+};
+export const libelle = (map: Record<string, string>, v?: string | null) => (v ? map[v] ?? v : '—');

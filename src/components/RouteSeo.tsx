@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { AGENCE, HUB, ZONES } from '@/content/seoPages';
 
 const SITE_URL = 'https://logisorama.ch';
 const DEFAULT_IMAGE = `${SITE_URL}/app-icon.png`;
@@ -182,6 +183,90 @@ const seoByPath: Record<string, SeoConfig> = {
     canonical: '/de/datenschutz',
     lang: 'de',
   },
+};
+
+// Pages de référencement local : hub, zones et agence (contenu dans src/content/seoPages.ts)
+const crumbs = (items: { name: string; path: string }[]) => ({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [{ name: 'Accueil', path: '/' }, ...items].map((it, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: it.name,
+    item: `${SITE_URL}${it.path}`,
+  })),
+});
+
+seoByPath[HUB.path] = {
+  title: HUB.title,
+  description: HUB.description,
+  canonical: HUB.path,
+  schema: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'CollectionPage',
+      name: HUB.h1,
+      url: `${SITE_URL}${HUB.path}`,
+      inLanguage: 'fr-CH',
+      about: { '@id': `${SITE_URL}/#business` },
+      hasPart: ZONES.map((z) => ({ '@type': 'WebPage', name: z.h1, url: `${SITE_URL}${z.path}` })),
+    },
+    crumbs([{ name: 'Recherche d’appartement', path: HUB.path }]),
+  ],
+};
+
+ZONES.forEach((z) => {
+  seoByPath[z.path] = {
+    title: z.title,
+    description: z.description,
+    canonical: z.path,
+    schema: [
+      {
+        '@context': 'https://schema.org',
+        '@type': 'Service',
+        name: z.h1,
+        description: z.description,
+        url: `${SITE_URL}${z.path}`,
+        serviceType: 'Recherche d’appartement et relocation',
+        provider,
+        areaServed: z.areaServed.map((name) => ({ '@type': 'Place', name })),
+        availableLanguage: ['fr', 'en'],
+      },
+      crumbs([
+        { name: 'Recherche d’appartement', path: HUB.path },
+        { name: z.name, path: z.path },
+      ]),
+    ],
+  };
+});
+
+seoByPath[AGENCE.path] = {
+  title: AGENCE.title,
+  description: AGENCE.description,
+  canonical: AGENCE.path,
+  schema: [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'RealEstateAgent',
+      '@id': `${SITE_URL}/#business`,
+      name: 'Logisorama by Immo-rama.ch',
+      url: `${SITE_URL}${AGENCE.path}`,
+      telephone: AGENCE.phoneE164,
+      email: AGENCE.email,
+      image: DEFAULT_IMAGE,
+      address: {
+        '@type': 'PostalAddress',
+        streetAddress: "Chemin de l'Esparcette 5",
+        postalCode: AGENCE.address.postalCode,
+        addressLocality: AGENCE.address.locality,
+        addressRegion: AGENCE.address.region,
+        addressCountry: AGENCE.address.country,
+      },
+      geo: { '@type': 'GeoCoordinates', latitude: AGENCE.geo.latitude, longitude: AGENCE.geo.longitude },
+      areaServed: cantons.map((name) => ({ '@type': 'AdministrativeArea', name })),
+    },
+    crumbs([{ name: AGENCE.name, path: AGENCE.path }]),
+  ],
 };
 
 function ensureMeta(selector: string, attribute: 'name' | 'property', key: string) {

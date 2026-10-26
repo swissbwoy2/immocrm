@@ -1,49 +1,39 @@
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import EmployesList from '@/components/salaires/EmployesList';
 import FichesSalaireList from '@/components/salaires/FichesSalaireList';
 import CoutEmployeurDashboard from '@/components/salaires/CoutEmployeurDashboard';
-import { Users, FileText, Calculator } from 'lucide-react';
+import { DashPage, DashPageHeader, DashFilterPills } from '@/components/client/dashboard/DashPrimitives';
 
+type Onglet = 'fiches' | 'employes' | 'couts';
+
+/**
+ * Salaires — trois vues : les fiches du mois (ce qu'il faut préparer, valider, payer),
+ * les employés, et le coût employeur de la période. Les fiches du mois sont l'onglet par défaut.
+ */
 export default function Salaires() {
-  const [activeTab, setActiveTab] = useState('employes');
+  const [activeTab, setActiveTab] = useState<Onglet>('fiches');
 
   return (
-    <div className="relative p-4 md:p-8 space-y-6">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      <div>
-        <h1 className="text-2xl font-bold">Gestion des salaires</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Employés, fiches de salaire et charges employeur
-        </p>
-      </div>
+    <DashPage className="space-y-5">
+      <DashPageHeader
+        title="Gestion des salaires"
+        subtitle="Employés, fiches de salaire et charges employeur"
+      />
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="employes" className="gap-2">
-            <Users className="h-4 w-4" /> Employés
-          </TabsTrigger>
-          <TabsTrigger value="fiches" className="gap-2">
-            <FileText className="h-4 w-4" /> Fiches de salaire
-          </TabsTrigger>
-          <TabsTrigger value="couts" className="gap-2">
-            <Calculator className="h-4 w-4" /> Coût employeur
-          </TabsTrigger>
-        </TabsList>
+      <DashFilterPills
+        label="Sections des salaires"
+        value={activeTab}
+        onChange={(v) => setActiveTab(v as Onglet)}
+        options={[
+          { key: 'fiches', label: 'Fiches de salaire' },
+          { key: 'employes', label: 'Employés' },
+          { key: 'couts', label: 'Coût employeur' },
+        ]}
+      />
 
-        <TabsContent value="employes">
-          <EmployesList />
-        </TabsContent>
-        <TabsContent value="fiches">
-          <FichesSalaireList />
-        </TabsContent>
-        <TabsContent value="couts">
-          <CoutEmployeurDashboard />
-        </TabsContent>
-      </Tabs>
-    </div>
+      {activeTab === 'employes' && <EmployesList />}
+      {activeTab === 'fiches' && <FichesSalaireList />}
+      {activeTab === 'couts' && <CoutEmployeurDashboard />}
+    </DashPage>
   );
 }

@@ -46,6 +46,8 @@ export function FloatingConversationList({ onSelect }: Props) {
       let convQuery = supabase
         .from('conversations')
         .select('id, agent_id, client_id, conversation_type, last_message_at')
+        // La conversation « Steeve » de l'admin s'ouvre par Steeve (en tête du panneau), pas dans cette liste.
+        .or('conversation_type.is.null,conversation_type.neq.steeve-admin')
         .order('last_message_at', { ascending: false })
         .range(from, to);
 
@@ -242,16 +244,18 @@ export function FloatingConversationList({ onSelect }: Props) {
 
   if (items.length === 0) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-muted-foreground gap-3">
-        <MessagesSquare className="h-10 w-10 opacity-40" />
-        <p className="text-sm">Aucune conversation pour le moment</p>
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+          <MessagesSquare className="h-6 w-6 text-primary" />
+        </span>
+        <p className="text-sm font-semibold text-foreground">Aucune conversation pour le moment</p>
       </div>
     );
   }
 
   return (
     <div ref={scrollRef} className="flex-1 overflow-y-auto">
-      <ul className="divide-y divide-border/50">
+      <ul className="divide-y divide-border/70">
         {items.map((item, idx) => (
           <motion.li
             key={item.id}
@@ -262,7 +266,7 @@ export function FloatingConversationList({ onSelect }: Props) {
             <button
               type="button"
               onClick={() => onSelect(item.id)}
-              className="w-full flex items-center gap-3 p-3 hover:bg-accent/50 active:bg-accent transition-colors text-left min-h-[64px]"
+              className="flex min-h-[68px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60 active:bg-muted"
             >
               <ChatAvatar
                 name={item.otherName}
@@ -272,15 +276,15 @@ export function FloatingConversationList({ onSelect }: Props) {
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-sm truncate">{item.otherName}</span>
+                  <span className="truncate text-[15px] font-semibold text-foreground">{item.otherName}</span>
                   {item.lastMessageAt && (
-                    <span className="text-[10px] text-muted-foreground shrink-0">
+                    <span className="shrink-0 text-[11px] text-muted-foreground">
                       {formatDistanceToNow(new Date(item.lastMessageAt), { locale: fr, addSuffix: false })}
                     </span>
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-2 mt-0.5">
-                  <span className="text-xs text-muted-foreground truncate">
+                  <span className="truncate text-sm text-muted-foreground">
                     {item.lastMessage || 'Pas de message'}
                   </span>
                   {item.unread > 0 && (

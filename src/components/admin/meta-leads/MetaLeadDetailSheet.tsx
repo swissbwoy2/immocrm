@@ -1,18 +1,31 @@
 import { useEffect, useState } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { DetailHeader, DetailBody, DetailSection, DetailActions, DETAIL_SHEET, dateTimeCH } from "@/components/details/DetailPrimitives";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
-  Phone, Mail, MessageSquare, MapPin, FileText, ExternalLink, Loader2,
-  ChevronDown, Code2, Copy, Megaphone, Trash2, CheckCircle, Send,
-  UserPlus, Calendar, Sparkles, Leaf, Hash,
+  Phone,
+  Mail,
+  MessageSquare,
+  MapPin,
+  FileText,
+  ExternalLink,
+  Loader2,
+  ChevronDown,
+  Code2,
+  Copy,
+  Megaphone,
+  Trash2,
+  CheckCircle,
+  Send,
+  Calendar,
+  Sparkles,
+  Leaf,
+  Hash,
 } from "lucide-react";
-import { format } from "date-fns";
-import { fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatSwissDateTime } from "@/lib/dateUtils";
@@ -82,42 +95,60 @@ export function MetaLeadDetailSheet({
 
   const handleMarkContacted = () => onUpdate(lead.id, { lead_status: "contacted" });
 
+  const lieu = [lead.postal_code, lead.city].filter(Boolean).join(" ");
+  const recuLe = dateTimeCH(lead.lead_created_time_meta || lead.created_at);
+
+  const collapsibleTrigger = (Icon: React.ElementType, label: string) => (
+    <CollapsibleTrigger className="group flex min-h-[44px] w-full items-center justify-between text-[13px] font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground">
+      <span className="flex items-center gap-2">
+        <Icon className="h-4 w-4" /> {label}
+      </span>
+      <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+    </CollapsibleTrigger>
+  );
+
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-[520px] overflow-y-auto p-0 max-md:!inset-x-0 max-md:!inset-y-auto max-md:!bottom-0 max-md:!top-auto max-md:!h-[92vh] max-md:!w-full max-md:!max-w-full max-md:rounded-t-2xl max-md:border-t max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=open]:slide-in-from-bottom"
+        className={cn(
+          DETAIL_SHEET,
+          "sm:max-w-[520px] max-md:!inset-x-0 max-md:!inset-y-auto max-md:!bottom-0 max-md:!top-auto max-md:!h-[92dvh] max-md:!w-full max-md:!max-w-full max-md:rounded-t-3xl max-md:border-t max-md:data-[state=closed]:slide-out-to-bottom max-md:data-[state=open]:slide-in-from-bottom",
+        )}
       >
-        {/* Header */}
-        <div className="bg-gradient-to-br from-[#1877F2]/15 to-[#1877F2]/5 p-6 border-b">
-          <div className="flex items-start gap-4">
-            <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#1877F2] to-[#1877F2]/60 text-white font-bold flex items-center justify-center text-lg flex-shrink-0">
-              {metaInitials(lead)}
-            </div>
-            <div className="flex-1 min-w-0">
-              <SheetHeader className="space-y-1 text-left">
-                <SheetTitle className="text-lg truncate">{metaFullName(lead)}</SheetTitle>
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="outline" className={cn("text-[10px]", src.className)}>{src.label}</Badge>
-                  {stage && <Badge variant="outline" className={cn("text-[10px]", stage.badge)}>{stage.label}</Badge>}
-                  {lead.is_organic && (
-                    <Badge variant="outline" className="text-[10px] bg-emerald-500/15 text-emerald-600 border-emerald-500/30 gap-1">
-                      <Leaf className="h-3 w-3" /> Organique
-                    </Badge>
-                  )}
-                </div>
-              </SheetHeader>
-            </div>
-          </div>
-        </div>
+        <DetailHeader
+          titleAs={SheetTitle}
+          descriptionAs={SheetDescription}
+          className="pt-5 sm:pt-6"
+          eyebrow={
+            <span className="inline-flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                {metaInitials(lead)}
+              </span>
+              Lead Meta
+            </span>
+          }
+          title={metaFullName(lead)}
+          subtitle={lieu ? <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{lieu}</span> : undefined}
+          badge={
+            <>
+              <Badge variant="outline" className={cn("rounded-full text-xs", src.className)}>{src.label}</Badge>
+              {stage && <Badge variant="outline" className={cn("rounded-full text-xs", stage.badge)}>{stage.label}</Badge>}
+              {lead.is_organic && (
+                <Badge variant="outline" className="gap-1 rounded-full border-emerald-500/30 bg-emerald-500/15 text-xs text-emerald-600">
+                  <Leaf className="h-3 w-3" /> Organique
+                </Badge>
+              )}
+            </>
+          }
+        />
 
-        <div className="p-6 space-y-6">
+        <DetailBody>
           {/* A. Contact */}
-          <section>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Contact</h4>
-            <div className="grid grid-cols-1 gap-2">
+          {(lead.email || lead.phone) && (
+            <div className="grid grid-cols-2 gap-2">
               {lead.email && (
-                <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
+                <Button variant="outline" asChild className="col-span-2 min-h-11 justify-start gap-2">
                   <a href={`mailto:${lead.email}`}>
                     <Mail className="h-4 w-4 text-primary" />
                     <span className="truncate">{lead.email}</span>
@@ -125,97 +156,113 @@ export function MetaLeadDetailSheet({
                 </Button>
               )}
               {lead.phone && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
+                <>
+                  <Button variant="outline" asChild className="min-h-11 gap-2">
                     <a href={`tel:${lead.phone}`}>
                       <Phone className="h-4 w-4 text-primary" />
-                      <span className="truncate">Appeler</span>
+                      Appeler
                     </a>
                   </Button>
-                  <Button variant="outline" asChild className="justify-start gap-2 h-auto py-2.5">
-                    <a
-                      href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                  <Button variant="outline" asChild className="min-h-11 gap-2">
+                    <a href={`https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`} target="_blank" rel="noreferrer">
                       <MessageSquare className="h-4 w-4 text-emerald-500" />
-                      <span className="truncate">WhatsApp</span>
+                      WhatsApp
                     </a>
                   </Button>
-                </div>
-              )}
-              {(lead.city || lead.postal_code) && (
-                <div className="text-xs text-muted-foreground flex flex-wrap gap-3 pt-1">
-                  <span className="inline-flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {[lead.postal_code, lead.city].filter(Boolean).join(" ")}
-                  </span>
-                </div>
+                </>
               )}
             </div>
-          </section>
+          )}
 
-          {/* B. Formulaire Facebook ⭐ */}
-          <section>
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                <FileText className="h-3 w-3" /> Formulaire Facebook
-              </h4>
-              {lead.form_name && (
-                <span className="text-[10px] text-muted-foreground truncate max-w-[200px]">{lead.form_name}</span>
-              )}
+          {/* B. Formulaire Facebook */}
+          <DetailSection title="Formulaire Facebook" icon={FileText}>
+            {lead.form_name && <p className="text-[15px] font-semibold text-foreground">{lead.form_name}</p>}
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground first-letter:uppercase">
+              <Calendar className="h-3.5 w-3.5 shrink-0" />
+              <span className="first-letter:uppercase">{recuLe}</span>
+            </p>
+            {lead.imported_at && lead.lead_created_time_meta && (
+              <p className="mt-0.5 pl-5 text-xs text-muted-foreground">
+                Importé dans le CRM le {formatSwissDateTime(lead.imported_at)}
+              </p>
+            )}
+            <div className="mt-3">
+              <MetaFormAnswers lead={lead} />
             </div>
-            <div className="rounded-lg border bg-gradient-to-br from-[#1877F2]/5 to-transparent p-3 mb-3">
-              {lead.form_name && (
-                <div className="font-semibold text-sm text-foreground mb-1.5">{lead.form_name}</div>
-              )}
-              <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Calendar className="h-3 w-3 flex-shrink-0" />
-                <span>
-                  {lead.lead_created_time_meta
-                    ? format(new Date(lead.lead_created_time_meta), "EEEE d MMMM yyyy 'à' HH'h'mm", { locale: fr })
-                    : format(new Date(lead.created_at), "EEEE d MMMM yyyy 'à' HH'h'mm", { locale: fr })}
-                </span>
+          </DetailSection>
+
+          {/* C. Gestion CRM */}
+          <DetailSection title="Gestion CRM">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label className="block text-[13px] text-muted-foreground">Statut</label>
+                <Select value={status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {META_STAGES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
-              {lead.imported_at && lead.lead_created_time_meta && (
-                <div className="text-[10px] text-muted-foreground/70 mt-1 ml-[18px]">
-                  Importé dans le CRM le {formatSwissDateTime(lead.imported_at)}
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <label className="block text-[13px] text-muted-foreground">Assigné à</label>
+                <Select value={assignedTo || "__none__"} onValueChange={(v) => handleAssignedChange(v === "__none__" ? "" : v)}>
+                  <SelectTrigger className="h-11"><SelectValue placeholder="Non assigné" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Non assigné</SelectItem>
+                    {agents.map((a) => {
+                      const p = a.profiles as any;
+                      return (
+                        <SelectItem key={a.id} value={a.id}>
+                          {p?.prenom || ""} {p?.nom || ""}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <MetaFormAnswers lead={lead} />
-          </section>
+          </DetailSection>
 
-          {/* C. Attribution publicitaire */}
+          {/* Notes */}
+          <DetailSection
+            title="Notes"
+            icon={FileText}
+            action={notes !== savedNotes ? <span className="text-xs italic text-muted-foreground">Enregistrement…</span> : undefined}
+          >
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Notes de suivi (sauvegarde automatique)…"
+              rows={4}
+              className="text-[15px]"
+            />
+          </DetailSection>
+
+          {/* D. Attribution publicitaire */}
           {hasAttribution && (
-            <section>
+            <DetailSection className="py-1 sm:py-1">
               <Collapsible defaultOpen={false}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 hover:text-foreground cursor-pointer">
-                  <span className="flex items-center gap-1">
-                    <Megaphone className="h-3 w-3" /> Attribution publicitaire
-                  </span>
-                  <ChevronDown className="h-3 w-3 transition-transform data-[state=open]:rotate-180" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-1.5 mt-2">
-                  <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+                {collapsibleTrigger(Megaphone, "Attribution publicitaire")}
+                <CollapsibleContent className="pb-3">
+                  <div className="divide-y divide-border/50">
                     {[
                       ["Page", lead.page_name, lead.page_id],
                       ["Campagne", lead.campaign_name, lead.campaign_id],
                       ["Adset", lead.adset_name, lead.adset_id],
                       ["Annonce", lead.ad_name, lead.ad_id],
                     ].filter(([, v]) => !!v).map(([k, v, id]) => (
-                      <div key={k as string} className="grid grid-cols-[90px_1fr] gap-2">
-                        <span className="text-muted-foreground">{k}</span>
-                        <div className="font-medium break-all">
+                      <div key={k as string} className="flex items-start justify-between gap-4 py-2">
+                        <span className="text-sm text-muted-foreground">{k}</span>
+                        <div className="min-w-0 break-all text-right text-sm font-medium text-foreground">
                           <div>{v}</div>
-                          {id && <div className="text-[10px] text-muted-foreground/60 font-mono">ID: {id}</div>}
+                          {id && <div className="font-mono text-xs text-muted-foreground">ID: {id}</div>}
                         </div>
                       </div>
                     ))}
                     {lead.ad_reference_label && (
-                      <div className="grid grid-cols-[90px_1fr] gap-2 pt-2 mt-2 border-t border-border/40">
-                        <span className="text-muted-foreground">Référence</span>
-                        <div className="font-medium break-all">
+                      <div className="flex items-start justify-between gap-4 py-2">
+                        <span className="text-sm text-muted-foreground">Référence</span>
+                        <div className="min-w-0 break-all text-right text-sm font-medium">
                           {lead.ad_reference_url ? (
                             <a
                               href={lead.ad_reference_url}
@@ -235,137 +282,49 @@ export function MetaLeadDetailSheet({
                   </div>
                 </CollapsibleContent>
               </Collapsible>
-            </section>
+            </DetailSection>
           )}
 
-          {/* D. UTM & Tracking */}
+          {/* E. UTM & Tracking */}
           {Object.keys(utm).length > 0 && (
-            <section>
+            <DetailSection className="py-1 sm:py-1">
               <Collapsible defaultOpen={false}>
-                <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 hover:text-foreground cursor-pointer">
-                  <span className="flex items-center gap-1">
-                    <Hash className="h-3 w-3" /> UTM & Tracking
-                  </span>
-                  <ChevronDown className="h-3 w-3 transition-transform data-[state=open]:rotate-180" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="mt-2">
-                  <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
+                {collapsibleTrigger(Hash, "UTM & Tracking")}
+                <CollapsibleContent className="pb-3">
+                  <div className="divide-y divide-border/50">
                     {Object.entries(utm).map(([k, v]) => (
-                      <div key={k} className="grid grid-cols-[110px_1fr] gap-2">
-                        <span className="text-muted-foreground">{k}</span>
-                        <span className="font-medium break-all">{v}</span>
+                      <div key={k} className="flex items-start justify-between gap-4 py-2">
+                        <span className="text-sm text-muted-foreground">{k}</span>
+                        <span className="min-w-0 break-all text-right text-sm font-medium text-foreground">{v}</span>
                       </div>
                     ))}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
-            </section>
+            </DetailSection>
           )}
 
-          <Separator />
-
-          {/* E. Gestion CRM */}
-          <section>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Gestion CRM</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">Statut</label>
-                <Select value={status} onValueChange={handleStatusChange}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {META_STAGES.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-[10px] text-muted-foreground mb-1 block">Assigné à</label>
-                <Select value={assignedTo || "__none__"} onValueChange={(v) => handleAssignedChange(v === "__none__" ? "" : v)}>
-                  <SelectTrigger className="h-9"><SelectValue placeholder="Non assigné" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Non assigné</SelectItem>
-                    {agents.map((a) => {
-                      const p = a.profiles as any;
-                      return (
-                        <SelectItem key={a.id} value={a.id}>
-                          {p?.prenom || ""} {p?.nom || ""}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </section>
-
-          {/* Notes */}
-          <section>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
-              <FileText className="h-3 w-3" /> Notes
-              {notes !== savedNotes && <span className="text-[10px] text-muted-foreground/60 italic ml-auto">enregistrement…</span>}
-            </h4>
-            <Textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes de suivi (sauvegarde automatique)…"
-              rows={4}
-            />
-          </section>
-
           {/* F. JSON brut */}
-          <section>
+          <DetailSection className="py-1 sm:py-1">
             <Collapsible defaultOpen={false}>
-              <CollapsibleTrigger className="flex items-center justify-between w-full text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 hover:text-foreground cursor-pointer">
-                <span className="flex items-center gap-1">
-                  <Code2 className="h-3 w-3" /> JSON brut Meta
-                </span>
-                <ChevronDown className="h-3 w-3 transition-transform data-[state=open]:rotate-180" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2 space-y-2">
+              {collapsibleTrigger(Code2, "JSON brut Meta")}
+              <CollapsibleContent className="space-y-2 pb-3">
                 <div className="flex justify-end">
-                  <Button variant="ghost" size="sm" onClick={handleCopyJson} className="h-7 gap-1 text-xs">
-                    <Copy className="h-3 w-3" /> Copier
+                  <Button variant="ghost" size="sm" onClick={handleCopyJson} className="gap-1">
+                    <Copy className="h-3.5 w-3.5" /> Copier
                   </Button>
                 </div>
-                <pre className="rounded-md border bg-muted/40 p-3 text-[10px] font-mono overflow-x-auto max-h-[300px] overflow-y-auto">
+                <pre className="max-h-[300px] overflow-auto rounded-xl bg-muted/50 p-3 font-mono text-xs">
 {JSON.stringify(lead.raw_meta_payload || {}, null, 2)}
                 </pre>
               </CollapsibleContent>
             </Collapsible>
-          </section>
+          </DetailSection>
 
-          <Separator />
-
-          {/* G. Actions */}
-          <section className="space-y-2">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Actions</h4>
-            <Button
-              className="w-full justify-start gap-2 bg-gradient-to-r from-violet-500 to-violet-600 hover:from-violet-600 hover:to-violet-700 text-white"
-              disabled={converting || lead.lead_status === "converted"}
-              onClick={() => onConvertToClient(lead)}
-            >
-              {converting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {lead.lead_status === "converted" ? "Déjà converti" : "Convertir en client"}
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-2"
-              disabled={lead.lead_status === "contacted"}
-              onClick={handleMarkContacted}
-            >
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
-              Marquer contacté
-            </Button>
-            {lead.email && (
-              <Button variant="outline" className="w-full justify-start gap-2" asChild>
-                <a href={`mailto:${lead.email}?subject=Suivi de votre demande`}>
-                  <Send className="h-4 w-4 text-primary" />
-                  Envoyer email de relance
-                </a>
-              </Button>
-            )}
+          <div className="flex justify-center">
             <Button
               variant="ghost"
-              className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+              className="min-h-11 gap-2 text-destructive hover:text-destructive"
               onClick={() => {
                 if (confirm("Supprimer définitivement ce lead Meta ?")) {
                   onDelete(lead);
@@ -375,8 +334,36 @@ export function MetaLeadDetailSheet({
               <Trash2 className="h-4 w-4" />
               Supprimer ce lead
             </Button>
-          </section>
-        </div>
+          </div>
+        </DetailBody>
+
+        <DetailActions className="sm:[&>*]:flex-[1_1_auto]">
+          {lead.email && (
+            <Button variant="outline" className="gap-2" asChild>
+              <a href={`mailto:${lead.email}?subject=Suivi de votre demande`}>
+                <Send className="h-4 w-4 text-primary" />
+                Envoyer email de relance
+              </a>
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            className="gap-2"
+            disabled={lead.lead_status === "contacted"}
+            onClick={handleMarkContacted}
+          >
+            <CheckCircle className="h-4 w-4 text-emerald-500" />
+            Marquer contacté
+          </Button>
+          <Button
+            className="gap-2"
+            disabled={converting || lead.lead_status === "converted"}
+            onClick={() => onConvertToClient(lead)}
+          >
+            {converting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {lead.lead_status === "converted" ? "Déjà converti" : "Convertir en client"}
+          </Button>
+        </DetailActions>
       </SheetContent>
     </Sheet>
   );

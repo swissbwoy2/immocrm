@@ -21,10 +21,10 @@ export function CandidatCriteresGate({ children }: { children: React.ReactNode }
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
             <Search className="h-7 w-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Vos critères de recherche</h1>
+          <h1 className="text-[26px] font-semibold tracking-tight text-foreground">Vos critères de recherche</h1>
           <p className="text-muted-foreground">{CRITERES_DISCLAIMER}</p>
         </div>
-        <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+        <div className="imr-lg-card rounded-[22px] p-4 sm:p-6">
           <CandidatCriteresForm />
         </div>
       </div>

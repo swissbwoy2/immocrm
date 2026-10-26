@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatZurichDateTime } from '@/lib/dateZurich';
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -138,7 +139,7 @@ export default function AdminComptesRendus() {
                       <span className="text-muted-foreground">→ {r.client_name}</span>
                     </div>
                     <div className="text-sm text-muted-foreground mt-1">
-                      {r.offre_titre} — {format(new Date(r.date_visite), "d MMM yyyy 'à' HH:mm", { locale: fr })}
+                      {r.offre_titre} — {formatZurichDateTime(r.date_visite, { short: true, year: true, weekday: false })}
                     </div>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => window.open(`/agent/visites/${r.id}/compte-rendu`, "_blank")}>

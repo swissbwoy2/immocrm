@@ -6,23 +6,23 @@ import { cn } from "@/lib/utils";
 import { useHapticFeedback } from "@/hooks/useHapticFeedback";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.97] touch-manipulation select-none min-h-[44px] min-w-[44px] md:min-h-[40px] md:min-w-[40px]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-medium ring-offset-background transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.96] touch-manipulation select-none min-h-[44px] min-w-[44px] md:min-h-[40px] md:min-w-[40px]",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90 hover:shadow-md active:bg-primary/80",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-md active:bg-destructive/80",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-accent active:bg-accent/80",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-sm active:bg-secondary/70",
-        ghost: "hover:bg-accent hover:text-accent-foreground active:bg-accent/80",
+        default: "imr-lg-tint",
+        destructive: "imr-lg-tint imr-lg-danger",
+        outline: "imr-lg-glass",
+        secondary: "imr-lg-glass",
+        ghost: "imr-lg-plain",
         link: "text-primary underline-offset-4 hover:underline",
-        success: "bg-green-600 text-white hover:bg-green-700 hover:shadow-md active:bg-green-800",
-        warning: "bg-amber-500 text-white hover:bg-amber-600 hover:shadow-md active:bg-amber-700",
+        success: "imr-lg-tint imr-lg-success",
+        warning: "imr-lg-tint imr-lg-warning",
       },
       size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
+        default: "h-10 px-5 py-2",
+        sm: "h-9 px-3.5",
+        lg: "h-12 px-7 text-[15px]",
         icon: "h-10 w-10",
       },
     },

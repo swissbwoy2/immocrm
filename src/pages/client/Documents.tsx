@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { 
   FileText, Upload, Download, Trash2, File, 
   Image as ImageIcon, FileSpreadsheet, AlertCircle, Eye, Pencil, ClipboardList,
-  Sparkles, FolderOpen
+  Sparkles, FolderOpen, Check
 } from 'lucide-react';
+import { DASH_CARD, DashPage, DashPageHeader, DashSection, DashEmptyState, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { useToast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -35,6 +36,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { DocumentUpdateReminder } from '@/components/DocumentUpdateReminder';
 import { isPurchaseBuyer } from '@/lib/journey';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 interface DocumentRequest {
   id: string;
@@ -77,6 +79,7 @@ export default function Documents() {
     justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges',
     justificatif_charges_fixes: 'charges',
     decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
+    extrait_poursuites: 'autre',
     accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
     autre: 'autre',
   };
@@ -641,351 +644,250 @@ export default function Documents() {
 
   if (loading) {
     return (
-      <div className="p-4 md:p-8" role="status" aria-label="Chargement des documents">
-        <div className="h-7 w-44 rounded bg-muted/60" />
-        <div className="mt-6 h-24 rounded bg-muted/40" />
-      </div>
+      <DashPage>
+        <div className="mx-auto w-full max-w-3xl" role="status" aria-label="Chargement des documents">
+          <div className="h-7 w-44 rounded-full bg-muted" />
+          <div className="mt-6 h-24 rounded-2xl bg-muted/60" />
+        </div>
+      </DashPage>
     );
   }
 
+  // ── Checklist du dossier (location / achat) ─────────────────────────────
+  type CheckItem = { label: string; types: string[]; min?: number; optional?: boolean; uploadType: string };
+  const RENTAL_CHECKLIST: { title: string; items: CheckItem[] }[] = [
+    {
+      title: 'Votre dossier de location',
+      items: [
+        { label: "Pièce d'identité ou permis de séjour", types: ['piece_identite', 'permis_sejour'], uploadType: 'piece_identite' },
+        { label: '3 dernières fiches de salaire', types: ['fiche_salaire', 'fiche_salaire_1', 'fiche_salaire_2', 'fiche_salaire_3'], min: 3, uploadType: 'fiche_salaire' },
+        { label: 'Contrat de travail', types: ['contrat_travail'], uploadType: 'contrat_travail' },
+        { label: 'Extrait des poursuites (moins de 3 mois)', types: ['extrait_poursuites'], uploadType: 'extrait_poursuites' },
+        { label: "Attestation de l'employeur", types: ['attestation_employeur'], optional: true, uploadType: 'attestation_employeur' },
+        { label: 'Attestation de domicile', types: ['attestation_domicile'], optional: true, uploadType: 'attestation_domicile' },
+        { label: 'Assurance RC ménage', types: ['rc_menage'], optional: true, uploadType: 'rc_menage' },
+      ],
+    },
+  ];
+  const PURCHASE_CHECKLIST: { title: string; items: CheckItem[] }[] = [
+    {
+      title: 'Identité',
+      items: [
+        { label: "Pièce d'identité", types: ['piece_identite'], uploadType: 'piece_identite' },
+        { label: 'Permis de séjour (si applicable)', types: ['permis_sejour'], optional: true, uploadType: 'permis_sejour' },
+        { label: 'Extrait des poursuites', types: ['extrait_poursuites'], uploadType: 'extrait_poursuites' },
+      ],
+    },
+    {
+      title: 'Revenus',
+      items: [
+        { label: 'Certificat de salaire annuel', types: ['certificat_salaire'], uploadType: 'certificat_salaire' },
+        { label: '3 dernières fiches de salaire', types: ['fiche_salaire_1', 'fiche_salaire_2', 'fiche_salaire_3', 'fiche_salaire'], min: 3, uploadType: 'fiche_salaire_1' },
+        { label: 'Contrat de travail', types: ['contrat_travail'], uploadType: 'contrat_travail' },
+        { label: 'Attestation employeur (si nécessaire)', types: ['attestation_employeur'], optional: true, uploadType: 'attestation_employeur' },
+      ],
+    },
+    {
+      title: 'Fonds propres',
+      items: [
+        { label: 'Relevé bancaire des fonds propres', types: ['releve_bancaire_fonds_propres'], uploadType: 'releve_bancaire_fonds_propres' },
+        { label: 'Attestation 3e pilier (3a)', types: ['attestation_3a'], optional: true, uploadType: 'attestation_3a' },
+        { label: 'Attestation LPP', types: ['attestation_lpp'], optional: true, uploadType: 'attestation_lpp' },
+        { label: 'Attestation EPL / libre passage', types: ['attestation_epl', 'attestation_libre_passage'], optional: true, uploadType: 'attestation_epl' },
+        { label: "Donation, avance d'hoirie, placements", types: ['justificatif_donation', 'justificatif_avance_hoirie', 'justificatif_placements'], optional: true, uploadType: 'justificatif_donation' },
+      ],
+    },
+    {
+      title: 'Charges et fiscalité',
+      items: [
+        { label: 'Dernière décision de taxation', types: ['decision_taxation'], uploadType: 'decision_taxation' },
+        { label: 'Crédit privé, leasing, carte de crédit', types: ['justificatif_credit_prive', 'justificatif_leasing', 'justificatif_carte_credit'], optional: true, uploadType: 'justificatif_credit_prive' },
+        { label: 'Pension alimentaire', types: ['justificatif_pension_alimentaire'], optional: true, uploadType: 'justificatif_pension_alimentaire' },
+      ],
+    },
+    {
+      title: 'Autorisations',
+      items: [
+        { label: 'Accord de transmission aux partenaires financiers', types: ['accord_transmission'], uploadType: 'accord_transmission' },
+        { label: 'Consentement au traitement des données financières', types: ['consentement_donnees'], uploadType: 'consentement_donnees' },
+      ],
+    },
+  ];
+  const checklist = isClientBuyer ? PURCHASE_CHECKLIST : RENTAL_CHECKLIST;
+  const countFor = (item: CheckItem) => documents.filter((d) => item.types.includes(d.type_document)).length;
+  const requiredItems = checklist.flatMap((g) => g.items).filter((i) => !i.optional);
+  const requiredDone = requiredItems.filter((i) => countFor(i) >= (i.min ?? 1)).length;
+  const openUpload = (type: string) => { setSelectedType(type); setUploadDialogOpen(true); };
+
+  const ROW_DIVIDE = 'divide-y divide-border/70';
+
   return (
-    <div className="relative flex-1 overflow-y-auto">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      <div className="p-4 md:p-8 space-y-6">
-        {/* Rappel mise à jour mensuelle */}
+    <DashPage>
+      <div className="mx-auto w-full max-w-3xl space-y-8">
+        {/* En-tête */}
+        <DashPageHeader
+          title="Mes documents"
+          subtitle={<>{documents.length} document{documents.length > 1 ? 's' : ''} · {requiredDone}/{requiredItems.length} pièces essentielles déposées</>}
+          action={
+            <Button onClick={() => openUpload(isClientBuyer ? 'piece_identite' : 'autre')} className="h-11 rounded-full px-5">
+              <Upload className="mr-2 h-4 w-4" /> Ajouter un document
+            </Button>
+          }
+        />
+
         <DocumentUpdateReminder />
 
-        {/* Header animé avec glassmorphism */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 p-6 md:p-8">
-          {/* Effets de fond */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl animate-pulse" />
-            <div className="absolute -bottom-16 -left-16 w-48 h-48 bg-primary/5 rounded-full blur-2xl" />
-          </div>
-          
-          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
-                  <FolderOpen className="w-7 h-7 text-primary-foreground" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-background border-2 border-primary flex items-center justify-center">
-                  <Sparkles className="w-3 h-3 text-primary" />
-                </div>
-              </div>
-              <div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                  Mes documents
-                </h1>
-                <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                  <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-                    {documents.length}
+        {/* Demandés par l'agent */}
+        {documentRequests.length > 0 && (
+          <DashSection
+            title="Demandés par votre agent"
+            action={<DashBadge tone="warning">{documentRequests.length}</DashBadge>}
+          >
+            <ul className={`${DASH_CARD} ${ROW_DIVIDE} overflow-hidden`}>
+              {documentRequests.map((request) => (
+                <li key={request.id} className="flex flex-wrap items-center gap-3 p-4 md:px-5">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                    <ClipboardList className="h-5 w-5" />
                   </span>
-                  document{documents.length > 1 ? 's' : ''} dans votre espace
-                </p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-base font-semibold text-foreground">{request.document_label}</p>
+                    {request.note && <p className="mt-0.5 text-sm text-muted-foreground">{request.note}</p>}
+                    <p className="mt-0.5 text-xs text-muted-foreground">Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}</p>
+                  </div>
+                  <Button size="sm" onClick={() => openUpload(request.document_type)} className="h-9 shrink-0 rounded-full px-4">
+                    <Upload className="mr-1.5 h-4 w-4" /> Déposer
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </DashSection>
+        )}
+
+        {/* Checklist du dossier */}
+        <DashSection title={isClientBuyer ? 'Pièces de votre dossier d\'achat' : 'Pièces de votre dossier'}>
+          <div className={`${DASH_CARD} overflow-hidden`}>
+            <div className="p-4 md:p-5">
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${requiredItems.length ? (requiredDone / requiredItems.length) * 100 : 0}%` }} />
               </div>
             </div>
-            
-            <Button 
-              onClick={() => setUploadDialogOpen(true)}
-              className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              <Upload className="w-4 h-4 mr-2" />
-              Ajouter un document
-            </Button>
-          </div>
-        </div>
-
-        {/* Info banner — conditionnel acheteur / locataire */}
-        {isClientBuyer ? (
-          <Card className="relative overflow-hidden border-sky-200/50 bg-gradient-to-br from-sky-50/80 to-sky-50/30 dark:from-sky-950/50 dark:to-sky-950/20 backdrop-blur-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sky-100/50 via-transparent to-transparent dark:from-sky-900/30" />
-            <CardContent className="relative flex items-start gap-4 pt-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-sky-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-sky-500/25">
-                <AlertCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-sm text-sky-800 dark:text-sky-200 space-y-3">
-                <p className="font-semibold text-base">Documents requis pour votre dossier d'achat immobilier :</p>
-                <ul className="grid gap-2">
-                  {[
-                    "Pièce d'identité (passeport / carte d'identité)",
-                    'Permis de séjour (si applicable)',
-                    'Certificat de salaire annuel',
-                    '3 dernières fiches de salaire',
-                    'Contrat de travail',
-                    'Attestation employeur (si nécessaire)',
-                    'Relevé bancaire fonds propres',
-                    'Attestation 3e pilier (3a)',
-                    'Attestation LPP',
-                    'Attestation EPL / retrait pour logement principal',
-                    'Attestation libre passage',
-                    'Justificatif placements financiers',
-                    "Justificatif donation / avance d'hoirie",
-                    'Justificatif crédit privé',
-                    'Justificatif leasing',
-                    'Justificatif carte de crédit (mensualités)',
-                    'Justificatif pension alimentaire',
-                    'Dernière décision de taxation',
-                    'Déclaration fiscale (si nécessaire)',
-                    'Accord de transmission aux partenaires financiers',
-                    'Consentement traitement des données financières',
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-sky-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="relative overflow-hidden border-blue-200/50 bg-gradient-to-br from-blue-50/80 to-blue-50/30 dark:from-blue-950/50 dark:to-blue-950/20 backdrop-blur-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100/50 via-transparent to-transparent dark:from-blue-900/30" />
-            <CardContent className="relative flex items-start gap-4 pt-6">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/25">
-                <AlertCircle className="w-5 h-5 text-white" />
-              </div>
-              <div className="text-sm text-blue-800 dark:text-blue-200 space-y-3">
-                <p className="font-semibold text-base">Documents requis (Personnes salariées sans garant) :</p>
-                <ul className="grid gap-2">
-                  {[
-                    'Formulaire de demande de recherches dûment complété et signé',
-                    'Copie de carte d\'identité/passeport (si suisse) OU Copie du permis de séjour',
-                    'Copie des 3 dernières fiches de salaire et du contrat de travail',
-                    'Attestation de l\'employeur',
-                    'Copie de la déclaration d\'impôts (si indépendant)',
-                    'Attestation de l\'Office des Poursuites (antérieure à 3 mois)',
-                    'Attestation de domicile ou d\'établissement de la commune actuelle',
-                    'Copie de la RC-ménage (assurance responsabilité civile)'
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-2">
-                      <span className="w-5 h-5 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                      </span>
-                      <span>{item}</span>
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-xs italic opacity-80 border-t border-blue-200/50 dark:border-blue-800/50 pt-3 mt-3">
-                  Note : Toute personne mariée ou en partenariat enregistré devra remettre tous les documents précédemment cités.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Documents demandés par l'agent */}
-        {documentRequests.length > 0 && (
-          <Card className="relative overflow-hidden border-orange-200/50 bg-gradient-to-br from-orange-50/80 to-orange-50/30 dark:from-orange-950/50 dark:to-orange-950/20 backdrop-blur-sm">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-orange-100/50 via-transparent to-transparent dark:from-orange-900/30" />
-            <CardHeader className="relative pb-3">
-              <CardTitle className="flex items-center gap-3 text-orange-800 dark:text-orange-200">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/25">
-                  <ClipboardList className="w-5 h-5 text-white" />
-                </div>
-                <span>Documents demandés par votre agent</span>
-                <Badge className="ml-auto bg-orange-500 hover:bg-orange-600 text-white border-0">
-                  {documentRequests.length}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="relative">
-              <div className="space-y-3">
-                {documentRequests.map((request, index) => (
-                  <div 
-                    key={request.id} 
-                    className="group relative flex items-center justify-between p-4 rounded-xl bg-background/80 backdrop-blur-sm border border-orange-200/50 dark:border-orange-800/50 hover:border-orange-300 dark:hover:border-orange-700 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10"
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/0 via-orange-500/5 to-orange-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
-                    <div className="relative flex-1">
-                      <p className="font-medium">{request.document_label}</p>
-                      {request.note && (
-                        <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
-                          <span>📝</span> {request.note}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Demandé le {new Date(request.created_at).toLocaleDateString('fr-CH')}
-                      </p>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      onClick={() => {
-                        setSelectedType(request.document_type);
-                        setUploadDialogOpen(true);
-                      }}
-                      className="relative overflow-hidden bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-md shadow-orange-500/25"
-                    >
-                      <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500" />
-                      <Upload className="w-4 h-4 mr-2" />
-                      Uploader
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Liste des documents */}
-        {documents.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {documents.map((doc, index) => {
-              const Icon = getFileIcon(doc.type);
-              return (
-                <Card 
-                  key={doc.id} 
-                  className="group relative overflow-hidden bg-gradient-to-br from-card to-card/80 border-border/50 hover:border-primary/30 transition-all duration-500 hover:shadow-xl hover:shadow-primary/10 hover:-translate-y-1 animate-fade-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  {/* Shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                  
-                  <CardHeader className="relative pb-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                          <Icon className="w-6 h-6 text-primary" />
-                        </div>
+            {checklist.map((group) => (
+              <div key={group.title} className="border-t border-border/70">
+                {checklist.length > 1 && (
+                  <p className="bg-muted/50 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground md:px-5">{group.title}</p>
+                )}
+                <ul className={ROW_DIVIDE}>
+                  {group.items.map((item) => {
+                    const n = countFor(item);
+                    const need = item.min ?? 1;
+                    const done = n >= need;
+                    return (
+                      <li key={item.label} className="flex items-center gap-3 px-4 py-3.5 md:px-5">
+                        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${done ? 'bg-primary text-primary-foreground' : 'border-2 border-border'}`}>
+                          {done && <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden="true" />}
+                        </span>
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-sm truncate group-hover:text-primary transition-colors" title={doc.nom}>
-                            {doc.nom}
-                          </CardTitle>
-                          {doc.taille ? (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {formatFileSize(doc.taille)}
-                            </p>
-                          ) : null}
+                          <p className="text-sm font-medium text-foreground">{item.label}</p>
+                          <p className={`text-xs ${done ? 'text-emerald-700 dark:text-emerald-400' : 'text-muted-foreground'}`}>
+                            {done ? 'Déposé' : need > 1 ? `${n}/${need} déposé${n > 1 ? 's' : ''}` : item.optional ? 'Selon votre situation' : 'À déposer'}
+                          </p>
                         </div>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="relative space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap gap-2">
-                        <Badge 
-                          variant="outline" 
-                          className={`text-sm font-medium px-3 py-1 border ${getTypeBadgeStyle(doc.type_document)}`}
-                        >
-                          {getTypeLabel(doc.type_document)}
-                        </Badge>
-                        {doc.offre_id && (
-                          <Badge className="text-xs bg-secondary/80 text-secondary-foreground border-0">
-                            📝 Candidature
-                          </Badge>
+                        {!done && (
+                          <Button size="sm" variant="outline" onClick={() => openUpload(item.uploadType)} className="h-9 shrink-0 rounded-full px-4">
+                            <Upload className="mr-1.5 h-4 w-4" /> Déposer
+                          </Button>
                         )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
-                      </p>
-                    </div>
-                    
-                    {doc.type.includes('image') && doc.url && doc.url.startsWith('data:') && (
-                      <div className="relative overflow-hidden rounded-lg">
-                        <img 
-                          src={doc.url} 
-                          alt={doc.nom}
-                          className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-                    )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            {!isClientBuyer && (
+              <p className="border-t border-border/70 px-4 py-3 text-xs text-muted-foreground md:px-5">
+                Indépendant : ajoutez votre dernière déclaration d'impôts. Personne mariée ou en partenariat : les mêmes pièces pour les deux.
+              </p>
+            )}
+          </div>
+        </DashSection>
 
-                    <div className="flex gap-2 pt-2">
-                      {(doc.type.includes('image') || doc.type === 'application/pdf') && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handlePreview(doc)}
-                          className="hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
-                        >
-                          <Eye className="w-3 h-3 mr-1" />
-                          Aperçu
+        {/* Fichiers déposés */}
+        <DashSection title="Mes fichiers">
+          {documents.length > 0 ? (
+            <ul className={`${DASH_CARD} ${ROW_DIVIDE} overflow-hidden`}>
+              {documents.map((doc) => {
+                const Icon = getFileIcon(doc.type || '');
+                const canPreview = (doc.type || '').includes('image') || doc.type === 'application/pdf';
+                return (
+                  <li key={doc.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center md:px-5">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-foreground" title={doc.nom}>{doc.nom}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {getTypeLabel(doc.type_document)} · {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+                          {doc.taille ? ` · ${formatFileSize(doc.taille)}` : ''}
+                          {doc.offre_id ? ' · Candidature' : ''}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
+                      {canPreview && (
+                        <Button size="sm" variant="outline" onClick={() => handlePreview(doc)} className="h-9 rounded-full px-4">
+                          <Eye className="mr-1.5 h-4 w-4" /> Voir
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setDocumentToRename(doc);
-                          setNewDocumentName(doc.nom);
-                          setRenameDialogOpen(true);
-                        }}
-                        className="hover:bg-primary/10 hover:text-primary"
-                      >
-                        <Pencil className="w-3 h-3" />
+                      <Button size="sm" variant="outline" onClick={() => handleDownload(doc)} className="h-9 rounded-full px-4">
+                        <Download className="mr-1.5 h-4 w-4" /> Télécharger
                       </Button>
                       <Button
-                        size="sm"
-                        variant="outline"
-                        className="flex-1 hover:bg-primary/10 hover:text-primary hover:border-primary/30 transition-all"
-                        onClick={() => handleDownload(doc)}
+                        size="icon"
+                        variant="ghost"
+                        aria-label="Renommer"
+                        onClick={() => { setDocumentToRename(doc); setNewDocumentName(doc.nom); setRenameDialogOpen(true); }}
+                        className="h-9 w-9 rounded-full"
                       >
-                        <Download className="w-3 h-3 mr-1" />
-                        Télécharger
+                        <Pencil className="h-4 w-4" />
                       </Button>
                       <Button
-                        size="sm"
+                        size="icon"
                         variant="ghost"
-                        onClick={() => {
-                          setSelectedDoc(doc);
-                          setDeleteDialogOpen(true);
-                        }}
-                        className="hover:bg-destructive/10 hover:text-destructive"
+                        aria-label="Supprimer"
+                        onClick={() => { setSelectedDoc(doc); setDeleteDialogOpen(true); }}
+                        className="h-9 w-9 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        ) : (
-          <Card className="relative overflow-hidden border-dashed border-2 border-muted-foreground/20 bg-gradient-to-br from-muted/30 to-muted/10">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent" />
-            <CardContent className="relative py-16 text-center">
-              <div className="relative inline-flex mb-6">
-                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                  <FileText className="w-10 h-10 text-muted-foreground" />
-                </div>
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 rounded-full bg-background border-2 border-dashed border-muted-foreground/30 flex items-center justify-center">
-                  <Upload className="w-4 h-4 text-muted-foreground" />
-                </div>
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Aucun document</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
-                Commencez par uploader vos documents importants pour constituer votre dossier
-              </p>
-              <Button 
-                onClick={() => setUploadDialogOpen(true)}
-                className="group relative overflow-hidden bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
-              >
-                <span className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <Upload className="w-4 h-4 mr-2" />
-                Ajouter un document
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <DashEmptyState
+              icon={FileText}
+              title="Aucun document pour l'instant"
+              description="Déposez vos pièces pour que votre agent puisse envoyer votre dossier rapidement."
+              action={
+                <Button onClick={() => openUpload(isClientBuyer ? 'piece_identite' : 'autre')} className="h-11 rounded-full px-5">
+                  <Upload className="mr-2 h-4 w-4" /> Ajouter un document
+                </Button>
+              }
+            />
+          )}
+        </DashSection>
       </div>
 
-      {/* Upload Dialog modernisé */}
+      {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="sm:max-w-lg border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="sm:max-w-lg rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-xl">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center shadow-lg shadow-primary/25">
-                <Upload className="w-5 h-5 text-primary-foreground" />
-              </div>
+            <DialogTitle className="flex items-center gap-3 text-lg font-semibold">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Upload className="h-5 w-5" />
+              </span>
               Ajouter un document
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -997,7 +899,7 @@ export default function Documents() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Type de document</Label>
               <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50">
+                <SelectTrigger className="rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1005,6 +907,7 @@ export default function Documents() {
                     <>
                       <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
                       <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
+                      <SelectItem value="extrait_poursuites">📋 Extrait des poursuites</SelectItem>
                       <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
                       <SelectItem value="fiche_salaire_1">💰 Fiche de salaire 1</SelectItem>
                       <SelectItem value="fiche_salaire_2">💰 Fiche de salaire 2</SelectItem>
@@ -1048,89 +951,84 @@ export default function Documents() {
           </div>
 
           <div
-            className={`relative overflow-hidden border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+            className={`rounded-2xl border-2 border-dashed p-6 text-center transition-colors duration-150 sm:p-8 ${
               dragActive
-                ? 'border-primary bg-primary/10 scale-[1.02]'
-                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-foreground/40 hover:bg-muted/40'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            {/* Gradient background on drag */}
-            <div className={`absolute inset-0 bg-gradient-to-br from-primary/10 to-primary/5 transition-opacity duration-300 ${dragActive ? 'opacity-100' : 'opacity-0'}`} />
-            
-            <div className="relative">
-              <div className={`w-16 h-16 mx-auto mb-4 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center transition-all duration-300 ${dragActive ? 'scale-110 from-primary/20 to-primary/10' : ''}`}>
-                <Upload className={`w-8 h-8 transition-colors duration-300 ${dragActive ? 'text-primary' : 'text-muted-foreground'}`} />
-              </div>
-              
-              {selectedFile ? (
-                <div className="space-y-3">
-                  <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                    <p className="text-sm font-medium text-foreground">{selectedFile.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatFileSize(selectedFile.size)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedFile(null);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}
-                    className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                  >
-                    Changer de fichier
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <p className="text-sm font-medium mb-2">
-                    Glissez-déposez votre fichier ici
+            <span className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full ${dragActive ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
+              <Upload className="h-7 w-7" />
+            </span>
+
+            {selectedFile ? (
+              <div className="space-y-3">
+                <div className="rounded-xl border border-border/70 bg-muted/40 p-4">
+                  <p className="break-all text-sm font-medium text-foreground">{selectedFile.name}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatFileSize(selectedFile.size)}
                   </p>
-                  <p className="text-xs text-muted-foreground mb-4">ou</p>
-                  <Button
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="hover:bg-primary/10 hover:text-primary hover:border-primary/30"
-                  >
-                    Sélectionner un fichier
-                  </Button>
-                </>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files?.[0]) {
-                    handleFileSelect(e.target.files[0]);
-                  }
-                }}
-              />
-            </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                  }}
+                  className="rounded-full px-4"
+                >
+                  Changer de fichier
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="mb-2 text-sm font-medium text-foreground">
+                  Glissez-déposez votre fichier ici
+                </p>
+                <p className="mb-4 text-xs text-muted-foreground">ou</p>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="rounded-full px-5"
+                >
+                  Sélectionner un fichier
+                </Button>
+              </>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.[0]) {
+                  handleFileSelect(e.target.files[0]);
+                }
+              }}
+            />
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button 
-              variant="outline" 
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
               onClick={() => {
                 setUploadDialogOpen(false);
                 setSelectedFile(null);
                 setSelectedType('autre');
               }}
-              className="hover:bg-muted"
+              className="rounded-full"
             >
               Annuler
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmUpload}
               disabled={!selectedFile || isUploading}
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25"
+              className="rounded-full"
             >
               {isUploading ? (
                 <>
@@ -1145,9 +1043,9 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog modernisé */}
-      <Dialog 
-        open={previewDialogOpen} 
+      {/* Preview Dialog */}
+      <Dialog
+        open={previewDialogOpen}
         onOpenChange={(open) => {
           setPreviewDialogOpen(open);
           if (!open && previewUrl && previewUrl.startsWith('blob:')) {
@@ -1155,43 +1053,44 @@ export default function Documents() {
           }
         }}
       >
-        <DialogContent className="max-w-5xl max-h-[95vh] border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="max-w-5xl max-h-[95vh] rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                <Eye className="w-4 h-4 text-primary" />
-              </div>
-              {previewDocument?.nom}
+            <DialogTitle className="flex min-w-0 items-center gap-3 text-base font-semibold">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Eye className="h-4 w-4" />
+              </span>
+              <span className="truncate">{previewDocument?.nom}</span>
             </DialogTitle>
           </DialogHeader>
-          <div className="h-[80vh] rounded-xl overflow-hidden bg-muted/30">
+          <div className="h-[80vh] overflow-hidden rounded-xl border border-border/70 bg-muted/40">
             {previewDocument?.type?.includes('pdf') ? (
-              <object
-                data={previewUrl}
-                type="application/pdf"
+              <PdfPreview
+                src={previewUrl}
                 className="w-full h-full"
-              >
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                  <div className="w-16 h-16 rounded-xl bg-muted flex items-center justify-center mb-4">
-                    <FileText className="w-8 h-8" />
-                  </div>
-                  <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
-                  <Button onClick={() => handleDownload(previewDocument)} className="bg-gradient-to-r from-primary to-primary/90">
+                fallback={(
+
+                <div className="flex h-full flex-col items-center justify-center px-4 text-center text-muted-foreground">
+                  <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <FileText className="h-7 w-7" />
+                  </span>
+                  <p className="mb-4 text-sm">Impossible d'afficher le PDF dans le navigateur.</p>
+                  <Button onClick={() => handleDownload(previewDocument)} className="rounded-full">
                     <Download className="w-4 h-4 mr-2" />
                     Télécharger le PDF
                   </Button>
                 </div>
-              </object>
+                )}
+              />
             ) : previewDocument?.type?.includes('image') ? (
               <div className="h-full overflow-auto flex justify-center items-start p-4">
-                <img 
-                  src={previewUrl} 
+                <img
+                  src={previewUrl}
                   alt={previewDocument?.nom}
-                  className="max-w-full h-auto rounded-lg shadow-2xl"
+                  className="max-w-full h-auto rounded-lg"
                 />
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-sm text-muted-foreground py-8">
                 Aperçu non disponible pour ce type de fichier
               </p>
             )}
@@ -1199,14 +1098,14 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Rename Dialog modernisé */}
+      {/* Rename Dialog */}
       <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
-        <DialogContent className="sm:max-w-md border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                <Pencil className="w-5 h-5 text-primary" />
-              </div>
+            <DialogTitle className="flex items-center gap-3 text-lg font-semibold">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Pencil className="h-5 w-5" />
+              </span>
               Renommer le document
             </DialogTitle>
           </DialogHeader>
@@ -1217,18 +1116,18 @@ export default function Documents() {
                 value={newDocumentName}
                 onChange={(e) => setNewDocumentName(e.target.value)}
                 placeholder="Nom du document"
-                className="bg-background/50 border-border/50 focus:border-primary/50"
+                className="rounded-xl"
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)} className="rounded-full">
               Annuler
             </Button>
-            <Button 
-              onClick={handleRename} 
+            <Button
+              onClick={handleRename}
               disabled={!newDocumentName.trim()}
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary"
+              className="rounded-full"
             >
               Renommer
             </Button>
@@ -1236,31 +1135,31 @@ export default function Documents() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Dialog modernisé */}
+      {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border-border/50 bg-gradient-to-br from-background to-background/95 backdrop-blur-xl">
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10 flex items-center justify-center">
-                <Trash2 className="w-5 h-5 text-destructive" />
-              </div>
+            <AlertDialogTitle className="flex items-center gap-3 text-lg font-semibold">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                <Trash2 className="h-5 w-5" />
+              </span>
               Supprimer le document
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
               Êtes-vous sûr de vouloir supprimer "<span className="font-medium text-foreground">{selectedDoc?.nom}</span>" ? Cette action est irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="hover:bg-muted">Annuler</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete} 
-              className="bg-gradient-to-r from-destructive to-destructive/90 hover:from-destructive/90 hover:to-destructive text-destructive-foreground"
+          <AlertDialogFooter className="gap-2 sm:gap-2">
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </DashPage>
   );
 }

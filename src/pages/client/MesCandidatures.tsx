@@ -26,13 +26,14 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { LinkPreviewCard } from "@/components/LinkPreviewCard";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { PremiumPageHeader, PremiumEmptyState } from "@/components/premium";
-import { PremiumCandidatureKPIs } from "@/components/premium/PremiumCandidatureKPIs";
-import { PremiumCandidatureCard } from "@/components/premium/PremiumCandidatureCard";
-import { PremiumWorkflowTimeline } from "@/components/premium/PremiumWorkflowTimeline";
 import { PremiumStatusCard } from "@/components/premium/PremiumStatusCard";
-import { PremiumCelebrationCard } from "@/components/premium/PremiumCelebrationCard";
-import { FloatingParticles } from "@/components/messaging/FloatingParticles";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AddressLink } from "@/components/AddressLink";
+import {
+  DASH_CARD, DashPage, DashPageHeader, DashFilterPills, DashSection, DashEmptyState, DashBadge,
+} from "@/components/client/dashboard/DashPrimitives";
+import type { ReactNode, ElementType } from "react";
+import { Target, CheckCircle, Circle, XCircle } from "lucide-react";
 
 const WORKFLOW_STATUTS = {
   envoyee: { label: 'Offre envoyée', color: 'secondary', step: 1 },
@@ -42,7 +43,7 @@ const WORKFLOW_STATUTS = {
   visite_effectuee: { label: 'Visite effectuée', color: 'default', step: 4 },
   candidature_deposee: { label: 'Candidature déposée', color: 'default', step: 5 },
   en_attente: { label: 'En attente réponse', color: 'secondary', step: 6 },
-  acceptee: { label: '🎉 Acceptée', color: 'default', step: 7 },
+  acceptee: { label: 'Acceptée', color: 'default', step: 7 },
   refusee: { label: 'Refusée', color: 'destructive', step: 0 },
   bail_conclu: { label: 'Bail conclu', color: 'default', step: 8 },
   attente_bail: { label: 'Attente bail régie', color: 'secondary', step: 9 },
@@ -50,7 +51,7 @@ const WORKFLOW_STATUTS = {
   signature_planifiee: { label: 'Signature planifiée', color: 'default', step: 11 },
   signature_effectuee: { label: 'Bail signé', color: 'default', step: 12 },
   etat_lieux_fixe: { label: 'État des lieux fixé', color: 'default', step: 13 },
-  cles_remises: { label: '🔑 Clés remises', color: 'default', step: 14 },
+  cles_remises: { label: 'Clés remises', color: 'default', step: 14 },
 };
 
 const getStatutLabel = (statut: string) => {
@@ -80,6 +81,205 @@ const getGroupe = (statut: string) => {
   if (STATUTS_DEPOSEES.includes(statut)) return 'deposees';
   return 'en_cours';
 };
+
+// ---- Briques d'affichage locales (rendu sobre, mêmes données que les anciens composants Premium) ----
+
+const STATUTS_SUCCES = ['acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe', 'cles_remises'];
+
+const getStatutTone = (statut: string): 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'muted' => {
+  if (getStatutBadgeVariant(statut) === 'destructive') return 'danger';
+  if (STATUTS_SUCCES.includes(statut)) return 'success';
+  if (statut === 'envoyee') return 'primary';
+  return 'neutral';
+};
+
+/** Compteurs (Total, Actives, Acceptées, Clés remises). */
+function CandidatureCounters({ data }: { data: { total: number; actives: number; acceptees: number; clesRemises: number } }) {
+  const items = [
+    { label: 'Total', value: data.total, icon: FileStack },
+    { label: 'Actives', value: data.actives, icon: Target },
+    { label: 'Acceptées', value: data.acceptees, icon: CheckCircle },
+    { label: 'Clés remises', value: data.clesRemises, icon: Key },
+  ];
+  return (
+    <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+      {items.map(({ label, value, icon: Icon }) => (
+        <div key={label} className={`${DASH_CARD} flex items-center gap-3 p-4`}>
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-2xl font-semibold leading-none tracking-tight text-foreground">{value}</span>
+            <span className="mt-1 block truncate text-xs text-muted-foreground">{label}</span>
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Carte repliable d'une candidature (adresse, statut, infos, loyer, détail au clic). */
+function CandidatureCard({ offre, statut, statutLabel, isExpanded, onToggle, children }: {
+  offre: any;
+  statut: string;
+  statutLabel: string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  children?: ReactNode;
+}) {
+  return (
+    <Collapsible open={isExpanded} onOpenChange={onToggle}>
+      <div className={`${DASH_CARD} overflow-hidden`}>
+        <CollapsibleTrigger asChild>
+          <div className="cursor-pointer p-4 transition-colors hover:bg-muted/30 md:p-5">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <AddressLink
+                  address={offre.adresse}
+                  className="break-words text-base font-semibold"
+                  iconClassName="h-4 w-4 shrink-0 text-muted-foreground"
+                />
+              </div>
+              <span className="shrink-0">
+                <DashBadge tone={getStatutTone(statut)}>{statutLabel}</DashBadge>
+              </span>
+            </div>
+
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+              <span className="whitespace-nowrap">{offre.pieces || '-'} pcs</span>
+              <span aria-hidden="true">·</span>
+              <span className="whitespace-nowrap">{offre.surface || '-'} m²</span>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                <Calendar className="h-3.5 w-3.5" />
+                {new Date(offre.date_envoi).toLocaleDateString('fr-CH')}
+              </span>
+            </p>
+
+            <div className="mt-3 flex items-end justify-between gap-3 border-t border-border/70 pt-3">
+              <p className="min-w-0 truncate text-foreground">
+                <span className="text-lg font-semibold">CHF {offre.prix?.toLocaleString()}</span>
+                <span className="ml-1 text-xs text-muted-foreground">par mois</span>
+              </p>
+              <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-foreground">
+                {isExpanded ? 'Réduire' : 'Voir les détails'}
+                {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </span>
+            </div>
+          </div>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent>
+          <div className="border-t border-border/70 px-4 pb-4 md:px-5 md:pb-5">
+            {children}
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
+
+const FRISE_ETAPES = [
+  { key: 'envoyee', label: 'Envoyée' },
+  { key: 'vue', label: 'Vue' },
+  { key: 'interesse', label: 'Intéressé' },
+  { key: 'visite_planifiee', label: 'Visite' },
+  { key: 'visite_effectuee', label: 'Visitée' },
+  { key: 'candidature_deposee', label: 'Déposée' },
+  { key: 'en_attente', label: 'Attente' },
+  { key: 'acceptee', label: 'Acceptée' },
+  { key: 'bail_conclu', label: 'Conclu' },
+  { key: 'attente_bail', label: 'Attente bail' },
+  { key: 'bail_recu', label: 'Bail reçu' },
+  { key: 'signature_planifiee', label: 'Signature' },
+  { key: 'signature_effectuee', label: 'Signé' },
+  { key: 'etat_lieux_fixe', label: 'État lieux' },
+  { key: 'cles_remises', label: 'Clés' },
+];
+const FRISE_ORDRE = FRISE_ETAPES.map((s) => s.key);
+
+/** Frise de progression sobre : barre + étapes autour de l'étape courante. */
+function ProgressionFrise({ currentStatut }: { currentStatut: string }) {
+  if (currentStatut === 'refusee') {
+    return (
+      <div className="flex items-center gap-2 rounded-xl bg-destructive/10 p-3 text-sm font-medium text-destructive">
+        <XCircle className="h-4 w-4 shrink-0" />
+        Candidature refusée
+      </div>
+    );
+  }
+
+  const currentIndex = FRISE_ORDRE.indexOf(currentStatut);
+  const progressPercent = currentIndex >= 0 ? ((currentIndex + 1) / FRISE_ORDRE.length) * 100 : 0;
+  const visibles = currentIndex <= 3
+    ? FRISE_ETAPES.slice(0, 7)
+    : currentIndex >= FRISE_ORDRE.length - 3
+      ? FRISE_ETAPES.slice(-7)
+      : FRISE_ETAPES.slice(currentIndex - 3, currentIndex + 4);
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+          <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${progressPercent}%` }} />
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">Progression : {Math.round(progressPercent)}%</p>
+      </div>
+      <ol className="flex flex-wrap gap-x-3 gap-y-2">
+        {visibles.map((step) => {
+          const stepIndex = FRISE_ORDRE.indexOf(step.key);
+          const isPast = stepIndex < currentIndex;
+          const isCurrent = stepIndex === currentIndex;
+          return (
+            <li
+              key={step.key}
+              className={`inline-flex items-center gap-1.5 text-xs ${
+                isCurrent ? 'font-semibold text-foreground' : isPast ? 'text-foreground' : 'text-muted-foreground'
+              }`}
+              aria-current={isCurrent ? 'step' : undefined}
+            >
+              {isPast ? (
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+              ) : isCurrent ? (
+                <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary">
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
+                </span>
+              ) : (
+                <Circle className="h-3.5 w-3.5" />
+              )}
+              {step.label}
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
+}
+
+/** Bloc de réussite (candidature acceptée, clés remises). */
+function SuccessNotice({ tone, title, description, icon: Icon, children }: {
+  tone: 'success' | 'primary';
+  title: string;
+  description?: string;
+  icon: ElementType;
+  children?: ReactNode;
+}) {
+  const iconCls = tone === 'success' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-primary/10 text-primary';
+  return (
+    <div className={`${DASH_CARD} p-4 md:p-5`}>
+      <div className="flex items-start gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconCls}`}>
+          <Icon className="h-5 w-5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-semibold text-foreground">{title}</p>
+          {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 
 interface DateProposee {
@@ -450,501 +650,490 @@ const MesCandidatures = () => {
 
   if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="relative">
-          <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
-          <div className="relative w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-sm border border-primary/20 rounded-full flex items-center justify-center">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-            <Loader2 className="h-8 w-8 text-primary animate-spin" />
-          </div>
+      <DashPage>
+        <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3" role="status" aria-label="Chargement des candidatures">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </span>
+          <p className="text-sm text-muted-foreground">Chargement de vos candidatures...</p>
         </div>
-        <p className="text-muted-foreground animate-pulse">Chargement de vos candidatures...</p>
-      </div>
+      </DashPage>
     );
   }
 
+  const filterOptions = [
+    { key: 'all', label: 'Tout', count: offres.length },
+    ...GROUPES
+      .map((g) => ({ key: `groupe:${g.key}`, label: g.label, count: enrichedOffres.filter(o => o.groupe === g.key).length }))
+      .filter((g) => g.count > 0),
+  ];
+
   return (
-    <div className="flex-1 overflow-x-hidden overflow-y-auto relative">
-      {/* Floating particles background */}
-      <FloatingParticles count={15} />
-      
-      <div
-        className="w-full max-w-full px-3 pt-4 sm:px-6 sm:pt-6 md:px-8 md:pt-8 relative z-10"
-        style={{
-          paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom, 0px))',
-        }}
-      >
+    <DashPage className="pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+      <DashPageHeader
+        title="Mes Candidatures"
+        subtitle="Suivez l'état de vos offres et candidatures en temps réel"
+      />
 
+      {/* Compteurs */}
+      <CandidatureCounters data={kpiData} />
 
-        <PremiumPageHeader
-          title="Mes Candidatures"
-          subtitle="Suivez l'état de vos offres et candidatures en temps réel"
-          icon={FileStack}
-          badge="Suivi Premium"
-        />
-
-        {/* Premium KPIs */}
-        <PremiumCandidatureKPIs data={kpiData} />
-
-        {offres.length > 0 ? (
-          <div className="space-y-8">
-            {/* Recherche / filtres / tri */}
-            <div className="rounded-2xl border border-primary/15 bg-card/70 backdrop-blur-sm p-3 sm:p-4 space-y-3 overflow-hidden">
-              <div className="flex flex-col lg:flex-row gap-3">
-                <div className="relative w-full min-w-0 lg:flex-1">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Rechercher par adresse, ville…"
-                    className="w-full pl-9 h-11 bg-background/60"
-                    aria-label="Rechercher une candidature"
-                  />
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:flex lg:w-auto lg:shrink-0">
-                  <Select value={statutFilter} onValueChange={setStatutFilter}>
-                    <SelectTrigger className="h-11 w-full min-w-0 lg:w-[230px]" aria-label="Filtrer par statut">
-                      <SelectValue placeholder="Statut" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-72">
-                      <SelectItem value="all">Tous les statuts ({offres.length})</SelectItem>
-                      {statutCounts.map(({ statut, count }) => (
-                        <SelectItem key={statut} value={statut}>
-                          {getStatutLabel(statut)} ({count})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-                    <SelectTrigger className="h-11 w-full min-w-0 lg:w-[190px]" aria-label="Trier">
-                      <SelectValue placeholder="Trier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="recent">Plus récentes d'abord</SelectItem>
-                      <SelectItem value="ancien">Plus anciennes d'abord</SelectItem>
-                      <SelectItem value="statut">Par statut (avancement)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+      {offres.length > 0 ? (
+        <div className="space-y-8">
+          {/* Recherche / filtres / tri */}
+          <div>
+            <div className="mb-3 flex flex-col gap-3 lg:flex-row">
+              <div className="relative w-full min-w-0 lg:flex-1">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Rechercher par adresse, ville…"
+                  className="h-11 w-full rounded-full bg-background pl-10"
+                  aria-label="Rechercher une candidature"
+                />
               </div>
-              <div className="-mx-1 flex flex-wrap items-center gap-2 px-1">
-                <button
-                  type="button"
-                  onClick={() => setStatutFilter('all')}
-                  className={`inline-flex max-w-full items-center justify-center rounded-full border px-3 py-2 text-xs font-medium transition-colors min-h-[38px] ${statutFilter === 'all' ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
-                >
-                  <span className="truncate">Tout ({offres.length})</span>
-                </button>
-                {GROUPES.map((g) => {
-                  const count = enrichedOffres.filter(o => o.groupe === g.key).length;
-                  if (!count) return null;
-                  return (
-                    <button
-                      key={g.key}
-                      type="button"
-                      onClick={() => setStatutFilter(statutFilter === `groupe:${g.key}` ? 'all' : `groupe:${g.key}`)}
-                      className={`inline-flex max-w-full items-center justify-center rounded-full border px-3 py-2 text-xs font-medium transition-colors min-h-[38px] ${statutFilter === `groupe:${g.key}` ? 'bg-primary text-primary-foreground border-primary' : 'bg-muted/40 border-border/50 hover:bg-muted'}`}
-                    >
-                      <span className="truncate">{g.label} ({count})</span>
-                    </button>
-                  );
-                })}
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:flex lg:w-auto lg:shrink-0">
+                <Select value={statutFilter} onValueChange={setStatutFilter}>
+                  <SelectTrigger className="h-11 w-full min-w-0 rounded-full lg:w-[230px]" aria-label="Filtrer par statut">
+                    <SelectValue placeholder="Statut" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    <SelectItem value="all">Tous les statuts ({offres.length})</SelectItem>
+                    {statutCounts.map(({ statut, count }) => (
+                      <SelectItem key={statut} value={statut}>
+                        {getStatutLabel(statut)} ({count})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                  <SelectTrigger className="h-11 w-full min-w-0 rounded-full lg:w-[190px]" aria-label="Trier">
+                    <SelectValue placeholder="Trier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="recent">Plus récentes d'abord</SelectItem>
+                    <SelectItem value="ancien">Plus anciennes d'abord</SelectItem>
+                    <SelectItem value="statut">Par statut (avancement)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
+            <DashFilterPills
+              label="Filtrer les candidatures"
+              options={filterOptions}
+              value={statutFilter}
+              onChange={(key) => {
+                if (key === 'all') setStatutFilter('all');
+                else setStatutFilter(statutFilter === key ? 'all' : key);
+              }}
+            />
+          </div>
 
+          {groupedOffres.map((groupe) => {
+            return (
+              <DashSection
+                key={groupe.key}
+                title={groupe.label}
+                action={<DashBadge tone="muted">{groupe.items.length}</DashBadge>}
+              >
+                <div className="grid items-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {groupe.items.map((offre) => {
+                    const candidature = candidatures.find(c => c.offre_id === offre.id);
+                    const statut = candidature?.statut || offre.statut;
+                    const datesProposees = candidature?.dates_signature_proposees as DateProposee[] | null;
+                    const isExpanded = expandedCards.has(offre.id);
 
-            {groupedOffres.map((groupe) => {
-              return (
-                <section key={groupe.key} className="space-y-4">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                    <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${groupe.dot}`} />
-                    <h2 className="min-w-0 truncate text-base sm:text-lg font-semibold tracking-tight">{groupe.label}</h2>
-                    <Badge variant="secondary" className="shrink-0 rounded-full">{groupe.items.length}</Badge>
-                    <div className="hidden sm:block flex-1 h-px bg-border/50" />
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-2">
-
-                  {groupe.items.map((offre, index) => {
-              const candidature = candidatures.find(c => c.offre_id === offre.id);
-              const statut = candidature?.statut || offre.statut;
-              const datesProposees = candidature?.dates_signature_proposees as DateProposee[] | null;
-              const isExpanded = expandedCards.has(offre.id);
-
-              return (
-                <div 
-                  key={offre.id}
-                  ref={(el) => {
-                    if (el) cardRefs.current.set(offre.id, el);
-                  }}
-                >
-                  <PremiumCandidatureCard
-                    offre={offre}
-                    statut={statut}
-                    statutLabel={getStatutLabel(statut)}
-                    statutVariant={getStatutBadgeVariant(statut)}
-                    isExpanded={isExpanded}
-                    onToggle={() => toggleCard(offre.id)}
-                    index={index}
-                  >
-                  <div className="pt-4 space-y-6">
-                    {/* Premium Workflow Timeline */}
-                    {candidature && (
-                      <PremiumWorkflowTimeline currentStatut={statut} />
-                    )}
-
-                    {/* Property details grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-muted/20 backdrop-blur-sm rounded-xl border border-border/30">
-                      <div className="flex items-center gap-2">
-                        <Home className="h-4 w-4 text-primary/70" />
-                        <span className="text-sm">{offre.pieces} pièces</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Square className="h-4 w-4 text-primary/70" />
-                        <span className="text-sm">{offre.surface} m²</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-primary/70" />
-                        <span className="text-sm">{offre.etage || '-'} étage</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4 text-primary/70" />
-                        <span className="text-sm">{offre.type_bien || 'Appartement'}</span>
-                      </div>
-                    </div>
-
-                    {offre.description && (
-                      <p className="text-sm text-muted-foreground">{offre.description}</p>
-                    )}
-
-                    {/* Quick actions */}
-                    <div className="flex flex-wrap gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="border-border/50 hover:border-primary/30 hover:bg-primary/5"
-                        onClick={(e) => { e.stopPropagation(); navigate('/client/messagerie'); }}
+                    return (
+                      <div
+                        key={offre.id}
+                        ref={(el) => {
+                          if (el) cardRefs.current.set(offre.id, el);
+                        }}
+                        className="min-w-0"
                       >
-                        <MessageSquare className="h-4 w-4 mr-2" />
-                        Contacter mon agent
-                      </Button>
-                      {offre.lien_annonce && (
-                        <LinkPreviewCard url={offre.lien_annonce} />
-                      )}
-                    </div>
-
-                    {/* WORKFLOW SECTIONS */}
-                    
-                    {/* Initial offer - Accept/Refuse */}
-                    {statut === 'envoyee' && (
-                      <div className="space-y-3 pt-4 border-t border-border/30">
-                        <Button 
-                          onClick={() => updateStatut(offre.id, 'interesse')} 
-                          className="w-full bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 group"
-                          size="lg"
+                        <CandidatureCard
+                          offre={offre}
+                          statut={statut}
+                          statutLabel={getStatutLabel(statut)}
+                          isExpanded={isExpanded}
+                          onToggle={() => toggleCard(offre.id)}
                         >
-                          <ThumbsUp className="h-5 w-5 mr-2 group-hover:scale-110 transition-transform" />
-                          Je suis intéressé
-                        </Button>
-                        <Button 
-                          onClick={() => updateStatut(offre.id, 'refusee')} 
-                          variant="destructive" 
-                          className="w-full"
-                        >
-                          <ThumbsDown className="h-4 w-4 mr-2" />
-                          Pas intéressé
-                        </Button>
-                      </div>
-                    )}
+                          <div className="space-y-5 pt-4">
+                            {/* Frise de progression */}
+                            {candidature && (
+                              <ProgressionFrise currentStatut={statut} />
+                            )}
 
-                    {/* Interested - waiting for visit */}
-                    {statut === 'interesse' && (
-                      <PremiumStatusCard
-                        variant="info"
-                        title="Offre marquée comme intéressante"
-                        description="Votre agent va organiser une visite pour vous."
-                      />
-                    )}
-
-                    {/* Visit/Candidature in progress */}
-                    {['visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'en_attente'].includes(statut) && (
-                      <PremiumStatusCard
-                        variant="waiting"
-                        title="Candidature en cours de traitement"
-                        description="Votre agent gère activement cette candidature."
-                        icon={Clock}
-                      />
-                    )}
-
-                    {/* 🎉 ACCEPTED - Celebration + Conclude button */}
-                    {statut === 'acceptee' && candidature && (
-                      <div className="space-y-4 pt-4 border-t border-border/30">
-                        <PremiumCelebrationCard
-                          type="accepted"
-                          title="🎉 Félicitations !"
-                          description="Votre candidature a été acceptée ! Vous pouvez maintenant conclure le bail."
-                          icon={PartyPopper}
-                        />
-
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button 
-                              className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:opacity-90 shadow-lg" 
-                              size="lg"
-                            >
-                              <FileSignature className="h-5 w-5 mr-2" />
-                              Conclure le bail
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent className="backdrop-blur-md bg-background/95 border-border/50">
-                            <AlertDialogHeader>
-                              <AlertDialogTitle className="flex items-center gap-2">
-                                <AlertTriangle className="h-5 w-5 text-amber-500" />
-                                Avertissement important
-                              </AlertDialogTitle>
-                              <AlertDialogDescription className="text-left space-y-3">
-                                <p>
-                                  En acceptant de conclure ce bail, vous vous engagez à respecter les conditions suivantes :
-                                </p>
-                                <div className="p-4 bg-amber-500/10 backdrop-blur-sm rounded-xl border border-amber-500/20">
-                                  <p className="font-medium text-amber-700 dark:text-amber-300">
-                                    ⚠️ Des frais pourront être facturés en cas de désistement par la régie ou le propriétaire 
-                                    de l'offre, en alignement avec leurs conditions générales.
-                                  </p>
-                                </div>
-                                <p>Êtes-vous sûr de vouloir continuer ?</p>
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Annuler</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleAccepterConclure(candidature.id)}>
-                                J'accepte et je conclus
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    )}
-
-                    {/* Bail conclu - waiting for régie */}
-                    {statut === 'bail_conclu' && (
-                      <PremiumStatusCard
-                        variant="info"
-                        title="Bail en cours de validation"
-                        description="Votre agent valide avec la régie. Vous serez notifié dès réception du bail."
-                        icon={Building2}
-                      />
-                    )}
-
-                    {/* Attente bail */}
-                    {statut === 'attente_bail' && (
-                      <PremiumStatusCard
-                        variant="waiting"
-                        title="En attente du bail"
-                        description="En attente de la réception du bail par la régie..."
-                        icon={Clock}
-                      />
-                    )}
-
-                    {/* Bail reçu - Choose signature date */}
-                    {statut === 'bail_recu' && datesProposees && datesProposees.length > 0 && (
-                      <div className="space-y-4 pt-4 border-t border-border/30">
-                        <div className="p-5 bg-gradient-to-br from-green-500/10 to-emerald-500/5 backdrop-blur-sm border border-green-500/20 rounded-xl">
-                          <h4 className="font-semibold text-green-700 dark:text-green-300 flex items-center gap-2 mb-3">
-                            <CalendarCheck className="h-5 w-5" />
-                            Le bail est prêt ! Choisissez une date de signature :
-                          </h4>
-                          <p className="text-sm text-green-600 dark:text-green-400 mb-4">
-                            📍 Lieu : {candidature?.lieu_signature || 'Chemin de l\'Esparcette 5, 1023 Crissier'}
-                          </p>
-                          <RadioGroup 
-                            value={selectedDateIndex?.toString()} 
-                            onValueChange={(val) => setSelectedDateIndex(parseInt(val))}
-                            className="space-y-3"
-                          >
-                            {datesProposees.map((d, idx) => (
-                              <div key={idx} className="flex items-center space-x-3 p-3 bg-card/50 backdrop-blur-sm rounded-lg border border-border/30 hover:border-primary/30 transition-colors">
-                                <RadioGroupItem value={idx.toString()} id={`date-${idx}`} />
-                                <Label htmlFor={`date-${idx}`} className="flex-1 cursor-pointer">
-                                  <span className="font-medium">
-                                    {format(new Date(d.date), 'EEEE dd MMMM yyyy à HH:mm', { locale: fr })}
-                                  </span>
-                                </Label>
+                            {/* Caractéristiques du bien */}
+                            <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/50 p-3">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <Home className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <span className="truncate text-sm">{offre.pieces} pièces</span>
                               </div>
-                            ))}
-                          </RadioGroup>
-                          <Button 
-                            className="w-full mt-4 bg-gradient-to-r from-green-500 to-emerald-600" 
-                            disabled={selectedDateIndex === null}
-                            onClick={() => candidature && selectedDateIndex !== null && handleChoisirDate(candidature.id, selectedDateIndex)}
-                          >
-                            <Check className="h-4 w-4 mr-2" />
-                            Confirmer cette date
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Signature planifiée */}
-                    {statut === 'signature_planifiee' && (
-                      <PremiumStatusCard
-                        variant="success"
-                        title="Signature prévue"
-                        icon={CalendarCheck}
-                      >
-                        <div className="mt-2 text-sm space-y-1">
-                          <p>📅 {candidature?.date_signature_choisie && format(new Date(candidature.date_signature_choisie), 'EEEE dd MMMM yyyy à HH:mm', { locale: fr })}</p>
-                          <p>📍 {candidature?.lieu_signature || 'Chemin de l\'Esparcette 5, 1023 Crissier'}</p>
-                        </div>
-                      </PremiumStatusCard>
-                    )}
-
-                    {/* Signature effectuée - waiting for état des lieux */}
-                    {statut === 'signature_effectuee' && (
-                      <PremiumStatusCard
-                        variant="success"
-                        title="Bail signé !"
-                        description="En attente de la date de l'état des lieux..."
-                        icon={Check}
-                      />
-                    )}
-
-                    {/* État des lieux fixé - IMPORTANT ALERT */}
-                    {statut === 'etat_lieux_fixe' && (
-                      <div className="space-y-4 pt-4 border-t border-border/30">
-                        <PremiumStatusCard
-                          variant="info"
-                          title="État des lieux et remise des clés"
-                          icon={Key}
-                        >
-                          <p className="text-sm mt-2">
-                            📅 {candidature?.date_etat_lieux && format(new Date(candidature.date_etat_lieux), 'EEEE dd MMMM yyyy', { locale: fr })}
-                            {candidature?.heure_etat_lieux && ` à ${candidature.heure_etat_lieux}`}
-                          </p>
-                        </PremiumStatusCard>
-
-                        <PremiumStatusCard
-                          variant="warning"
-                          title="⚠️ IMPORTANT - À préparer AVANT l'état des lieux"
-                          icon={AlertCircle}
-                        >
-                          <div className="mt-3 space-y-2">
-                            <p className="text-sm">
-                              Pour l'obtention de vos clés à l'état des lieux, il vous faut <strong>impérativement</strong> :
-                            </p>
-                            <ul className="space-y-2 text-sm">
-                              <li className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                                <span>✅ Avoir souscrit une <strong>garantie de loyer</strong></span>
-                              </li>
-                              <li className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                                <span>✅ Avoir payé le <strong>premier loyer</strong></span>
-                              </li>
-                              <li className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                                <span>✅ Avoir souscrit une <strong>assurance RC</strong> (si vous n'en avez pas déjà une)</span>
-                              </li>
-                            </ul>
-                            <p className="text-sm font-medium mt-3">
-                              🚫 Sans l'un de ces éléments, la régie pourrait refuser de vous remettre les clés !
-                            </p>
-                          </div>
-                        </PremiumStatusCard>
-                      </div>
-                    )}
-
-                    {/* Clés remises - Recommendation */}
-                    {statut === 'cles_remises' && (
-                      <div className="space-y-4 pt-4 border-t border-border/30">
-                        <PremiumCelebrationCard
-                          type="keys"
-                          title="🔑 Bienvenue chez vous !"
-                          description="Félicitations ! Vous avez reçu les clés de votre nouveau logement."
-                          icon={Key}
-                        >
-                          {!candidature?.recommandation_envoyee && (
-                            <div className="mt-4 space-y-3">
-                              <p className="text-sm text-muted-foreground">
-                                Aidez-nous à aider d'autres personnes comme vous !
-                              </p>
-                              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                                <Button 
-                                  variant="outline" 
-                                  onClick={() => {
-                                    setCurrentCandidatureId(candidature?.id);
-                                    setShowRecommendationDialog(true);
-                                  }}
-                                  className="border-violet-500/30 text-violet-700 dark:text-violet-300 hover:bg-violet-500/10"
-                                >
-                                  <Mail className="h-4 w-4 mr-2" />
-                                  Recommander à 5 amis
-                                </Button>
-                                <Button 
-                                  variant="outline"
-                                  onClick={() => openGoogleMaps(candidature?.id)}
-                                  className="border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10"
-                                  disabled={candidature?.avis_google_envoye}
-                                >
-                                  <Star className="h-4 w-4 mr-2" />
-                                  {candidature?.avis_google_envoye ? 'Merci pour votre avis !' : 'Noter sur Google'}
-                                </Button>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <Square className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <span className="truncate text-sm">{offre.surface} m²</span>
+                              </div>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <span className="truncate text-sm">{offre.etage || '-'} étage</span>
+                              </div>
+                              <div className="flex min-w-0 items-center gap-2">
+                                <Building2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                <span className="truncate text-sm">{offre.type_bien || 'Appartement'}</span>
                               </div>
                             </div>
-                          )}
-                          
-                          {candidature?.recommandation_envoyee && (
-                            <p className="text-sm text-green-600 flex items-center justify-center gap-2 mt-4">
-                              <Sparkles className="h-4 w-4" />
-                              Merci pour vos recommandations !
-                            </p>
-                          )}
-                        </PremiumCelebrationCard>
+
+                            {offre.description && (
+                              <p className="text-sm text-muted-foreground">{offre.description}</p>
+                            )}
+
+                            {/* Actions rapides */}
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-full"
+                                onClick={(e) => { e.stopPropagation(); navigate('/client/messagerie'); }}
+                              >
+                                <MessageSquare className="mr-2 h-4 w-4" />
+                                Contacter mon agent
+                              </Button>
+                              {offre.lien_annonce && (
+                                <LinkPreviewCard url={offre.lien_annonce} />
+                              )}
+                            </div>
+
+                            {/* ÉTAPES DU PARCOURS */}
+
+                            {/* Offre initiale - Accepter / Refuser */}
+                            {statut === 'envoyee' && (
+                              <div className="space-y-2 border-t border-border/70 pt-4">
+                                <Button
+                                  onClick={() => updateStatut(offre.id, 'interesse')}
+                                  className="w-full rounded-full"
+                                  size="lg"
+                                >
+                                  <ThumbsUp className="mr-2 h-5 w-5" />
+                                  Je suis intéressé
+                                </Button>
+                                <Button
+                                  onClick={() => updateStatut(offre.id, 'refusee')}
+                                  variant="outline"
+                                  className="w-full rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                >
+                                  <ThumbsDown className="mr-2 h-4 w-4" />
+                                  Pas intéressé
+                                </Button>
+                              </div>
+                            )}
+
+                            {/* Intéressé - en attente de visite */}
+                            {statut === 'interesse' && (
+                              <PremiumStatusCard
+                                variant="info"
+                                title="Offre marquée comme intéressante"
+                                description="Votre agent va organiser une visite pour vous."
+                              />
+                            )}
+
+                            {/* Visite / candidature en cours */}
+                            {['visite_planifiee', 'visite_effectuee', 'candidature_deposee', 'en_attente'].includes(statut) && (
+                              <PremiumStatusCard
+                                variant="waiting"
+                                title="Candidature en cours de traitement"
+                                description="Votre agent gère activement cette candidature."
+                                icon={Clock}
+                              />
+                            )}
+
+                            {/* ACCEPTÉE - félicitations + conclure */}
+                            {statut === 'acceptee' && candidature && (
+                              <div className="space-y-3 border-t border-border/70 pt-4">
+                                <SuccessNotice
+                                  tone="success"
+                                  title="Félicitations !"
+                                  description="Votre candidature a été acceptée ! Vous pouvez maintenant conclure le bail."
+                                  icon={PartyPopper}
+                                />
+
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      className="w-full rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
+                                      size="lg"
+                                    >
+                                      <FileSignature className="mr-2 h-5 w-5" />
+                                      Conclure le bail
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent className="rounded-2xl">
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle className="flex items-center gap-2">
+                                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                                          <AlertTriangle className="h-[18px] w-[18px]" />
+                                        </span>
+                                        Avertissement important
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription className="space-y-3 text-left">
+                                        <p>
+                                          En acceptant de conclure ce bail, vous vous engagez à respecter les conditions suivantes :
+                                        </p>
+                                        <div className="rounded-xl bg-amber-500/10 p-4">
+                                          <p className="font-medium text-amber-700 dark:text-amber-300">
+                                            Des frais pourront être facturés en cas de désistement par la régie ou le propriétaire
+                                            de l'offre, en alignement avec leurs conditions générales.
+                                          </p>
+                                        </div>
+                                        <p>Êtes-vous sûr de vouloir continuer ?</p>
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+                                      <AlertDialogAction className="rounded-full" onClick={() => handleAccepterConclure(candidature.id)}>
+                                        J'accepte et je conclus
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              </div>
+                            )}
+
+                            {/* Bail conclu - en attente de la régie */}
+                            {statut === 'bail_conclu' && (
+                              <PremiumStatusCard
+                                variant="info"
+                                title="Bail en cours de validation"
+                                description="Votre agent valide avec la régie. Vous serez notifié dès réception du bail."
+                                icon={Building2}
+                              />
+                            )}
+
+                            {/* Attente bail */}
+                            {statut === 'attente_bail' && (
+                              <PremiumStatusCard
+                                variant="waiting"
+                                title="En attente du bail"
+                                description="En attente de la réception du bail par la régie..."
+                                icon={Clock}
+                              />
+                            )}
+
+                            {/* Bail reçu - choisir la date de signature */}
+                            {statut === 'bail_recu' && datesProposees && datesProposees.length > 0 && (
+                              <div className="border-t border-border/70 pt-4">
+                                <div className={`${DASH_CARD} p-4 md:p-5`}>
+                                  <div className="mb-3 flex items-start gap-3">
+                                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                                      <CalendarCheck className="h-5 w-5" />
+                                    </span>
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="text-base font-semibold text-foreground">
+                                        Le bail est prêt ! Choisissez une date de signature :
+                                      </h4>
+                                      <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
+                                        <MapPin className="mt-0.5 h-4 w-4 shrink-0" />
+                                        <span>Lieu : {candidature?.lieu_signature || 'Chemin de l\'Esparcette 5, 1023 Crissier'}</span>
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <RadioGroup
+                                    value={selectedDateIndex?.toString()}
+                                    onValueChange={(val) => setSelectedDateIndex(parseInt(val))}
+                                    className="space-y-2"
+                                  >
+                                    {datesProposees.map((d, idx) => (
+                                      <div key={idx} className="flex items-center space-x-3 rounded-xl border border-border/70 bg-background p-3 transition-colors hover:border-foreground/40">
+                                        <RadioGroupItem value={idx.toString()} id={`date-${idx}`} />
+                                        <Label htmlFor={`date-${idx}`} className="flex-1 cursor-pointer">
+                                          <span className="font-medium">
+                                            {format(new Date(d.date), 'EEEE dd MMMM yyyy à HH:mm', { locale: fr })}
+                                          </span>
+                                        </Label>
+                                      </div>
+                                    ))}
+                                  </RadioGroup>
+                                  <Button
+                                    className="mt-4 w-full rounded-full bg-emerald-600 text-white hover:bg-emerald-700"
+                                    disabled={selectedDateIndex === null}
+                                    onClick={() => candidature && selectedDateIndex !== null && handleChoisirDate(candidature.id, selectedDateIndex)}
+                                  >
+                                    <Check className="mr-2 h-4 w-4" />
+                                    Confirmer cette date
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Signature planifiée */}
+                            {statut === 'signature_planifiee' && (
+                              <PremiumStatusCard
+                                variant="success"
+                                title="Signature prévue"
+                                icon={CalendarCheck}
+                              >
+                                <div className="mt-2 space-y-1 text-sm">
+                                  <p className="flex items-start gap-1.5">
+                                    <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span>{candidature?.date_signature_choisie && format(new Date(candidature.date_signature_choisie), 'EEEE dd MMMM yyyy à HH:mm', { locale: fr })}</span>
+                                  </p>
+                                  <p className="flex items-start gap-1.5">
+                                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span>{candidature?.lieu_signature || 'Chemin de l\'Esparcette 5, 1023 Crissier'}</span>
+                                  </p>
+                                </div>
+                              </PremiumStatusCard>
+                            )}
+
+                            {/* Signature effectuée - en attente de l'état des lieux */}
+                            {statut === 'signature_effectuee' && (
+                              <PremiumStatusCard
+                                variant="success"
+                                title="Bail signé !"
+                                description="En attente de la date de l'état des lieux..."
+                                icon={Check}
+                              />
+                            )}
+
+                            {/* État des lieux fixé - ALERTE IMPORTANTE */}
+                            {statut === 'etat_lieux_fixe' && (
+                              <div className="space-y-3 border-t border-border/70 pt-4">
+                                <PremiumStatusCard
+                                  variant="info"
+                                  title="État des lieux et remise des clés"
+                                  icon={Key}
+                                >
+                                  <p className="mt-2 flex items-start gap-1.5 text-sm">
+                                    <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span>
+                                      {candidature?.date_etat_lieux && format(new Date(candidature.date_etat_lieux), 'EEEE dd MMMM yyyy', { locale: fr })}
+                                      {candidature?.heure_etat_lieux && ` à ${candidature.heure_etat_lieux}`}
+                                    </span>
+                                  </p>
+                                </PremiumStatusCard>
+
+                                <PremiumStatusCard
+                                  variant="warning"
+                                  title="IMPORTANT - À préparer AVANT l'état des lieux"
+                                  icon={AlertCircle}
+                                >
+                                  <div className="mt-3 space-y-2">
+                                    <p className="text-sm">
+                                      Pour l'obtention de vos clés à l'état des lieux, il vous faut <strong>impérativement</strong> :
+                                    </p>
+                                    <ul className="space-y-2 text-sm">
+                                      <li className="flex items-start gap-2">
+                                        <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                        <span>Avoir souscrit une <strong>garantie de loyer</strong></span>
+                                      </li>
+                                      <li className="flex items-start gap-2">
+                                        <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                        <span>Avoir payé le <strong>premier loyer</strong></span>
+                                      </li>
+                                      <li className="flex items-start gap-2">
+                                        <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                        <span>Avoir souscrit une <strong>assurance RC</strong> (si vous n'en avez pas déjà une)</span>
+                                      </li>
+                                    </ul>
+                                    <p className="mt-3 text-sm font-medium">
+                                      Sans l'un de ces éléments, la régie pourrait refuser de vous remettre les clés !
+                                    </p>
+                                  </div>
+                                </PremiumStatusCard>
+                              </div>
+                            )}
+
+                            {/* Clés remises - recommandation */}
+                            {statut === 'cles_remises' && (
+                              <div className="space-y-3 border-t border-border/70 pt-4">
+                                <SuccessNotice
+                                  tone="primary"
+                                  title="Bienvenue chez vous !"
+                                  description="Félicitations ! Vous avez reçu les clés de votre nouveau logement."
+                                  icon={Key}
+                                >
+                                  {!candidature?.recommandation_envoyee && (
+                                    <div className="mt-3 space-y-3">
+                                      <p className="text-sm text-muted-foreground">
+                                        Aidez-nous à aider d'autres personnes comme vous !
+                                      </p>
+                                      <div className="flex flex-col gap-2 sm:flex-row">
+                                        <Button
+                                          variant="outline"
+                                          className="rounded-full"
+                                          onClick={() => {
+                                            setCurrentCandidatureId(candidature?.id);
+                                            setShowRecommendationDialog(true);
+                                          }}
+                                        >
+                                          <Mail className="mr-2 h-4 w-4" />
+                                          Recommander à 5 amis
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          className="rounded-full"
+                                          onClick={() => openGoogleMaps(candidature?.id)}
+                                          disabled={candidature?.avis_google_envoye}
+                                        >
+                                          <Star className="mr-2 h-4 w-4" />
+                                          {candidature?.avis_google_envoye ? 'Merci pour votre avis !' : 'Noter sur Google'}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {candidature?.recommandation_envoyee && (
+                                    <p className="mt-3 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
+                                      <Sparkles className="h-4 w-4" />
+                                      Merci pour vos recommandations !
+                                    </p>
+                                  )}
+                                </SuccessNotice>
+                              </div>
+                            )}
+
+                            {/* Refusée */}
+                            {statut === 'refusee' && (
+                              <PremiumStatusCard
+                                variant="warning"
+                                title="Candidature refusée"
+                                description="Cette candidature a été refusée. Contactez votre agent pour plus d'informations."
+                              />
+                            )}
+                          </div>
+                        </CandidatureCard>
                       </div>
-                    )}
-
-                    {/* Refused */}
-                    {statut === 'refusee' && (
-                      <PremiumStatusCard
-                        variant="warning"
-                        title="Candidature refusée"
-                        description="Cette candidature a été refusée. Contactez votre agent pour plus d'informations."
-                      />
-                    )}
-                  </div>
-                </PremiumCandidatureCard>
-              </div>
-              );
+                    );
                   })}
-                  </div>
-                </section>
-              );
-            })}
-            {visibleOffres.length === 0 && (
-              <PremiumEmptyState
-                icon={FileStack}
-                title="Aucun résultat"
-                description="Aucune candidature ne correspond à votre recherche ou à vos filtres."
-              />
-            )}
-          </div>
-        ) : (
-          <PremiumEmptyState
-            icon={FileStack}
-            title="Aucune offre reçue"
-            description="Vous n'avez pas encore reçu d'offres pour le moment"
-          />
-        )}
-      </div>
+                </div>
+              </DashSection>
+            );
+          })}
+          {visibleOffres.length === 0 && (
+            <DashEmptyState
+              icon={FileStack}
+              title="Aucun résultat"
+              description="Aucune candidature ne correspond à votre recherche ou à vos filtres."
+            />
+          )}
+        </div>
+      ) : (
+        <DashEmptyState
+          icon={FileStack}
+          title="Aucune offre reçue"
+          description="Vous n'avez pas encore reçu d'offres pour le moment"
+        />
+      )}
 
-      {/* Recommendation Dialog */}
+      {/* Dialogue recommandation */}
       <Dialog open={showRecommendationDialog} onOpenChange={setShowRecommendationDialog}>
-        <DialogContent className="max-w-md backdrop-blur-md bg-background/95 border-border/50">
+        <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-primary" />
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Mail className="h-[18px] w-[18px]" />
+              </span>
               Recommander Immo-Rama
             </DialogTitle>
             <DialogDescription>
@@ -954,12 +1143,11 @@ const MesCandidatures = () => {
           <div className="space-y-3 py-4">
             {recommendationEmails.map((email, idx) => (
               <div key={idx} className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground w-6">{idx + 1}.</span>
+                <span className="w-6 text-sm text-muted-foreground">{idx + 1}.</span>
                 <Input
                   type="email"
                   placeholder="email@exemple.com"
                   value={email}
-                  className="bg-muted/30 border-border/50 focus:border-primary/50"
                   onChange={(e) => {
                     const newEmails = [...recommendationEmails];
                     newEmails[idx] = e.target.value;
@@ -969,14 +1157,14 @@ const MesCandidatures = () => {
               </div>
             ))}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRecommendationDialog(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" className="rounded-full" onClick={() => setShowRecommendationDialog(false)}>
               Annuler
             </Button>
-            <Button onClick={handleSendRecommendations} disabled={sendingRecommendation}>
+            <Button className="rounded-full" onClick={handleSendRecommendations} disabled={sendingRecommendation}>
               {sendingRecommendation ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Envoi...
                 </>
               ) : (
@@ -987,39 +1175,36 @@ const MesCandidatures = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Thank You Dialog */}
+      {/* Dialogue remerciement */}
       <Dialog open={showThankYouDialog} onOpenChange={setShowThankYouDialog}>
-        <DialogContent className="max-w-md text-center backdrop-blur-md bg-background/95 border-border/50">
+        <DialogContent className="max-w-md rounded-2xl text-center">
           <DialogHeader>
-            <div className="flex justify-center mb-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-amber-500/20 rounded-full blur-xl animate-pulse" />
-                <div className="relative w-16 h-16 bg-gradient-to-br from-amber-500/20 to-amber-500/5 backdrop-blur-sm border border-amber-500/20 rounded-full flex items-center justify-center">
-                  <Star className="h-8 w-8 text-amber-500" />
-                </div>
-              </div>
+            <div className="mb-3 flex justify-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+                <Star className="h-7 w-7" />
+              </span>
             </div>
-            <DialogTitle className="text-2xl">Merci infiniment ! 🙏</DialogTitle>
-            <DialogDescription className="text-base mt-4 space-y-3">
+            <DialogTitle className="text-center text-xl font-semibold">Merci infiniment !</DialogTitle>
+            <DialogDescription className="mt-3 space-y-3 text-center text-[15px]">
               <p>
-                Votre avis compte énormément pour nous et aide d'autres personnes 
+                Votre avis compte énormément pour nous et aide d'autres personnes
                 à nous faire confiance dans leur recherche de logement.
               </p>
-              <p className="text-amber-600 dark:text-amber-400 font-medium">
-                Grâce à vous, nous pouvons continuer à accompagner des familles 
+              <p className="font-medium text-foreground">
+                Grâce à vous, nous pouvons continuer à accompagner des familles
                 vers leur nouveau chez-soi !
               </p>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button onClick={() => setShowThankYouDialog(false)} className="w-full group">
-              <Sparkles className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform" />
+            <Button onClick={() => setShowThankYouDialog(false)} className="w-full rounded-full">
+              <Sparkles className="mr-2 h-4 w-4" />
               Avec plaisir !
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </DashPage>
   );
 };
 

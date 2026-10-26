@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { AlertCircle, Clock, Hourglass, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserCredits } from '@/hooks/useUserCredits';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { TodoCard } from '@/components/client/dashboard/DashPrimitives';
 
 /** Bannière (≤25 crédits, actif) ou écran bloquant (suspendu) sur l'espace client. */
 export function MandatCreditsGate() {
@@ -37,10 +38,10 @@ export function MandatCreditsGate() {
 
   const buttons = (
     <div className="flex flex-col gap-2 sm:flex-row">
-      <Button onClick={renew} disabled={!!busy} className="min-h-[44px]">
+      <Button onClick={renew} disabled={!!busy} className="min-h-[44px] rounded-full">
         {busy === 'renew' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Renouveler (90 crédits gratuitement)
       </Button>
-      <Button variant="outline" onClick={() => setConfirmCancel(true)} disabled={!!busy} className="min-h-[44px]">Résilier le mandat</Button>
+      <Button variant="outline" onClick={() => setConfirmCancel(true)} disabled={!!busy} className="min-h-[44px] rounded-full">Résilier le mandat</Button>
     </div>
   );
 
@@ -50,22 +51,33 @@ export function MandatCreditsGate() {
   return (
     <>
       {aucun && (
-        <div className="rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
-          <p>Lancez votre essai gratuit de 3 jours pour que nos agents recherchent pour vous.</p>
-        </div>
+        <TodoCard
+          icon={Clock}
+          tone="primary"
+          title="Essai gratuit de 3 jours"
+          description="Lancez votre essai gratuit de 3 jours pour que nos agents recherchent pour vous."
+        />
       )}
       {expire && (
-        <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
-          <p>Votre essai est terminé : les recherches automatiques sont arrêtées. Activez vos recherches en créant votre compte client.</p>
-          <Button asChild className="min-h-[44px]"><a href="/nouveau-mandat">Activer mes recherches</a></Button>
-        </div>
+        <TodoCard
+          icon={AlertCircle}
+          title="Essai terminé"
+          description="Votre essai est terminé : les recherches automatiques sont arrêtées. Activez vos recherches en créant votre compte client."
+          action={<Button asChild size="sm" className="min-h-[44px] rounded-full"><a href="/nouveau-mandat">Activer mes recherches</a></Button>}
+        />
       )}
       {low && !dismissed && (
-        <div className="space-y-3 rounded-xl border border-primary/30 bg-primary/10 p-4 text-sm">
-          <p>Vous avez bientôt plus de crédit sur votre mandat ({credits.coins_mandat} jours restants).</p>
-          {buttons}
-          <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setDismissed(true)}>Plus tard</button>
-        </div>
+        <TodoCard
+          icon={Hourglass}
+          title="Crédit de mandat bientôt épuisé"
+          description={`Vous avez bientôt plus de crédit sur votre mandat (${credits.coins_mandat} jours restants).`}
+          action={
+            <div className="space-y-2">
+              {buttons}
+              <button type="button" className="text-xs text-muted-foreground underline" onClick={() => setDismissed(true)}>Plus tard</button>
+            </div>
+          }
+        />
       )}
       <Dialog open={suspended}>
         <DialogContent className="max-w-md [&>button]:hidden" onEscapeKeyDown={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
@@ -73,7 +85,7 @@ export function MandatCreditsGate() {
             <DialogTitle>Votre mandat est en suspens</DialogTitle>
             <DialogDescription>Votre mandat est en suspens — vous n'avez plus de crédit.</DialogDescription>
           </DialogHeader>
-          <Button onClick={renew} disabled={!!busy} className="min-h-[44px]">
+          <Button onClick={renew} disabled={!!busy} className="min-h-[44px] rounded-full">
             {busy === 'renew' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Renouveler (90 crédits gratuitement)
           </Button>
           <button type="button" className="text-sm text-muted-foreground underline" onClick={() => setConfirmCancel(true)}>Résilier le mandat</button>
@@ -85,7 +97,7 @@ export function MandatCreditsGate() {
             <DialogTitle>Résilier le mandat ?</DialogTitle>
             <DialogDescription>Votre mandat sera stoppé immédiatement.</DialogDescription>
           </DialogHeader>
-          <Button variant="destructive" onClick={cancel} disabled={!!busy} className="min-h-[44px]">
+          <Button variant="destructive" onClick={cancel} disabled={!!busy} className="min-h-[44px] rounded-full">
             {busy === 'cancel' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirmer la résiliation
           </Button>
         </DialogContent>

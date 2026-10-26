@@ -15,6 +15,7 @@ import { RequestDocumentsDialog } from './RequestDocumentsDialog';
 import { getStoragePath } from '@/lib/documentUtils';
 import { getIdentityKind } from '@/lib/identityDocument';
 import { SensitiveDocConsentCheckbox } from '@/components/legal/SensitiveDocConsentCheckbox';
+import { PdfPreview } from '@/components/files/PdfPreview';
 interface Document {
   id: string;
   nom: string;
@@ -597,7 +598,7 @@ export function CandidateDocumentsSection({
           </DialogHeader>
           <div className="flex-1 overflow-auto">
             {selectedDocument?.type.includes('pdf') ? (
-              <iframe src={previewUrl} className="w-full h-[70vh]" />
+              <PdfPreview src={previewUrl} className="w-full h-[70vh]" title={selectedDocument?.nom} />
             ) : (
               <img src={previewUrl} alt={selectedDocument?.nom} className="max-w-full" />
             )}

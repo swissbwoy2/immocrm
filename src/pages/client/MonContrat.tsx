@@ -1,15 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Download, Calendar, Clock, CheckCircle2, User, MapPin, DollarSign, Home, Sparkles, AlertCircle, RefreshCw, Ban, Pause, Play, Settings } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileText, Download, Calendar, Clock, CheckCircle2, User, MapPin, DollarSign, Home, AlertCircle, RefreshCw, Ban, Pause, Play, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { PremiumPageHeader } from '@/components/premium/PremiumPageHeader';
+import { DASH_CARD, DashPage, DashPageHeader, DashSection, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { CancellationReasonForm, type CancellationReason } from '@/components/mandat/CancellationReasonForm';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -215,7 +212,9 @@ export default function MonContrat() {
     }
   };
 
-  const { start: mandatStart, end: mandatEnd, daysRemaining, daysSinceSignature, isAutoRenewed } = getMandatDates(client);
+  const { start: signatureStart, cycleStart, end: mandatEnd, daysRemaining, daysSinceSignature, isAutoRenewed } = getMandatDates(client);
+  // Période affichée = période de 90 jours en cours (après reconduction, elle ne commence plus à la signature)
+  const mandatStart = isAutoRenewed && cycleStart ? cycleStart : signatureStart;
   const signatureDate = client?.mandat_date_signature || demandeMandat?.cgv_acceptees_at || demandeMandat?.created_at;
   const signatureData = client?.mandat_signature_data || demandeMandat?.signature_data;
   const hasPdf = !!client?.id;
@@ -264,457 +263,417 @@ export default function MonContrat() {
 
   if (!client) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="max-w-md backdrop-blur-xl bg-card/80 border-border/50 shadow-2xl">
-          <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <AlertCircle className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Contrat non disponible</h2>
-            <p className="text-muted-foreground">
-              Votre contrat de mandat n'est pas encore disponible. Veuillez contacter votre agent.
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className={`${DASH_CARD} w-full max-w-md p-6 text-center`}>
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+            <AlertCircle className="h-7 w-7" />
+          </span>
+          <h2 className="mt-4 text-lg font-semibold text-foreground">Contrat non disponible</h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            Votre contrat de mandat n'est pas encore disponible. Veuillez contacter votre agent.
+          </p>
+        </div>
       </div>
     );
   }
 
+  const progressPct = Math.round((90 - daysRemaining) / 90 * 100);
+  const daysTone: 'success' | 'warning' | 'danger' = daysRemaining > 30 ? 'success' : daysRemaining > 0 ? 'warning' : 'danger';
+  const refundTone: 'success' | 'warning' | 'danger' = refundEligibleNow ? 'success' : refundWindowClosed ? 'danger' : 'warning';
+
   return (
-    <div className="relative flex-1 overflow-y-auto">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      {/* Floating particles background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 rounded-full bg-primary/10 animate-float"
-            style={{
-              left: `${10 + i * 12}%`,
-              top: `${15 + (i % 4) * 20}%`,
-              animationDelay: `${i * 0.8}s`,
-              animationDuration: `${5 + i}s`
-            }}
-          />
-        ))}
-      </div>
+    <DashPage className="space-y-8">
+      <DashPageHeader
+        title="Mon contrat de mandat"
+        subtitle="Votre mandat de recherche exclusif"
+      />
 
-      <div className="relative z-10 p-4 md:p-8 space-y-6">
-        {/* Header */}
-        <PremiumPageHeader
-          title="Mon contrat de mandat"
-          subtitle="Votre mandat de recherche exclusif"
-          icon={FileText}
-          className="mb-6"
-        />
+      {/* Status Card */}
+      <div className={`${DASH_CARD} p-4 md:p-5`}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <FileText className="h-5 w-5" />
+            </span>
+            <h2 className="text-base font-semibold text-foreground">Contrat de mandat exclusif</h2>
+          </div>
+          <DashBadge tone={daysTone}>
+            {daysRemaining > 0 ? (
+              <>
+                <Clock className="mr-1 h-3 w-3" />
+                {daysRemaining} jours restants
+              </>
+            ) : (
+              <>
+                <AlertCircle className="mr-1 h-3 w-3" />
+                Mandat expiré
+              </>
+            )}
+          </DashBadge>
+        </div>
 
-        {/* Status Card */}
-        <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl overflow-hidden">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <FileText className="w-5 h-5 text-primary" />
-                </div>
-                Contrat de mandat exclusif
-              </CardTitle>
-              <Badge 
-                className={`${
-                  daysRemaining > 30 
-                    ? 'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30' 
-                    : daysRemaining > 0 
-                    ? 'bg-orange-500/20 text-orange-600 dark:text-orange-400 border-orange-500/30' 
-                    : 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30'
-                } backdrop-blur-sm`}
-              >
-                {daysRemaining > 0 ? (
-                  <>
-                    <Clock className="w-3 h-3 mr-1" />
-                    {daysRemaining} jours restants
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="w-3 h-3 mr-1" />
-                    Mandat expiré
-                  </>
-                )}
-              </Badge>
+        {/* Dates */}
+        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border/70 p-4">
+            <div className="mb-1 flex items-center gap-2 text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span className="text-sm">{isAutoRenewed ? 'Début de la période en cours' : 'Date de début'}</span>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Dates */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="p-4 rounded-xl bg-muted/50 border border-border/30">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-sm">Date de début</span>
-                </div>
-                <p className="font-semibold text-lg">
-                  {mandatStart ? format(mandatStart, 'd MMMM yyyy', { locale: fr }) : 'Non définie'}
-                </p>
-              </div>
-              <div className="p-4 rounded-xl bg-muted/50 border border-border/30">
-                <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                  <Calendar className="w-4 h-4" />
-                  <span className="text-sm">Date de fin</span>
-                </div>
-                <p className="font-semibold text-lg">
-                  {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : 'Non définie'}
-                </p>
-              </div>
+            <p className="text-base font-semibold text-foreground">
+              {mandatStart ? format(mandatStart, 'd MMMM yyyy', { locale: fr }) : 'Non définie'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/70 p-4">
+            <div className="mb-1 flex items-center gap-2 text-muted-foreground">
+              <Calendar className="h-4 w-4" />
+              <span className="text-sm">Date de fin</span>
             </div>
+            <p className="text-base font-semibold text-foreground">
+              {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : 'Non définie'}
+            </p>
+          </div>
+        </div>
 
-            {/* Progress bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Progression du mandat</span>
-                <span className="font-medium">{Math.round((90 - daysRemaining) / 90 * 100)}%</span>
-              </div>
-              <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    daysRemaining > 30 
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-400' 
-                      : daysRemaining > 0 
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-400' 
-                      : 'bg-gradient-to-r from-red-500 to-rose-400'
-                  }`}
-                  style={{ width: `${Math.min(100, Math.round((90 - daysRemaining) / 90 * 100))}%` }}
-                />
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Download Button */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              {hasPdf ? (
-                <Button 
-                  onClick={handleDownloadPDF} 
-                  disabled={downloading}
-                  className="flex-1 group relative overflow-hidden"
-                >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                  {downloading ? (
-                    <div className="h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  Télécharger le contrat PDF
-                </Button>
-              ) : (
-                <div className="flex-1 p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 text-center">
-                  <AlertCircle className="w-5 h-5 text-orange-500 mx-auto mb-2" />
-                  <p className="text-sm text-orange-600 dark:text-orange-400">
-                    Le PDF du contrat sera disponible prochainement
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* === Mandate Management Card === */}
-        {(!isInactif || hasCancelled) && (
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl overflow-hidden">
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <CardTitle className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl bg-primary/10">
-                    <Settings className="w-5 h-5 text-primary" />
-                  </div>
-                  Gestion de mon mandat
-                </CardTitle>
-                <Badge
-                  className={refundEligibleNow
-                    ? 'bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30'
-                    : refundWindowClosed
-                      ? 'bg-red-500/20 text-red-700 dark:text-red-400 border-red-500/30'
-                      : 'bg-orange-500/20 text-orange-700 dark:text-orange-400 border-orange-500/30'}
-                >
-                  {refundEligibleNow
-                    ? `🟢 Éligible au remboursement (J${daysSinceSignature ?? 0}/${MANDAT_DURATION_DAYS})`
-                    : refundWindowClosed
-                      ? `⛔ Fenêtre close — mandat renouvelé (J${daysSinceSignature ?? 0})`
-                      : `🔴 Non éligible (J${daysSinceSignature ?? 0}/${REFUND_ELIGIBILITY_DAY})`}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Mandat annulé — avertissement acompte */}
-              {hasCancelled && (
-                <div className="p-4 rounded-xl bg-orange-500/10 border-2 border-orange-500/40">
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" />
-                    <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">
-                      {MANDAT_RENEWAL_ACOMPTE_WARNING}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* Paused banner */}
-              {isPaused && (
-                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/30">
-                  <div className="flex items-start gap-3">
-                    <Pause className="w-5 h-5 text-blue-600 mt-0.5" />
-                    <div className="flex-1">
-                      <p className="font-medium text-blue-700 dark:text-blue-400">Mandat en pause</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Depuis le {client?.mandate_paused_at ? format(new Date(client.mandate_paused_at), 'd MMMM yyyy', { locale: fr }) : ''}.
-                        Aucune relance ne vous est envoyée.
-                      </p>
-                    </div>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleMandateAction('resume')}
-                      disabled={actionLoading === 'resume'}
-                    >
-                      <Play className="w-4 h-4 mr-1" /> Reprendre
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Refund pending banner */}
-              {showRefundRequested && (
-                <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/30 text-sm">
-                  <div className="flex items-start gap-3">
-                    <DollarSign className="w-5 h-5 text-green-600 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-green-700 dark:text-green-400">Remboursement en attente</p>
-                      <p className="text-muted-foreground mt-1">
-                        Demande enregistrée le {client?.refund_requested_at ? format(new Date(client.refund_requested_at), 'd MMMM yyyy', { locale: fr }) : ''}.
-                        Traitement sous 30 jours après la fin officielle du mandat.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Reminder window banner */}
-              {inReminderWindow && (
-                <div className={`p-4 rounded-xl border ${
-                  refundEligibleNow
-                    ? 'bg-green-500/10 border-green-500/30'
-                    : 'bg-orange-500/10 border-orange-500/30'
-                }`}>
-                  <div className="flex items-start gap-3">
-                    <AlertCircle className={`w-5 h-5 mt-0.5 ${refundEligibleNow ? 'text-green-600' : 'text-orange-600'}`} />
-                    <div>
-                      <p className="font-semibold">Votre mandat se termine dans {daysRemaining} jour{daysRemaining > 1 ? 's' : ''}</p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {isAutoRenewed ? 'Renouvelé automatiquement' : 'Sans action de votre part, il sera renouvelé automatiquement'} le {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : ''}.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Action buttons */}
-              {!isPaused && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                  {/* Renouveler — only visible in reminder window */}
-                  {(inReminderWindow || hasCancelled) && (
-                    <Button
-                      onClick={() => hasCancelled ? setRenewConfirmOpen(true) : handleMandateAction('renew')}
-                      disabled={actionLoading === 'renew'}
-                      className="w-full"
-                    >
-                      <RefreshCw className="w-4 h-4 mr-2" /> Renouveler
-                    </Button>
-                  )}
-
-                  {!hasCancelled && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      if (refundEligibleNow) {
-                        openCancelDialog();
-                      } else {
-                        setRefundNotAvailableOpen(true);
-                      }
-                    }}
-                    disabled={actionLoading !== null}
-                    className="w-full"
-                  >
-                    <Ban className="w-4 h-4 mr-2" /> Annuler mon mandat + remboursement
-                  </Button>
-
-                  )}{/* Pause */}
-
-                  <Button
-                    variant="ghost"
-                    onClick={() => handleMandateAction('pause')}
-                    disabled={actionLoading !== null}
-                    className="w-full sm:col-span-2"
-                  >
-                    <Pause className="w-4 h-4 mr-2" /> Mettre en pause
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Cancel reason dialog */}
-        <Dialog open={reasonDialogOpen} onOpenChange={setReasonDialogOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {refundEligibleNow ? 'Annuler + Demander mon remboursement' : 'Annuler mon mandat'}
-              </DialogTitle>
-              <DialogDescription>
-                Aidez-nous à comprendre votre choix. Cette information est confidentielle.
-              </DialogDescription>
-            </DialogHeader>
-            <CancellationReasonForm
-              withRefund={refundEligibleNow}
-              daysSinceSignature={daysSinceSignature ?? 0}
-              loading={actionLoading !== null}
-              onSubmit={handleCancelSubmit}
-              onCancel={() => setReasonDialogOpen(false)}
+        {/* Progress bar */}
+        <div className="mt-5 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Progression du mandat</span>
+            <span className="font-semibold tabular-nums text-foreground">{progressPct}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div
+              className={`h-full rounded-full transition-[width] duration-500 ${
+                daysTone === 'success' ? 'bg-emerald-500' : daysTone === 'warning' ? 'bg-amber-500' : 'bg-destructive'
+              }`}
+              style={{ width: `${Math.min(100, progressPct)}%` }}
             />
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
 
-        {/* Renew confirmation dialog (mandat annulé) */}
-        <Dialog open={renewConfirmOpen} onOpenChange={setRenewConfirmOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Renouveler mon mandat</DialogTitle>
-              <DialogDescription>
-                Merci de confirmer le renouvellement de votre mandat de recherche.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="p-4 rounded-xl bg-orange-500/10 border-2 border-orange-500/40">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" />
-                <p className="text-sm font-semibold text-orange-700 dark:text-orange-400">
+        {/* Download Button */}
+        <div className="mt-5 border-t border-border/70 pt-5">
+          {hasPdf ? (
+            <Button
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              className="w-full rounded-full sm:w-auto"
+            >
+              {downloading ? (
+                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Télécharger le contrat PDF
+            </Button>
+          ) : (
+            <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 p-4">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                Le PDF du contrat sera disponible prochainement
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* === Mandate Management === */}
+      {(!isInactif || hasCancelled) && (
+        <DashSection title="Gestion de mon mandat">
+          <div className={`${DASH_CARD} space-y-4 p-4 md:p-5`}>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Settings className="h-[18px] w-[18px]" />
+              </span>
+              <DashBadge tone={refundTone}>
+                {refundEligibleNow
+                  ? `Éligible au remboursement (J${daysSinceSignature ?? 0}/${MANDAT_DURATION_DAYS})`
+                  : refundWindowClosed
+                    ? `Fenêtre close — mandat renouvelé (J${daysSinceSignature ?? 0})`
+                    : `Non éligible (J${daysSinceSignature ?? 0}/${REFUND_ELIGIBILITY_DAY})`}
+              </DashBadge>
+              {/* Demande de remboursement : même règle que le bouton « Annuler mon mandat + remboursement » */}
+              {showRefundRequested ? (
+                <DashBadge tone="success">Remboursement demandé</DashBadge>
+              ) : !hasCancelled && !refundWindowClosed && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={refundEligibleNow ? 'default' : 'outline'}
+                  className="h-9 rounded-full"
+                  disabled={actionLoading !== null}
+                  onClick={() => {
+                    if (refundEligibleNow) {
+                      openCancelDialog();
+                    } else {
+                      setRefundNotAvailableOpen(true);
+                    }
+                  }}
+                >
+                  Demander un remboursement
+                </Button>
+              )}
+            </div>
+
+            {/* Mandat annulé — avertissement acompte */}
+            {hasCancelled && (
+              <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 p-4">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
                   {MANDAT_RENEWAL_ACOMPTE_WARNING}
                 </p>
               </div>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setRenewConfirmOpen(false)} disabled={actionLoading !== null}>
-                Retour
-              </Button>
-              <Button
-                className="flex-1"
-                disabled={actionLoading !== null}
-                onClick={async () => {
-                  await handleMandateAction('renew');
-                  setRenewConfirmOpen(false);
-                }}
-              >
-                <RefreshCw className="w-4 h-4 mr-2" /> Confirmer le renouvellement
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            )}
 
-        {/* Refund not yet available dialog */}
-        <Dialog open={refundNotAvailableOpen} onOpenChange={setRefundNotAvailableOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Remboursement pas encore disponible</DialogTitle>
-              <DialogDescription>
-                Votre mandat est actif depuis {daysSinceSignature ?? 0} jours. Vous ne pouvez pas encore demander un remboursement — revenez à partir du 80e jour, ou annulez votre mandat sans remboursement.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setRefundNotAvailableOpen(false)}
-                disabled={actionLoading !== null}
-              >
-                Continuer
-              </Button>
-              <Button
-                variant="destructive"
-                className="flex-1"
-                onClick={() => {
-                  setRefundNotAvailableOpen(false);
-                  openCancelDialog();
-                }}
-                disabled={actionLoading !== null}
-              >
-                <Ban className="w-4 h-4 mr-2" /> Annuler sans remboursement
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            {/* Paused banner */}
+            {isPaused && (
+              <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/40 p-4 sm:flex-row sm:items-start">
+                <div className="flex flex-1 items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Pause className="h-[18px] w-[18px]" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground">Mandat en pause</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Depuis le {client?.mandate_paused_at ? format(new Date(client.mandate_paused_at), 'd MMMM yyyy', { locale: fr }) : ''}.
+                      Aucune relance ne vous est envoyée.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => handleMandateAction('resume')}
+                  disabled={actionLoading === 'resume'}
+                >
+                  <Play className="mr-1 h-4 w-4" /> Reprendre
+                </Button>
+              </div>
+            )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Refund pending banner */}
+            {showRefundRequested && (
+              <div className="flex items-start gap-3 rounded-xl bg-emerald-500/10 p-4 text-sm">
+                <DollarSign className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                <div>
+                  <p className="font-semibold text-emerald-700 dark:text-emerald-400">Remboursement en attente</p>
+                  <p className="mt-1 text-muted-foreground">
+                    Demande enregistrée le {client?.refund_requested_at ? format(new Date(client.refund_requested_at), 'd MMMM yyyy', { locale: fr }) : ''}.
+                    Traitement sous 30 jours après la fin officielle du mandat.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Reminder window banner */}
+            {inReminderWindow && (
+              <div className={`flex items-start gap-3 rounded-xl p-4 ${refundEligibleNow ? 'bg-emerald-500/10' : 'bg-amber-500/10'}`}>
+                <AlertCircle className={`mt-0.5 h-5 w-5 shrink-0 ${refundEligibleNow ? 'text-emerald-600' : 'text-amber-600'}`} />
+                <div>
+                  <p className="font-semibold text-foreground">Votre mandat se termine dans {daysRemaining} jour{daysRemaining > 1 ? 's' : ''}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {isAutoRenewed ? 'Renouvelé automatiquement' : 'Sans action de votre part, il sera renouvelé automatiquement'} le {mandatEnd ? format(mandatEnd, 'd MMMM yyyy', { locale: fr }) : ''}.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Action buttons */}
+            {!isPaused && (
+              <div className="grid grid-cols-1 gap-3 pt-1 sm:grid-cols-2">
+                {/* Renouveler — only visible in reminder window */}
+                {(inReminderWindow || hasCancelled) && (
+                  <Button
+                    onClick={() => hasCancelled ? setRenewConfirmOpen(true) : handleMandateAction('renew')}
+                    disabled={actionLoading === 'renew'}
+                    className="w-full rounded-full"
+                  >
+                    <RefreshCw className="mr-2 h-4 w-4" /> Renouveler
+                  </Button>
+                )}
+
+                {!hasCancelled && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    if (refundEligibleNow) {
+                      openCancelDialog();
+                    } else {
+                      setRefundNotAvailableOpen(true);
+                    }
+                  }}
+                  disabled={actionLoading !== null}
+                  className="h-auto min-h-10 w-full whitespace-normal rounded-full"
+                >
+                  <Ban className="mr-2 h-4 w-4 shrink-0" /> Annuler mon mandat + remboursement
+                </Button>
+
+                )}{/* Pause */}
+
+                <Button
+                  variant="ghost"
+                  onClick={() => handleMandateAction('pause')}
+                  disabled={actionLoading !== null}
+                  className="w-full rounded-full sm:col-span-2"
+                >
+                  <Pause className="mr-2 h-4 w-4" /> Mettre en pause
+                </Button>
+              </div>
+            )}
+          </div>
+        </DashSection>
+      )}
+
+      {/* Cancel reason dialog */}
+      <Dialog open={reasonDialogOpen} onOpenChange={setReasonDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {refundEligibleNow ? 'Annuler + Demander mon remboursement' : 'Annuler mon mandat'}
+            </DialogTitle>
+            <DialogDescription>
+              Aidez-nous à comprendre votre choix. Cette information est confidentielle.
+            </DialogDescription>
+          </DialogHeader>
+          <CancellationReasonForm
+            withRefund={refundEligibleNow}
+            daysSinceSignature={daysSinceSignature ?? 0}
+            loading={actionLoading !== null}
+            onSubmit={handleCancelSubmit}
+            onCancel={() => setReasonDialogOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Renew confirmation dialog (mandat annulé) */}
+      <Dialog open={renewConfirmOpen} onOpenChange={setRenewConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Renouveler mon mandat</DialogTitle>
+            <DialogDescription>
+              Merci de confirmer le renouvellement de votre mandat de recherche.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 p-4">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
+              {MANDAT_RENEWAL_ACOMPTE_WARNING}
+            </p>
+          </div>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1 rounded-full" onClick={() => setRenewConfirmOpen(false)} disabled={actionLoading !== null}>
+              Retour
+            </Button>
+            <Button
+              className="h-auto min-h-10 flex-1 whitespace-normal rounded-full"
+              disabled={actionLoading !== null}
+              onClick={async () => {
+                await handleMandateAction('renew');
+                setRenewConfirmOpen(false);
+              }}
+            >
+              <RefreshCw className="mr-2 h-4 w-4 shrink-0" /> Confirmer le renouvellement
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Refund not yet available dialog */}
+      <Dialog open={refundNotAvailableOpen} onOpenChange={setRefundNotAvailableOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Remboursement pas encore disponible</DialogTitle>
+            <DialogDescription>
+              Votre mandat est actif depuis {daysSinceSignature ?? 0} jours. Vous ne pouvez pas encore demander un remboursement — revenez à partir du 80e jour, ou annulez votre mandat sans remboursement.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 pt-2 sm:flex-row">
+            <Button
+              variant="outline"
+              className="flex-1 rounded-full"
+              onClick={() => setRefundNotAvailableOpen(false)}
+              disabled={actionLoading !== null}
+            >
+              Continuer
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1 rounded-full"
+              onClick={() => {
+                setRefundNotAvailableOpen(false);
+                openCancelDialog();
+              }}
+              disabled={actionLoading !== null}
+            >
+              <Ban className="mr-2 h-4 w-4" /> Annuler sans remboursement
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <DashSection title="Détails du contrat">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
 
           {/* Search Criteria */}
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-blue-500/10">
-                  <Home className="w-5 h-5 text-blue-500" />
+          <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Home className="h-[18px] w-[18px]" />
+              </span>
+              <h3 className="text-base font-semibold text-foreground">Critères de recherche</h3>
+            </div>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border/70 p-3">
+                  <p className="mb-1 text-xs text-muted-foreground">Type de recherche</p>
+                  <p className="text-sm font-medium text-foreground">{client.type_recherche || 'Non défini'}</p>
                 </div>
-                Critères de recherche
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                  <p className="text-xs text-muted-foreground mb-1">Type de recherche</p>
-                  <p className="font-medium">{client.type_recherche || 'Non défini'}</p>
+                <div className="rounded-xl border border-border/70 p-3">
+                  <p className="mb-1 text-xs text-muted-foreground">Type de bien</p>
+                  <p className="text-sm font-medium text-foreground">{client.type_bien || 'Non défini'}</p>
                 </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                  <p className="text-xs text-muted-foreground mb-1">Type de bien</p>
-                  <p className="font-medium">{client.type_bien || 'Non défini'}</p>
+                <div className="rounded-xl border border-border/70 p-3">
+                  <p className="mb-1 text-xs text-muted-foreground">Nombre de pièces</p>
+                  <p className="text-sm font-medium text-foreground">{client.pieces ? `${client.pieces} pièces` : 'Non défini'}</p>
                 </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                  <p className="text-xs text-muted-foreground mb-1">Nombre de pièces</p>
-                  <p className="font-medium">{client.pieces ? `${client.pieces} pièces` : 'Non défini'}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                  <p className="text-xs text-muted-foreground mb-1">Budget maximum</p>
-                  <p className="font-medium">
+                <div className="rounded-xl border border-border/70 p-3">
+                  <p className="mb-1 text-xs text-muted-foreground">Budget maximum</p>
+                  <p className="text-sm font-medium text-foreground">
                     {client.budget_max ? `${client.budget_max.toLocaleString('fr-CH')} CHF` : 'Non défini'}
                   </p>
                 </div>
               </div>
-              <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                <p className="text-xs text-muted-foreground mb-1">Région de recherche</p>
-                <p className="font-medium flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
+              <div className="rounded-xl border border-border/70 p-3">
+                <p className="mb-1 text-xs text-muted-foreground">Région de recherche</p>
+                <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                  <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
                   {client.region_recherche || 'Non définie'}
                 </p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Signature */}
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-green-500/10">
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                </div>
-                Signature électronique
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                <CheckCircle2 className="h-[18px] w-[18px]" />
+              </span>
+              <h3 className="text-base font-semibold text-foreground">Signature électronique</h3>
+            </div>
+            <div className="space-y-3">
               {signatureData ? (
                 <>
-                  <div className="p-4 bg-white rounded-xl border-2 border-dashed border-border/50 flex items-center justify-center">
-                    <img 
-                      src={signatureData} 
-                      alt="Signature" 
+                  {/* Fond blanc conservé : la signature est tracée à l'encre sombre sur fond transparent. */}
+                  <div className="flex items-center justify-center rounded-xl border border-dashed border-border bg-white p-4">
+                    <img
+                      src={signatureData}
+                      alt="Signature"
                       className="max-h-24 object-contain"
                     />
                   </div>
-                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                    <CheckCircle2 className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" />
                     <span className="text-sm font-medium">Contrat signé électroniquement</span>
                   </div>
                   {signatureDate && (
@@ -725,52 +684,48 @@ export default function MonContrat() {
                 </>
               ) : (
                 <div className="p-6 text-center">
-                  <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                    <AlertCircle className="w-6 h-6 text-muted-foreground" />
-                  </div>
-                  <p className="text-muted-foreground">
+                  <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                    <AlertCircle className="h-6 w-6" />
+                  </span>
+                  <p className="text-sm text-muted-foreground">
                     Aucune signature enregistrée
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Client Info */}
         {profile && (
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-purple-500/10">
-                  <User className="w-5 h-5 text-purple-500" />
-                </div>
-                Titulaire du contrat
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                  <p className="text-xs text-muted-foreground mb-1">Nom complet</p>
-                  <p className="font-medium">{profile.prenom} {profile.nom}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                  <p className="text-xs text-muted-foreground mb-1">Email</p>
-                  <p className="font-medium truncate">{profile.email}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                  <p className="text-xs text-muted-foreground mb-1">Téléphone</p>
-                  <p className="font-medium">{profile.telephone || 'Non renseigné'}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30 border border-border/20">
-                  <p className="text-xs text-muted-foreground mb-1">N° de client</p>
-                  <p className="font-medium text-xs font-mono">{client.id.slice(0, 8).toUpperCase()}</p>
-                </div>
+          <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className="mb-4 flex items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <User className="h-[18px] w-[18px]" />
+              </span>
+              <h3 className="text-base font-semibold text-foreground">Titulaire du contrat</h3>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-xl border border-border/70 p-3">
+                <p className="mb-1 text-xs text-muted-foreground">Nom complet</p>
+                <p className="text-sm font-medium text-foreground">{profile.prenom} {profile.nom}</p>
               </div>
-            </CardContent>
-          </Card>
+              <div className="min-w-0 rounded-xl border border-border/70 p-3">
+                <p className="mb-1 text-xs text-muted-foreground">Email</p>
+                <p className="truncate text-sm font-medium text-foreground">{profile.email}</p>
+              </div>
+              <div className="rounded-xl border border-border/70 p-3">
+                <p className="mb-1 text-xs text-muted-foreground">Téléphone</p>
+                <p className="text-sm font-medium text-foreground">{profile.telephone || 'Non renseigné'}</p>
+              </div>
+              <div className="rounded-xl border border-border/70 p-3">
+                <p className="mb-1 text-xs text-muted-foreground">N° de client</p>
+                <p className="font-mono text-xs font-medium text-foreground">{client.id.slice(0, 8).toUpperCase()}</p>
+              </div>
+            </div>
+          </div>
         )}
-      </div>
-    </div>
+      </DashSection>
+    </DashPage>
   );
 }

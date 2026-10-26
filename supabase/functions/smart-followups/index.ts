@@ -1,6 +1,6 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("smart-followups");
-import { renderCorporateEmail, emailButton, escapeEmailHtml } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -74,12 +74,13 @@ serve(async (req) => {
 
           const ctaUrl = `https://immocrm.lovable.app/mandat?email=${encodeURIComponent(lead.email)}`;
 
-          const html = renderCorporateEmail({title:'Votre recherche immobilière', category:'VOTRE RECHERCHE', bodyHtml:`
-              <p>Bonjour ${escapeEmailHtml(lead.prenom || '')} ${escapeEmailHtml(lead.nom || '')},</p>
-              <p>Vous avez manifesté votre intérêt pour nos services de recherche immobilière il y a ${days} jour${days > 1 ? 's' : ''}.</p>
-              <p>${days === 1 ? 'Nos chasseurs immobiliers sont prêts à vous accompagner.' : days === 3 ? 'Chaque jour compte sur le marché immobilier suisse.' : 'Les meilleurs biens partent vite. Ne tardez pas !'}</p>
-              ${emailButton('Lancer ma recherche →',ctaUrl)}
-          `});
+          const leadName = `${lead.prenom || ''} ${lead.nom || ''}`.trim();
+          const html = renderCorporateEmail({title:'Votre recherche immobilière', category:'VOTRE RECHERCHE', bodyHtml:
+              emailParagraph(leadName ? `Bonjour ${escapeEmailHtml(leadName)},` : 'Bonjour,') +
+              emailParagraph(`Vous avez manifesté votre intérêt pour nos services de recherche immobilière il y a ${days} jour${days > 1 ? 's' : ''}.`) +
+              emailParagraph(days === 1 ? 'Nos chasseurs immobiliers sont prêts à vous accompagner.' : days === 3 ? 'Chaque jour compte sur le marché immobilier suisse.' : 'Les meilleurs biens partent vite. Ne tardez pas !') +
+              emailButton('Lancer ma recherche →',ctaUrl),
+          });
 
           try {
             await sendTrackedEmail('https://api.resend.com/emails', {

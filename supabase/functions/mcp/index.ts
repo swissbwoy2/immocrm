@@ -121,7 +121,7 @@ async function auditLog(supabase, entry) {
 var list_pending_postulations_default = defineTool({
   name: "list_pending_postulations",
   title: "Postulations \xE0 faire",
-  description: "Liste les postulations en attente de d\xE9p\xF4t (offres au statut \xAB souhaite_postuler \xBB), avec le client concern\xE9. Les demandes dont la pr\xE9paration est en file, pr\xEAte ou bloqu\xE9e apparaissent en premier, avec job_id, statut, priorit\xE9, r\xE9sum\xE9 et \xE9l\xE9ments manquants.",
+  description: "Liste les postulations en attente de d\xE9p\xF4t (offres au statut \xAB souhaite_postuler \xBB), avec le client concern\xE9. Les demandes dont la pr\xE9paration est en file, pr\xEAte ou bloqu\xE9e apparaissent en premier, avec job_id, statut, priorit\xE9, r\xE9sum\xE9 et \xE9l\xE9ments manquants. Le champ steeve donne l'\xE9tat du registre partag\xE9 : si deja_envoye est vrai ou si un envoi est en cours, ne refais rien pour cette offre.",
   inputSchema: {
     limit: z.number().int().describe("Nombre maximum de postulations \xE0 retourner (d\xE9faut 25, max 100).").optional()
   },
@@ -153,6 +153,7 @@ var list_pending_postulations_default = defineTool({
       const { data: clients } = await supabase.from("clients").select("id, user_id").in("id", clientIds);
       for (const c of clients ?? []) clientById.set(c.id, { user_id: c.user_id });
     }
+    const { data: registre } = await supabase.rpc("steeve_registre_offres", { p_offre_ids: rows.map((o) => o.id) });
     const userIds = [...new Set([...clientById.values()].map((c) => c.user_id).filter(Boolean))];
     const profileById = /* @__PURE__ */ new Map();
     if (userIds.length) {
@@ -184,6 +185,7 @@ var list_pending_postulations_default = defineTool({
           type_bien: o.type_bien,
           lien_annonce: o.lien_annonce,
           statut: o.statut,
+          steeve: registre?.[o.id] ?? null,
           client: {
             client_id: o.client_id,
             prenom: profile?.prenom ?? null,
@@ -461,18 +463,44 @@ var upload_prepared_pdf_default = defineTool4({
   }
 });
 
+// src/lib/mcp/tools/report-postulation-progress.ts
+import { defineTool as defineTool5 } from "npm:@lovable.dev/mcp-js@0.26.1";
+import { z as z5 } from "npm:zod@^3.25.76";
+var report_postulation_progress_default = defineTool5({
+  name: "report_postulation_progress",
+  title: "Signaler l'avancement d'une postulation",
+  description: "Signale l'avancement d'une postulation au registre partag\xE9 avec Steeve. etape = pdf_prepare (PDF de candidature d\xE9pos\xE9), brouillon_pret (brouillon complet d\xE9pos\xE9 dans les Brouillons de relocation@immo-rama.ch : Steeve le contr\xF4le puis l'envoie, tu ne l'envoies pas toi-m\xEAme) ou bloque (pr\xE9paration impossible, note obligatoire avec la cause). Si le dossier est d\xE9j\xE0 envoy\xE9, la r\xE9ponse le dit : ne refais rien.",
+  inputSchema: {
+    postulation_id: z5.string().uuid().describe("postulation_id renvoy\xE9 par list_pending_postulations (identifiant de l'offre)."),
+    etape: z5.enum(["pdf_prepare", "brouillon_pret", "bloque"]),
+    note: z5.string().max(500).describe("Pr\xE9cision courte (objet du brouillon, cause du blocage\u2026).").optional()
+  },
+  annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: false },
+  handler: async ({ postulation_id, etape, note }, ctx) => {
+    const { supabase } = await requireAutomationOperator(ctx);
+    const { data, error } = await supabase.rpc("steeve_routine_signaler", {
+      p_offre_id: postulation_id,
+      p_etape: etape,
+      p_note: note ?? null,
+      p_routine: "routine-chatgpt"
+    });
+    if (error) throw new Error(error.message);
+    return textResult(data);
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "ydljsdscdnqrqnjvqela";
 var mcp_default = defineMcp({
   name: "logisorama-logiciel-crm-immo-rama",
   title: "Logisorama - Logiciel CRM Immo-rama",
   version: "1.0.0",
-  instructions: "Outils du CRM Logisorama pour le flux \xAB Postulations \xBB. Utilisez list_pending_postulations pour lister les postulations \xE0 faire, get_postulation_context pour obtenir le dossier born\xE9 d'une postulation, create_document_download_link pour obtenir un lien sign\xE9 de 60 s vers un document, et upload_prepared_pdf pour d\xE9poser le PDF de candidature pr\xE9par\xE9. Toutes les actions s'ex\xE9cutent avec l'identit\xE9 de l'utilisateur connect\xE9 (r\xF4le automation_operator requis).",
+  instructions: "Outils du CRM Logisorama pour le flux \xAB Postulations \xBB. Utilisez list_pending_postulations pour lister les postulations \xE0 faire, get_postulation_context pour obtenir le dossier born\xE9 d'une postulation, create_document_download_link pour obtenir un lien sign\xE9 de 60 s vers un document, upload_prepared_pdf pour d\xE9poser le PDF de candidature pr\xE9par\xE9, et report_postulation_progress pour signaler l'avancement au registre partag\xE9 avec Steeve (\xAB brouillon_pret \xBB : Steeve contr\xF4le et envoie ; un dossier d\xE9j\xE0 envoy\xE9 n'est jamais refait). Toutes les actions s'ex\xE9cutent avec l'identit\xE9 de l'utilisateur connect\xE9 (r\xF4le automation_operator requis).",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [list_pending_postulations_default, get_postulation_context_default, create_document_download_link_default, upload_prepared_pdf_default]
+  tools: [list_pending_postulations_default, get_postulation_context_default, create_document_download_link_default, upload_prepared_pdf_default, report_postulation_progress_default]
 });
 
 // lovable-mcp-supabase-entry.ts

@@ -21,7 +21,7 @@ export function GoogleSignInButton({ next, className = '' }: { next?: string | n
       type="button"
       onClick={onClick}
       disabled={busy}
-      className={`w-full flex items-center justify-center gap-2 h-11 px-5 rounded-xl border border-border bg-background text-foreground text-sm font-medium hover:bg-muted transition-colors cursor-pointer disabled:opacity-60 ${className}`}
+      className={`imr-lg-glass w-full flex items-center justify-center gap-2 h-12 px-5 rounded-full text-foreground text-[15px] font-medium active:scale-[0.97] cursor-pointer disabled:opacity-60 ${className}`}
     >
       {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : (
         <svg className="h-4 w-4" viewBox="0 0 48 48" aria-hidden="true">

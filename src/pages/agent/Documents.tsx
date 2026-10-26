@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { getStoragePath, formatFileSize as formatFileSizeUtil } from '@/lib/documentUtils';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 export default function AgentDocuments() {
   const { user } = useAuth();
@@ -416,11 +417,11 @@ export default function AgentDocuments() {
           </DialogHeader>
           <div className="h-[80vh]">
             {selectedDocument?.type.includes('pdf') ? (
-              <object
-                data={previewUrl}
-                type="application/pdf"
+              <PdfPreview
+                src={previewUrl}
                 className="w-full h-full rounded-lg"
-              >
+                fallback={(
+
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
                   <Button onClick={() => handleDownload(selectedDocument)}>
@@ -428,7 +429,8 @@ export default function AgentDocuments() {
                     Télécharger le PDF
                   </Button>
                 </div>
-              </object>
+                )}
+              />
             ) : selectedDocument?.type.includes('image') ? (
               <div className="h-full overflow-auto flex justify-center items-start">
                 <img

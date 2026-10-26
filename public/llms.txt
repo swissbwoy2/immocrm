@@ -10,6 +10,17 @@
 - [Accompagnement à l'achat immobilier](https://logisorama.ch/accompagnement-achat): financement, recherche, visites, négociation, notaire et remise des clés.
 - [Annonces immobilières](https://logisorama.ch/annonces/recherche): appartements et maisons à louer ou à vendre en Suisse romande.
 
+## Zones de recherche et agence
+
+- [Recherche d’appartement en Suisse romande](https://logisorama.ch/recherche-appartement): vue d’ensemble des zones couvertes et de la méthode de recherche.
+- [Lausanne et Ouest lausannois](https://logisorama.ch/recherche-appartement/lausanne-ouest-lausannois): Lausanne, Renens, Prilly, Crissier, Ecublens, Bussigny ; marché, quartiers et dossier.
+- [Logement étudiant UNIL et EPFL](https://logisorama.ch/recherche-appartement/logement-etudiant-unil-epfl): studio, colocation et résidences près du campus, calendrier de la rentrée, garant.
+- [Lavaux et Riviera](https://logisorama.ch/recherche-appartement/lavaux-riviera): Pully, Lutry, Vevey, La Tour-de-Peilz, Montreux ; offre rare et forte demande.
+- [La Côte, Morges et Nyon](https://logisorama.ch/recherche-appartement/la-cote-morges-nyon): Morges, Rolle, Gland, Nyon, Coppet ; familles et pendulaires vers Genève.
+- [Genève](https://logisorama.ch/recherche-appartement/geneve): Genève et communes voisines ; marché très tendu, logements subventionnés, dossier.
+- [Fribourg, Neuchâtel, Valais et Jura](https://logisorama.ch/recherche-appartement/fribourg-neuchatel-valais-jura): marchés contrastés hors Arc lémanique.
+- [Agence immobilière à Crissier](https://logisorama.ch/agence-immobiliere-crissier): adresse, téléphone, plan d’accès et services du bureau.
+
 ## Zone d'intervention
 
 Logisorama intervient dans les cantons de Vaud, Genève, Fribourg, Valais, Neuchâtel et Jura. Le service couvre notamment Lausanne, Crissier, Renens, Prilly, Ecublens, Morges, Nyon, Genève, Vevey, Montreux, Fribourg, Neuchâtel et Sion.

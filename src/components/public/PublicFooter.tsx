@@ -1,12 +1,17 @@
+import { lazy, Suspense } from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Mail, Phone, MapPin, Facebook, Instagram, Linkedin } from 'lucide-react';
 import { DeposerAnnonceButton } from '@/components/public/DeposerAnnonceButton';
 import logoLogisorama from '@/assets/logisorama-logo.png';
 
+// Steeve (assistant des visiteurs) sur les pages du portail d'annonces, chargé à la demande.
+const SteevePublicChat = lazy(() => import('@/components/public-site/SteevePublicChat').then((m) => ({ default: m.SteevePublicChat })));
+
 export function PublicFooter() {
   const currentYear = new Date().getFullYear();
 
   return (
+    <>
     <footer className="bg-sidebar text-sidebar-foreground">
       <div className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -135,5 +140,9 @@ export function PublicFooter() {
         </div>
       </div>
     </footer>
+    <Suspense fallback={null}>
+      <SteevePublicChat />
+    </Suspense>
+    </>
   );
 }

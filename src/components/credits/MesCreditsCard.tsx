@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserCredits } from '@/hooks/useUserCredits';
+import { FileText, Send, Ticket } from 'lucide-react';
+import type React from 'react';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 
 const TRIAL_DAYS = 3;
 
@@ -30,13 +33,26 @@ export function MesCreditsCard() {
   const mandatDays = isAucun || isExpire ? 0 : trialLeft !== null || credits.mandat_statut === 'essai'
     ? Math.min(TRIAL_DAYS, trialLeft ?? credits.coins_mandat)
     : credits.coins_mandat;
+  const tiles: { icon: React.ElementType; label: string; value: string }[] = [
+    { icon: Ticket, label: 'Crédits visite', value: `${credits.coins_visite} visite${credits.coins_visite > 1 ? 's' : ''}` },
+    { icon: FileText, label: 'Crédit mandat', value: isAucun ? 'essai non démarré' : isExpire ? 'essai terminé' : `${mandatDays} jour${mandatDays > 1 ? 's' : ''} restant${mandatDays > 1 ? 's' : ''}` },
+    { icon: Send, label: 'Postulations', value: 'illimité' },
+  ];
   return (
-    <div className="rounded-2xl border border-border/60 bg-card/80 p-4">
-      <h3 className="mb-3 text-sm font-semibold text-foreground">Mes crédits</h3>
-      <div className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
-        <div className="rounded-xl bg-muted/50 p-3">🎟️ Crédits visite : <b>{credits.coins_visite} visite{credits.coins_visite > 1 ? 's' : ''}</b></div>
-        <div className="rounded-xl bg-muted/50 p-3">📄 Crédit mandat : <b>{isAucun ? 'essai non démarré' : isExpire ? 'essai terminé' : `${mandatDays} jour${mandatDays > 1 ? 's' : ''} restant${mandatDays > 1 ? 's' : ''}`}</b></div>
-        <div className="rounded-xl bg-muted/50 p-3">📨 Postulations : <b>illimité</b></div>
+    <div className={`${DASH_CARD} p-4 md:p-5`}>
+      <h3 className="mb-3 text-base font-semibold text-foreground">Mes crédits</h3>
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 sm:gap-3">
+        {tiles.map(({ icon: Icon, label, value }) => (
+          <div key={label} className="imr-lg-glass flex items-center gap-3 rounded-2xl p-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Icon className="h-[18px] w-[18px]" />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-xs text-muted-foreground">{label}</span>
+              <span className="block truncate text-sm font-semibold text-foreground">{value}</span>
+            </span>
+          </div>
+        ))}
       </div>
       {isAucun && <p className="mt-3 text-sm text-muted-foreground">Lancez votre essai gratuit de 3 jours pour que nos agents recherchent pour vous.</p>}
       {isExpire && (

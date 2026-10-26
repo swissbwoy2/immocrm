@@ -1,8 +1,9 @@
 import { format, differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
 import { useMemo } from 'react';
 import { fr } from 'date-fns/locale';
+import { formatZurichDay, formatZurichTime, formatZurichTimeRange } from '@/lib/dateZurich';
 import { 
-  Calendar, Clock, User, Users, CheckCircle, XCircle, Trash2, Sparkles,
+  Calendar, Clock, User, Users, CheckCircle, XCircle, Trash2,
   Home, Maximize, Building
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeLabels, eventTypeColors, priorityColors } from './types';
 import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 
 interface PremiumDayEventsProps {
   date: Date | null;
@@ -29,8 +31,8 @@ interface PremiumDayEventsProps {
 
 const statusIcons: Record<string, React.ReactNode> = {
   planifie: <Clock className="h-3 w-3" />,
-  effectue: <CheckCircle className="h-3 w-3 text-green-500" />,
-  annule: <XCircle className="h-3 w-3 text-red-500" />,
+  effectue: <CheckCircle className="h-3 w-3 text-emerald-600" />,
+  annule: <XCircle className="h-3 w-3 text-destructive" />,
 };
 
 export function PremiumDayEvents({ 
@@ -61,31 +63,13 @@ export function PremiumDayEvents({
   }, [events, visites]);
   if (!date) {
     return (
-      <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/30 border border-border/50 overflow-hidden">
-        {/* Floating particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 rounded-full bg-primary/20 motion-safe:animate-float"
-              style={{
-                left: `${20 + i * 15}%`,
-                top: `${30 + (i % 3) * 20}%`,
-                animationDelay: `${i * 0.5}s`,
-                animationDuration: `${3 + i * 0.5}s`,
-              }}
-            />
-          ))}
-        </div>
-        
+      <div className={cn(DASH_CARD, 'h-full overflow-hidden')}>
         <div className="flex items-center justify-center h-full p-6">
           <div className="text-center">
-            <div className="relative inline-block mb-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <Calendar className="w-8 h-8 text-primary/60" />
-              </div>
-            </div>
-            <p className="text-muted-foreground font-medium">
+            <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+              <Calendar className="w-7 h-7 text-primary" />
+            </span>
+            <p className="text-sm text-muted-foreground">
               Sélectionnez un jour pour voir les événements
             </p>
           </div>
@@ -110,88 +94,61 @@ export function PremiumDayEvents({
     const now = new Date();
     
     if (eventDate < now) {
-      return { text: 'Passé', color: 'text-muted-foreground' };
+      return { text: 'Passé', color: 'bg-muted text-muted-foreground' };
     }
     
     if (isToday(eventDate)) {
       const hours = differenceInHours(eventDate, now);
-      if (hours <= 0) return { text: 'Maintenant', color: 'text-green-500' };
-      if (hours <= 3) return { text: `Dans ${hours}h`, color: 'text-orange-500' };
-      return { text: `Dans ${hours}h`, color: 'text-blue-500' };
+      if (hours <= 0) return { text: 'Maintenant', color: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' };
+      if (hours <= 3) return { text: `Dans ${hours}h`, color: 'bg-amber-500/10 text-amber-700 dark:text-amber-400' };
+      return { text: `Dans ${hours}h`, color: 'bg-primary/10 text-primary' };
     }
     
     if (isTomorrow(eventDate)) {
-      return { text: 'Demain', color: 'text-blue-500' };
+      return { text: 'Demain', color: 'bg-primary/10 text-primary' };
     }
     
     const days = differenceInDays(eventDate, now);
-    return { text: `Dans ${days}j`, color: 'text-primary' };
+    return { text: `Dans ${days}j`, color: 'bg-primary/10 text-primary' };
   };
 
   return (
-    <div className="relative h-full rounded-2xl bg-gradient-to-br from-card via-card to-muted/20 border border-border/50 overflow-hidden flex flex-col shadow-xl">
-      {/* Animated gradient border */}
-      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/20 via-transparent to-primary/20 opacity-0 hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-      
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(6)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 rounded-full bg-primary/15 motion-safe:animate-float"
-            style={{
-              left: `${10 + i * 15}%`,
-              top: `${20 + (i % 4) * 20}%`,
-              animationDelay: `${i * 0.4}s`,
-              animationDuration: `${4 + i * 0.3}s`,
-            }}
-          />
-        ))}
-      </div>
-      
-      {/* Premium Header */}
-      <div className="relative z-10 p-5 border-b border-border/50">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                <Calendar className="w-6 h-6 text-primary" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary animate-pulse" />
-            </div>
-            <div>
-              <h3 className="font-bold text-lg capitalize">
+    <div className={cn(DASH_CARD, 'h-full overflow-hidden flex flex-col')}>
+      {/* Header */}
+      <div className="p-4 md:p-5 border-b border-border/70">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Calendar className="w-5 h-5" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold capitalize text-foreground truncate">
                 {format(date, 'EEEE d MMMM', { locale: fr })}
               </h3>
-              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                <Sparkles className="h-3 w-3" />
+              <p className="text-xs text-muted-foreground">
                 {allItems.length} événement{allItems.length > 1 ? 's' : ''}
               </p>
             </div>
           </div>
           
           {allItems.length > 0 && (
-            <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-0 shadow-lg shadow-primary/20">
-              <Sparkles className="w-3 h-3 mr-1" />
+            <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground">
               {allItems.length}
-            </Badge>
+            </span>
           )}
         </div>
       </div>
 
-      <ScrollArea className="flex-1 p-4 relative z-10">
+      <ScrollArea className="flex-1 p-4">
         {allItems.length === 0 ? (
           <div className="text-center py-12">
-            <div className="relative inline-block mb-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                <Calendar className="w-7 h-7 text-muted-foreground/50" />
-              </div>
-            </div>
-            <p className="text-muted-foreground font-medium">Aucun événement ce jour</p>
+            <span className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Calendar className="w-6 h-6 text-muted-foreground" />
+            </span>
+            <p className="text-sm text-muted-foreground">Aucun événement ce jour</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {allItems.map((item, idx) => {
               const isEvent = item.type === 'event';
               const isVisiteGroup = item.type === 'visite-group';
@@ -205,49 +162,43 @@ export function PremiumDayEvents({
                 return (
                   <div
                     key={`visite-group-${firstVisite.id}-${idx}`}
-                    style={{ animationDelay: `${idx * 50}ms` }}
                     className={cn(
-                      'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in',
-                      'transition-all duration-300 hover:shadow-lg hover:scale-[1.01]',
-                      eventTypeColors.visite,
-                      onVisiteGroupClick && 'cursor-pointer hover:border-primary/50'
+                      'group relative rounded-xl border border-border/70 bg-card overflow-hidden transition-colors',
+                      onVisiteGroupClick && 'cursor-pointer hover:border-foreground/30'
                     )}
                     onClick={() => onVisiteGroupClick?.(group)}
                     role={onVisiteGroupClick ? "button" : undefined}
                     tabIndex={onVisiteGroupClick ? 0 : undefined}
                   >
-                    {/* Shine effect */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                    
-                    <div className="relative p-4 space-y-3">
+                    <div className="p-4 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                             {/* Badge de type de visite selon le statut */}
                             {group.some((g: any) => g.est_deleguee || g.source === 'deleguee') ? (
-                              <Badge variant="outline" className="text-xs font-medium bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30 animate-pulse">
-                                🔥 DÉLÉGUÉE
+                              <Badge variant="outline" className="rounded-full text-xs font-semibold bg-orange-500/10 text-orange-700 dark:text-orange-400 border-transparent">
+                                DÉLÉGUÉE
                               </Badge>
                             ) : firstVisite.statut === 'proposee' ? (
-                              <Badge variant="outline" className="text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30">
-                                ⏳ En attente de réponse
+                              <Badge variant="outline" className="rounded-full text-xs font-semibold bg-amber-500/10 text-amber-700 dark:text-amber-400 border-transparent">
+                                En attente de réponse
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30">
-                                ✅ Visite confirmée
+                              <Badge variant="outline" className="rounded-full text-xs font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-400 border-transparent">
+                                Visite confirmée
                               </Badge>
                             )}
                             {group.length > 1 && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="rounded-full text-xs">
                                 <Users className="h-3 w-3 mr-1" />
                                 {group.length} clients
                               </Badge>
                             )}
-                            <Badge variant="outline" className={cn("text-xs", timeRemaining.color)}>
+                            <Badge variant="outline" className={cn("rounded-full border-transparent text-xs font-semibold", timeRemaining.color)}>
                               {timeRemaining.text}
                             </Badge>
                           </div>
-                          <h4 className="font-bold mt-2 text-base group-hover:text-primary transition-colors">
+                          <h4 className="text-base font-semibold mt-2 text-foreground">
                             {firstVisite.adresse}
                           </h4>
                         </div>
@@ -291,17 +242,17 @@ export function PremiumDayEvents({
                       </div>
 
                       {/* Date & Time Card */}
-                      <div className="relative p-3 rounded-lg bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 overflow-hidden">
+                      <div className="p-3 rounded-xl bg-muted/60">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                            <Clock className="w-5 h-5 text-primary" />
-                          </div>
+                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <Clock className="w-[18px] h-[18px]" />
+                          </span>
                           <div>
                             <p className="font-semibold text-sm">
-                              {format(eventDate, 'HH:mm')}
+                              {formatZurichTimeRange(firstVisite.date_visite, firstVisite.date_visite_fin)}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {format(eventDate, "EEEE d MMMM", { locale: fr })}
+                              {formatZurichDay(firstVisite.date_visite, { year: false })}
                             </p>
                           </div>
                         </div>
@@ -310,20 +261,20 @@ export function PremiumDayEvents({
                       {/* Property details */}
                       {firstVisite.offres && (
                         <div className="grid grid-cols-3 gap-2">
-                          <div className="p-2 rounded-lg bg-muted/50 border border-border/50 text-center hover:border-primary/30 transition-colors">
+                          <div className="p-2 rounded-xl border border-border/70 text-center">
                             <Home className="w-3.5 h-3.5 mx-auto text-primary mb-0.5" />
                             <p className="text-xs text-muted-foreground">Pièces</p>
-                            <p className="font-bold text-sm">{firstVisite.offres.pieces || '-'}</p>
+                            <p className="font-semibold text-sm text-foreground">{firstVisite.offres.pieces || '-'}</p>
                           </div>
-                          <div className="p-2 rounded-lg bg-muted/50 border border-border/50 text-center hover:border-primary/30 transition-colors">
+                          <div className="p-2 rounded-xl border border-border/70 text-center">
                             <Maximize className="w-3.5 h-3.5 mx-auto text-primary mb-0.5" />
                             <p className="text-xs text-muted-foreground">Surface</p>
-                            <p className="font-bold text-sm">{firstVisite.offres.surface || '-'} m²</p>
+                            <p className="font-semibold text-sm text-foreground">{firstVisite.offres.surface || '-'} m²</p>
                           </div>
-                          <div className="p-2 rounded-lg bg-muted/50 border border-border/50 text-center hover:border-primary/30 transition-colors">
+                          <div className="p-2 rounded-xl border border-border/70 text-center">
                             <Building className="w-3.5 h-3.5 mx-auto text-primary mb-0.5" />
                             <p className="text-xs text-muted-foreground">Prix</p>
-                            <p className="font-bold text-sm">{firstVisite.offres.prix} CHF</p>
+                            <p className="font-semibold text-sm text-foreground">{firstVisite.offres.prix} CHF</p>
                           </div>
                         </div>
                       )}
@@ -332,14 +283,14 @@ export function PremiumDayEvents({
                       {(() => {
                         const uniqueClients = getUniqueVisitesByClient(group);
                         return (
-                          <div className="pt-3 border-t border-border/50">
+                          <div className="pt-3 border-t border-border/70">
                             <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1 mb-2">
                               <Users className="h-3 w-3" />
                               Clients concernés
                             </p>
                             <div className="space-y-1.5">
                               {uniqueClients.map((visite: any) => (
-                                <div key={visite.client_id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/30">
+                                <div key={visite.client_id} className="flex items-center gap-2 p-2 rounded-xl border border-border/70">
                                   <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                                     <User className="h-3 w-3 text-primary" />
                                   </div>
@@ -354,12 +305,12 @@ export function PremiumDayEvents({
                       })()}
 
                       {/* Live de visite (Phase B) — hôte : admin / agent / coursier */}
-                      <div className="pt-3 border-t border-border/50" onClick={(e) => e.stopPropagation()}>
-                        <VisitLiveButton visiteId={firstVisite.id} className="w-full" />
+                      <div className="pt-3 border-t border-border/70" onClick={(e) => e.stopPropagation()}>
+                        <VisitLiveButton visiteId={firstVisite.id} className="w-full rounded-full" />
                       </div>
 
                       {firstVisite.agent_id && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border/30">
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border/70">
                           <User className="h-3 w-3" />
                           <span className="font-medium">{getAgentName(firstVisite.agent_id)}</span>
                         </div>
@@ -379,29 +330,24 @@ export function PremiumDayEvents({
               return (
                 <div
                   key={`${item.type}-${data.id}-${idx}`}
-                  style={{ animationDelay: `${idx * 50}ms` }}
                   className={cn(
-                    'group relative rounded-xl bg-gradient-to-br from-card to-card/80 border overflow-hidden animate-fade-in',
-                    'transition-all duration-300 hover:shadow-lg hover:scale-[1.01]',
+                    'group relative rounded-xl border overflow-hidden transition-colors',
                     eventTypeColors[item.eventType],
-                    isPhoneRdv && onPhoneApptClick && 'cursor-pointer hover:border-indigo-500/50'
+                    isPhoneRdv && onPhoneApptClick && 'cursor-pointer hover:border-foreground/30'
                   )}
                   onClick={isPhoneRdv && onPhoneApptClick ? () => onPhoneApptClick(phoneApptId!) : undefined}
                   role={isPhoneRdv && onPhoneApptClick ? 'button' : undefined}
                   tabIndex={isPhoneRdv && onPhoneApptClick ? 0 : undefined}
                 >
-                  {/* Shine effect */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  
-                  <div className="relative p-4 space-y-3">
+                  <div className="p-4 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-xs font-medium">
+                          <Badge variant="outline" className="rounded-full text-xs font-medium bg-background/70">
                             {eventTypeLabels[item.eventType]}
                           </Badge>
                           {data.priority && (
-                            <Badge className={cn('text-xs', priorityColors[data.priority])}>
+                            <Badge className={cn('rounded-full text-xs', priorityColors[data.priority])}>
                               {data.priority}
                             </Badge>
                           )}
@@ -411,19 +357,19 @@ export function PremiumDayEvents({
                               {data.status}
                             </span>
                           )}
-                          <Badge variant="outline" className={cn("text-xs", timeRemaining.color)}>
+                          <Badge variant="outline" className={cn("rounded-full border-transparent text-xs font-semibold", timeRemaining.color)}>
                             {timeRemaining.text}
                           </Badge>
                         </div>
-                        <h4 className="font-bold mt-2 text-base group-hover:text-primary transition-colors">
+                        <h4 className="text-base font-semibold mt-2 text-foreground">
                           {data.title}
                         </h4>
-                        {!data.all_day && (
+                        {!data.all_day && formatZurichTime(data.event_date) && (
                           <div className="flex items-center gap-2 mt-2">
-                            <div className="p-1.5 rounded-md bg-primary/10">
+                            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70">
                               <Clock className="h-3.5 w-3.5 text-primary" />
-                            </div>
-                            <span className="text-sm font-medium">{format(eventDate, 'HH:mm')}</span>
+                            </span>
+                            <span className="text-sm font-medium">{formatZurichTime(data.event_date)}</span>
                           </div>
                         )}
                         {data.description && (
@@ -433,13 +379,13 @@ export function PremiumDayEvents({
                         )}
                         <div className="flex flex-wrap gap-3 mt-3 text-xs text-muted-foreground">
                           {data.agent_id && (
-                            <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
+                            <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/70">
                               <User className="h-3 w-3" />
                               {getAgentName(data.agent_id)}
                             </span>
                           )}
                           {data.client_id && (
-                            <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50">
+                            <span className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-background/70">
                               <Users className="h-3 w-3" />
                               {getClientName(data.client_id)}
                             </span>
@@ -487,11 +433,11 @@ export function PremiumDayEvents({
 
                     {/* Status actions */}
                     {onStatusChange && data.status !== 'effectue' && !data.id.startsWith('signature-') && !data.id.startsWith('etat-lieux-') && !isPhoneRdv && (
-                      <div className="flex gap-2 pt-3 border-t border-border/50">
+                      <div className="flex gap-2 pt-3 border-t border-border/70">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs h-8 flex-1 hover:bg-green-500/10 hover:text-green-600 hover:border-green-500/30 transition-all"
+                          className="text-xs h-8 flex-1 rounded-full hover:bg-emerald-500/10 hover:text-emerald-700"
                           onClick={() => onStatusChange(data.id, 'effectue')}
                         >
                           <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
@@ -501,7 +447,7 @@ export function PremiumDayEvents({
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-xs h-8 flex-1 hover:bg-red-500/10 hover:text-red-600 hover:border-red-500/30 transition-all"
+                            className="text-xs h-8 flex-1 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => onStatusChange(data.id, 'annule')}
                           >
                             <XCircle className="h-3.5 w-3.5 mr-1.5" />

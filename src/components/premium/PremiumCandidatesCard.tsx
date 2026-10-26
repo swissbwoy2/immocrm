@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { UserPlus, Pencil, Trash2, Shield, Users, DollarSign, AlertTriangle, FileText, CheckCircle, XCircle, Ban, Sparkles, Mail, Phone, Globe } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, Shield, Users, DollarSign, AlertTriangle, FileText, CheckCircle, XCircle, Ban, Mail, Phone, Globe } from 'lucide-react';
 import { ClientCandidate, CANDIDATE_TYPE_LABELS, CUMULATIVE_TYPES, useClientCandidates } from '@/hooks/useClientCandidates';
 import { AddCandidateDialog } from '@/components/AddCandidateDialog';
 import { hasStableStatus } from '@/hooks/useSolvabilityCheck';
 import { cn } from '@/lib/utils';
 import { CandidateFullDetails } from '@/components/candidates/CandidateFullDetails';
+import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 
 
 interface PremiumCandidatesCardProps {
@@ -95,11 +95,11 @@ export function PremiumCandidatesCard({
 
   if (loading) {
     return (
-      <div className="relative overflow-hidden rounded-2xl border border-border/50 bg-card/80 backdrop-blur-xl p-6">
+      <div className={`${DASH_CARD} p-4 md:p-5`}>
         <div className="animate-pulse space-y-4">
-          <div className="h-6 bg-muted rounded w-1/3"></div>
-          <div className="h-24 bg-muted/50 rounded-xl"></div>
-          <div className="h-24 bg-muted/50 rounded-xl"></div>
+          <div className="h-6 w-1/3 rounded bg-muted"></div>
+          <div className="h-24 rounded-xl bg-muted/50"></div>
+          <div className="h-24 rounded-xl bg-muted/50"></div>
         </div>
       </div>
     );
@@ -107,298 +107,252 @@ export function PremiumCandidatesCard({
 
   return (
     <>
-      <div className="group relative overflow-hidden rounded-2xl border border-border/50 bg-card/80 backdrop-blur-xl transition-all duration-500 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20">
-        {/* Shine effect */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700">
-          <div className="absolute inset-0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/5 to-transparent" />
-        </div>
-
-        {/* Glow effect */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 via-transparent to-primary/10 rounded-2xl opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500" />
-
-        <div className="relative z-10">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 pb-4 border-b border-border/30">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 group-hover:from-primary/30 group-hover:to-primary/10 transition-all duration-300">
-                  <Users className="w-5 h-5 text-primary group-hover:scale-110 transition-transform duration-300" />
-                </div>
-                <div className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-primary/50 animate-pulse" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-lg flex items-center gap-2">
-                  Candidats du dossier
-                  <Sparkles className="w-4 h-4 text-primary/50" />
-                </h3>
-                <p className="text-xs text-muted-foreground">
-                  {candidates.length} candidat{candidates.length > 1 ? 's' : ''} dans le dossier
-                </p>
-              </div>
+      <div className={`${DASH_CARD} p-4 md:p-5`}>
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Users className="h-5 w-5" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-foreground">Candidats du dossier</h3>
+              <p className="text-xs text-muted-foreground">
+                {candidates.length} candidat{candidates.length > 1 ? 's' : ''} dans le dossier
+              </p>
             </div>
-            <Button 
-              size="sm" 
-              onClick={() => { setEditCandidate(null); setAddDialogOpen(true); }}
-              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 hover:scale-105"
-            >
-              <UserPlus className="w-4 h-4 mr-2" />
-              Ajouter
-            </Button>
           </div>
+          <Button 
+            size="sm" 
+            onClick={() => { setEditCandidate(null); setAddDialogOpen(true); }}
+            className="shrink-0 rounded-full"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Ajouter
+          </Button>
+        </div>
           
-          <div className="p-6 pt-4 space-y-4">
-            {candidates.length === 0 ? (
-              <div className="text-center py-10 relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-muted/20 to-transparent rounded-xl" />
-                <div className="relative z-10">
-                  <div className="p-4 rounded-2xl bg-muted/30 w-20 h-20 mx-auto flex items-center justify-center mb-4">
-                    <Users className="w-10 h-10 text-muted-foreground/50" />
-                  </div>
-                  <p className="text-muted-foreground font-medium">Aucun candidat supplémentaire</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Ajoutez un garant, colocataire ou co-débiteur</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {candidates.map((candidate, index) => {
-                  const TypeIcon = getTypeIcon(candidate.type);
-                  const contributes = candidateContributes(candidate);
-                  const garantValid = isGarantValid(candidate);
-                  const isStable = candidateHasStableStatus(candidate);
-                  const isCumulativeType = CUMULATIVE_TYPES.includes(candidate.type);
-                  
-                  const getBgClass = () => {
-                    if (candidate.poursuites) return 'from-destructive/10 to-destructive/5 border-destructive/30';
-                    if (!isStable && (isCumulativeType || candidate.type === 'garant')) return 'from-warning/10 to-warning/5 border-warning/30';
-                    if (garantValid === true) return 'from-success/10 to-success/5 border-success/30';
-                    if (garantValid === false) return 'from-warning/10 to-warning/5 border-warning/30';
-                    return 'from-muted/50 to-muted/20 border-border/50';
-                  };
-                  
-                  return (
-                    <div 
-                      key={candidate.id} 
-                      className={cn(
-                        "group/card relative overflow-hidden p-4 rounded-xl border bg-gradient-to-br transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5",
-                        getBgClass()
-                      )}
-                      style={{ animationDelay: `${index * 100}ms` }}
-                    >
-                      {/* Card shine */}
-                      <div className="absolute inset-0 opacity-0 group-hover/card:opacity-100 transition-opacity duration-500">
-                        <div className="absolute inset-0 translate-x-[-100%] group-hover/card:translate-x-[100%] transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-                      </div>
-
-                      <div className="relative z-10 flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <div className={cn(
-                            "p-2.5 rounded-xl transition-all duration-300 group-hover/card:scale-110",
-                            candidate.type === 'garant' 
-                              ? 'bg-purple-500/20 dark:bg-purple-500/30' 
-                              : 'bg-blue-500/20 dark:bg-blue-500/30'
-                          )}>
-                            <TypeIcon className={cn(
-                              "w-5 h-5",
-                              candidate.type === 'garant' 
-                                ? 'text-purple-600 dark:text-purple-400' 
-                                : 'text-blue-600 dark:text-blue-400'
-                            )} />
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold">{candidate.prenom} {candidate.nom}</p>
-                              <Badge variant="outline" className="text-xs bg-background/50 backdrop-blur-sm">
-                                {CANDIDATE_TYPE_LABELS[candidate.type]}
-                              </Badge>
-                              {candidate.lien_avec_client && (
-                                <Badge variant="secondary" className="text-xs bg-secondary/50 backdrop-blur-sm">
-                                  {candidate.lien_avec_client}
-                                </Badge>
-                              )}
-                              {!isStable && (
-                                <Badge className="text-xs bg-warning/20 text-warning border-warning/40 hover:bg-warning/30">
-                                  Permis non stable
-                                </Badge>
-                              )}
-                            </div>
-                            
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1.5 font-medium">
-                                <DollarSign className="w-3.5 h-3.5 text-primary" />
-                                CHF {(candidate.revenus_mensuels || 0).toLocaleString()}
-                              </span>
-                              {candidate.type_permis && (
-                                <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted/50">
-                                  📄 Permis {candidate.type_permis}
-                                </span>
-                              )}
-                              {candidate.poursuites && (
-                                <span className="flex items-center gap-1 text-destructive font-medium">
-                                  <AlertTriangle className="w-3.5 h-3.5" />
-                                  Poursuites
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Coordonnées */}
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1 min-w-0">
-                                <Mail className="w-3.5 h-3.5 shrink-0" />
-                                {candidate.email ? (
-                                  <a href={`mailto:${candidate.email}`} className="truncate hover:underline">{candidate.email}</a>
-                                ) : (
-                                  <span className="text-warning">E-mail manquant</span>
-                                )}
-                              </span>
-                              <span className="flex items-center gap-1 min-w-0">
-                                <Phone className="w-3.5 h-3.5 shrink-0" />
-                                {candidate.telephone ? (
-                                  <a href={`tel:${candidate.telephone}`} className="truncate hover:underline">{candidate.telephone}</a>
-                                ) : (
-                                  <span className="text-warning">Téléphone manquant</span>
-                                )}
-                              </span>
-                              {candidate.nationalite && (
-                                <span className="flex items-center gap-1">
-                                  <Globe className="w-3.5 h-3.5 shrink-0" />
-                                  {candidate.nationalite}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Info contribution */}
-
-                            <div className="pt-1">
-                              {contributes ? (
-                                <p className="text-xs text-success flex items-center gap-1.5 font-medium">
-                                  <CheckCircle className="w-4 h-4" />
-                                  +CHF {Math.round((candidate.revenus_mensuels || 0) / 3).toLocaleString()} au budget
-                                </p>
-                              ) : candidate.type === 'garant' ? (
-                                garantValid ? (
-                                  <p className="text-xs text-success flex items-center gap-1.5 font-medium">
-                                    <CheckCircle className="w-4 h-4" />
-                                    Garant valide (garantit jusqu'à CHF {Math.round((candidate.revenus_mensuels || 0) / 3).toLocaleString()})
-                                  </p>
-                                ) : (
-                                  <p className="text-xs text-warning flex items-center gap-1.5 font-medium">
-                                    <XCircle className="w-4 h-4" />
-                                    {candidate.poursuites 
-                                      ? 'Garant invalide (poursuites)' 
-                                      : !isStable
-                                        ? 'Garant invalide (permis non stable)'
-                                        : `Revenus insuffisants (min CHF ${(budgetDemande * 3).toLocaleString()} requis)`
-                                    }
-                                  </p>
-                                )
-                              ) : isCumulativeType ? (
-                                <p className="text-xs text-warning flex items-center gap-1.5 font-medium">
-                                  <Ban className="w-4 h-4" />
-                                  {candidate.poursuites 
-                                    ? 'Non comptabilisé (poursuites)' 
-                                    : 'Non comptabilisé (permis non stable)'
-                                  }
-                                </p>
-                              ) : null}
-                            </div>
-
-                            <CandidateFullDetails candidate={candidate} />
+        <div className="space-y-4">
+          {candidates.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/70 px-4 py-8 text-center">
+              <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                <Users className="h-6 w-6" />
+              </span>
+              <p className="mt-3 text-sm font-semibold text-foreground">Aucun candidat supplémentaire</p>
+              <p className="mt-1 text-xs text-muted-foreground">Ajoutez un garant, colocataire ou co-débiteur</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {candidates.map((candidate) => {
+                const TypeIcon = getTypeIcon(candidate.type);
+                const contributes = candidateContributes(candidate);
+                const garantValid = isGarantValid(candidate);
+                const isStable = candidateHasStableStatus(candidate);
+                const isCumulativeType = CUMULATIVE_TYPES.includes(candidate.type);
+                
+                const getBorderClass = () => {
+                  if (candidate.poursuites) return 'border-destructive/30';
+                  if (!isStable && (isCumulativeType || candidate.type === 'garant')) return 'border-amber-500/30';
+                  if (garantValid === true) return 'border-emerald-500/30';
+                  if (garantValid === false) return 'border-amber-500/30';
+                  return 'border-border/70';
+                };
+                
+                return (
+                  <div 
+                    key={candidate.id} 
+                    className={cn('rounded-xl border bg-card p-3 sm:p-4', getBorderClass())}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
+                        <TypeIcon className="h-[18px] w-[18px]" />
+                      </span>
+                      <div className="min-w-0 flex-1 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                            <p className="text-sm font-semibold text-foreground">{candidate.prenom} {candidate.nom}</p>
+                            <DashBadge tone="neutral">
+                              {CANDIDATE_TYPE_LABELS[candidate.type].split(' ').slice(1).join(' ')}
+                            </DashBadge>
+                            {candidate.lien_avec_client && (
+                              <DashBadge tone="muted">{candidate.lien_avec_client}</DashBadge>
+                            )}
+                            {!isStable && (
+                              <DashBadge tone="warning">Permis non stable</DashBadge>
+                            )}
                           </div>
 
-                        </div>
-                        
-                        <div className="flex items-center gap-0.5">
-                          {onDocumentsClick && (
+                          <div className="-mr-1 -mt-1 flex shrink-0 items-center">
+                            {onDocumentsClick && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                className="h-8 w-8 rounded-full"
+                                onClick={() => onDocumentsClick(candidate)}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="icon"
-                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
-                              onClick={() => onDocumentsClick(candidate)}
+                              className="h-8 w-8 rounded-full"
+                              onClick={() => handleEdit(candidate)}
                             >
-                              <FileText className="w-4 h-4" />
+                              <Pencil className="h-4 w-4" />
                             </Button>
-                          )}
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
-                            onClick={() => handleEdit(candidate)}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="h-8 w-8 text-destructive/70 hover:text-destructive hover:bg-destructive/10 transition-colors"
-                            onClick={() => handleDeleteClick(candidate)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 rounded-full text-destructive/70 hover:bg-destructive/10 hover:text-destructive"
+                              onClick={() => handleDeleteClick(candidate)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Récapitulatif budget */}
-            {candidates.length > 0 && (
-              <div className="mt-6 p-5 rounded-xl bg-gradient-to-br from-primary/5 via-primary/[0.02] to-transparent border border-primary/10">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="p-1.5 rounded-lg bg-primary/10">
-                    <DollarSign className="w-4 h-4 text-primary" />
-                  </div>
-                  <p className="font-semibold text-sm">Récapitulatif des revenus</p>
-                </div>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between items-center py-1.5 px-3 rounded-lg bg-muted/30">
-                    <span className="text-muted-foreground">Client principal</span>
-                    <span className="font-medium">CHF {clientRevenus.toLocaleString()}</span>
-                  </div>
-                  {candidates
-                    .filter(c => CUMULATIVE_TYPES.includes(c.type))
-                    .map(c => {
-                      const isContributing = candidateContributes(c);
-                      return (
-                        <div 
-                          key={c.id} 
-                          className={cn(
-                            "flex justify-between items-center py-1.5 px-3 rounded-lg transition-colors",
-                            isContributing ? 'bg-success/10 text-success' : 'bg-muted/20 text-muted-foreground line-through'
+                          
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1.5 font-medium text-foreground">
+                            <DollarSign className="h-3.5 w-3.5 text-primary" />
+                            CHF {(candidate.revenus_mensuels || 0).toLocaleString()}
+                          </span>
+                          {candidate.type_permis && (
+                            <span className="flex items-center gap-1 text-xs">
+                              <FileText className="h-3.5 w-3.5" />
+                              Permis {candidate.type_permis}
+                            </span>
                           )}
-                        >
-                          <span className="flex items-center gap-1">
-                            {isContributing ? <CheckCircle className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                            {CANDIDATE_TYPE_LABELS[c.type].split(' ')[1]}: {c.prenom}
-                            {!isContributing && (
-                              <span className="text-xs opacity-70 ml-1">
-                                ({c.poursuites ? 'poursuites' : 'permis'})
-                              </span>
+                          {candidate.poursuites && (
+                            <span className="flex items-center gap-1 font-medium text-destructive">
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                              Poursuites
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Coordonnées */}
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                          <span className="flex min-w-0 items-center gap-1">
+                            <Mail className="h-3.5 w-3.5 shrink-0" />
+                            {candidate.email ? (
+                              <a href={`mailto:${candidate.email}`} className="truncate hover:underline">{candidate.email}</a>
+                            ) : (
+                              <span className="text-amber-600">E-mail manquant</span>
                             )}
                           </span>
-                          <span className="font-medium">CHF {(c.revenus_mensuels || 0).toLocaleString()}</span>
+                          <span className="flex min-w-0 items-center gap-1">
+                            <Phone className="h-3.5 w-3.5 shrink-0" />
+                            {candidate.telephone ? (
+                              <a href={`tel:${candidate.telephone}`} className="truncate hover:underline">{candidate.telephone}</a>
+                            ) : (
+                              <span className="text-amber-600">Téléphone manquant</span>
+                            )}
+                          </span>
+                          {candidate.nationalite && (
+                            <span className="flex items-center gap-1">
+                              <Globe className="h-3.5 w-3.5 shrink-0" />
+                              {candidate.nationalite}
+                            </span>
+                          )}
                         </div>
-                      );
-                    })
-                  }
-                  <div className="border-t border-border/50 pt-3 mt-3 space-y-2">
-                    <div className="flex justify-between items-center py-1.5 px-3 rounded-lg bg-muted/50 font-medium">
-                      <span>Total revenus (comptabilisés)</span>
-                      <span>CHF {totalRevenus.toLocaleString()}</span>
+
+                        {/* Info contribution */}
+                        <div className="pt-1">
+                          {contributes ? (
+                            <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                              <CheckCircle className="h-4 w-4" />
+                              +CHF {Math.round((candidate.revenus_mensuels || 0) / 3).toLocaleString()} au budget
+                            </p>
+                          ) : candidate.type === 'garant' ? (
+                            garantValid ? (
+                              <p className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
+                                <CheckCircle className="h-4 w-4" />
+                                Garant valide (garantit jusqu'à CHF {Math.round((candidate.revenus_mensuels || 0) / 3).toLocaleString()})
+                              </p>
+                            ) : (
+                              <p className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+                                <XCircle className="h-4 w-4" />
+                                {candidate.poursuites 
+                                  ? 'Garant invalide (poursuites)' 
+                                  : !isStable
+                                    ? 'Garant invalide (permis non stable)'
+                                    : `Revenus insuffisants (min CHF ${(budgetDemande * 3).toLocaleString()} requis)`
+                                }
+                              </p>
+                            )
+                          ) : isCumulativeType ? (
+                            <p className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
+                              <Ban className="h-4 w-4" />
+                              {candidate.poursuites 
+                                ? 'Non comptabilisé (poursuites)' 
+                                : 'Non comptabilisé (permis non stable)'
+                              }
+                            </p>
+                          ) : null}
+                        </div>
+
+                        <CandidateFullDetails candidate={candidate} />
+                      </div>
                     </div>
-                    <div className="flex justify-between items-center py-2 px-3 rounded-lg bg-gradient-to-r from-primary/20 to-primary/10 text-primary font-semibold">
-                      <span className="flex items-center gap-1.5">
-                        <Sparkles className="w-4 h-4" />
-                        Budget max possible
-                      </span>
-                      <span className="text-lg">CHF {budgetPossible.toLocaleString()}</span>
-                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Récapitulatif budget */}
+          {candidates.length > 0 && (
+            <div className="imr-lg-glass rounded-2xl p-3 sm:p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <DollarSign className="h-4 w-4" />
+                </span>
+                <p className="text-sm font-semibold text-foreground">Récapitulatif des revenus</p>
+              </div>
+              <div className="space-y-1.5 text-sm">
+                <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-1.5">
+                  <span className="text-muted-foreground">Client principal</span>
+                  <span className="font-medium text-foreground">CHF {clientRevenus.toLocaleString()}</span>
+                </div>
+                {candidates
+                  .filter(c => CUMULATIVE_TYPES.includes(c.type))
+                  .map(c => {
+                    const isContributing = candidateContributes(c);
+                    return (
+                      <div 
+                        key={c.id} 
+                        className={cn(
+                          'flex items-center justify-between gap-2 rounded-lg px-3 py-1.5',
+                          isContributing ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-muted/30 text-muted-foreground line-through'
+                        )}
+                      >
+                        <span className="flex min-w-0 items-center gap-1">
+                          {isContributing ? <CheckCircle className="h-3 w-3 shrink-0" /> : <XCircle className="h-3 w-3 shrink-0" />}
+                          {CANDIDATE_TYPE_LABELS[c.type].split(' ')[1]}: {c.prenom}
+                          {!isContributing && (
+                            <span className="ml-1 text-xs opacity-70">
+                              ({c.poursuites ? 'poursuites' : 'permis'})
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-medium">CHF {(c.revenus_mensuels || 0).toLocaleString()}</span>
+                      </div>
+                    );
+                  })
+                }
+                <div className="mt-3 space-y-1.5 border-t border-border/70 pt-3">
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/40 px-3 py-1.5 font-medium text-foreground">
+                    <span>Total revenus (comptabilisés)</span>
+                    <span>CHF {totalRevenus.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2 rounded-lg bg-primary/10 px-3 py-2 font-semibold text-primary">
+                    <span>Budget max possible</span>
+                    <span className="text-base">CHF {budgetPossible.toLocaleString()}</span>
                   </div>
                 </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -413,7 +367,7 @@ export function PremiumCandidatesCard({
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="border-border/50 bg-card/95 backdrop-blur-xl">
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Supprimer ce candidat ?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -421,10 +375,10 @@ export function PremiumCandidatesCard({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteConfirm} 
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Supprimer
             </AlertDialogAction>

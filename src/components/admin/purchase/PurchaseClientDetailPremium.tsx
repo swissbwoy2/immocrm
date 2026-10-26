@@ -1,3 +1,4 @@
+import { libelleStatutBancaire } from '@/lib/purchaseFinancing';
 import { ArrowLeft, Mail, Phone, Building2, Briefcase, User, DollarSign, Home, CheckCircle2, Edit, Trash2, MailPlus, Send, MessageSquare, Sparkles, Clock, TrendingUp, Loader2, Receipt, Users, FileText, Key, Shield, Target, Wallet, Banknote, MapPin, Calendar } from 'lucide-react';
 import { AchatSuiviCompteurs } from '@/components/achat/AchatSuiviCompteurs';
 import { Button } from '@/components/ui/button';
@@ -188,7 +189,7 @@ export function PurchaseClientDetailPremium({
                     {financing?.statut_bancaire && (
                       <Badge className="bg-indigo-500/20 text-primary dark:text-primary border-primary/20/30 backdrop-blur-sm text-xs">
                         <Shield className="w-3 h-3 mr-1" />
-                        Banque : {financing.statut_bancaire}
+                        Banque : {libelleStatutBancaire(financing.statut_bancaire)}
                       </Badge>
                     )}
                     {!profile.actif && (
@@ -334,11 +335,11 @@ export function PurchaseClientDetailPremium({
                     <span className="sm:hidden">Suppr.</span>
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+                <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle className="flex items-center gap-2">
-                      <div className="p-2 rounded-xl bg-red-500/20">
-                        <Trash2 className="w-5 h-5 text-red-500" />
+                    <AlertDialogTitle className="flex items-center gap-3 text-lg font-semibold">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+                        <Trash2 className="w-5 h-5" />
                       </div>
                       Confirmer la suppression
                     </AlertDialogTitle>
@@ -347,15 +348,15 @@ export function PurchaseClientDetailPremium({
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction onClick={onDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                    <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+                    <AlertDialogAction onClick={onDeleteConfirm} className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
                       Supprimer définitivement
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
               <Button
-                className="w-full sm:w-auto group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all duration-300"
+                className="w-full sm:w-auto group"
                 onClick={onEditOpen}
               >
                 <Edit className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />

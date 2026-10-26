@@ -285,11 +285,13 @@ export function getClientParcoursType(): string | null {
 export function remapClientPathForParcours(path: string, parcours?: string | null): string {
   const p = parcours ?? currentClientParcoursType;
   if (p !== 'achat' || !path.startsWith('/client')) return path;
+  // Les biens à l'achat, leurs visites déléguées (vidéos) et les suites données vivent dans « Biens proposés ».
   if (path.startsWith('/client/offres-recues')) return '/client/biens-proposes';
-  if (path.startsWith('/client/videos-recues')) return '/client/biens-selectionnes';
+  if (path.startsWith('/client/videos-recues')) return '/client/biens-proposes';
+  if (path.startsWith('/client/biens-selectionnes')) return '/client/biens-proposes';
   if (path.startsWith('/client/visites-deleguees')) return '/client/calendrier';
   if (path.startsWith('/client/visites')) return '/client/calendrier';
-  if (path.startsWith('/client/mes-candidatures')) return '/client/biens-selectionnes';
+  if (path.startsWith('/client/mes-candidatures')) return '/client/biens-proposes';
   if (path.startsWith('/client/mon-contrat')) return '/client/dossier';
   return path;
 }
@@ -365,6 +367,17 @@ export function getCorrectNotificationLink(
   metadata?: NotificationMetadata | null
 ): string {
   const stored = currentLink?.trim() || null;
+
+  // Acheteur : tout ce qui concerne la visite d'un bien (compte-rendu, visite déléguée confirmée/refusée)
+  // s'ouvre sur la fiche du bien dans « Biens proposés », où se trouvent le rapport, les photos et la vidéo.
+  if (
+    role === 'client' &&
+    getClientParcoursType() === 'achat' &&
+    ['compte_rendu_visite', 'visit_confirmed', 'visit_refused'].includes(notificationType) &&
+    metadata?.offre_id
+  ) {
+    return `/client/biens-proposes?offreId=${metadata.offre_id}`;
+  }
 
   // 0) Appels : route universelle /appel (existe pour tous les rôles).
   //    Les anciens liens (/messagerie?call=..., /agent/messagerie?call=...)

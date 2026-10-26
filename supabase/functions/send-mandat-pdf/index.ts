@@ -1,4 +1,5 @@
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailDetails, emailNotice, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatCHF } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "../_shared/tracked-resend.ts";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
@@ -55,12 +56,20 @@ interface MandatData {
   payment_method?: 'twint' | 'qr_invoice';
   demande_id?: string;
   client_id?: string;
+  // Mandat réellement affiché et signé dans le formulaire (texte intégral) + dispositions approuvées
+  contract_title?: string;
+  contract_text?: string;
+  consents?: { key?: string; title: string; question?: string; cta?: string; accepted_at?: string | null }[];
+  signed_at?: string;
 }
 
 // Sanitize text to remove Unicode characters that can't be encoded in WinAnsi
 function sanitizeText(text: string | null | undefined): string {
   if (!text) return '-';
   return String(text)
+    .replace(/[\u2018\u2019\u02BC]/g, "'") // apostrophes typographiques → '
+    .replace(/[\u201C\u201D]/g, '"')       // guillemets anglais → "
+    .replace(/\u2713/g, 'v')                // coche → v
     .replace(/\u202f/g, ' ')  // Narrow no-break space → normal space
     .replace(/\u00a0/g, ' ')  // No-break space → normal space
     .replace(/'/g, "'")       // Right single quotation mark → apostrophe
@@ -72,7 +81,7 @@ function sanitizeText(text: string | null | undefined): string {
     .replace(/[\u2000-\u200B]/g, ' ')  // Various Unicode spaces → normal space
     .replace(/[^\x00-\x7F]/g, (char) => {
       // Keep accented characters that WinAnsi supports
-      const supported = 'àâäçéèêëîïôùûüÿœæÀÂÄÇÉÈÊËÎÏÔÙÛÜŸŒÆ°€£¥©®™±×÷';
+      const supported = 'àâäçéèêëîïôùûüÿœæÀÂÄÇÉÈÊËÎÏÔÙÛÜŸŒÆ°€£¥©®™±×÷«»';
       return supported.includes(char) ? char : '';
     });
 }
@@ -89,6 +98,19 @@ function formatDate(dateString: string): string {
     return sanitizeText(`${day} ${month} ${year}`);
   } catch {
     return sanitizeText(dateString);
+  }
+}
+
+function formatDateTimeCH(iso: string | null | undefined): string {
+  if (!iso) return '-';
+  try {
+    const d = new Date(iso);
+    const s = new Intl.DateTimeFormat('fr-CH', {
+      timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }).format(d);
+    return sanitizeText(s.replace(',', ' a'));
+  } catch {
+    return sanitizeText(iso);
   }
 }
 
@@ -450,7 +472,71 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
 
   const maxTextWidth = pageWidth - 2 * margin;
 
-  if (isPurchase) {
+  // Variante grasse (titres du contrat)
+  const addWrappedBold = (text: string, x: number, maxWidth: number, fontSize: number) => {
+    const words = sanitizeText(text).split(' ');
+    let line = '';
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (helveticaBold.widthOfTextAtSize(test, fontSize) > maxWidth && line) {
+        page.drawText(line, { x, y: yPosition, size: fontSize, font: helveticaBold, color: rgb(0.1, 0.2, 0.4) });
+        yPosition -= lineHeight;
+        line = word;
+        checkNewPage();
+      } else {
+        line = test;
+      }
+    }
+    if (line) {
+      page.drawText(line, { x, y: yPosition, size: fontSize, font: helveticaBold, color: rgb(0.1, 0.2, 0.4) });
+      yPosition -= lineHeight;
+    }
+  };
+  const isContractHeading = (t: string) =>
+    /^Article\s+\d+/i.test(t) || (/^\d+(\.\d+)*\.?\s/.test(t) && t.length < 90) || (t.length < 70 && t === t.toUpperCase() && /[A-Z]/.test(t));
+
+  if (data.contract_text && data.contract_text.trim()) {
+    // Texte intégral du mandat tel qu'affiché et signé dans le formulaire
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    yPosition = pageHeight - margin;
+    addWrappedBold(`TEXTE INTEGRAL DU MANDAT - ${(data.contract_title || (isPurchase ? 'Achat' : 'Location')).toUpperCase()}`, margin, maxTextWidth, 12);
+    yPosition -= 10;
+    for (const raw of data.contract_text.split('\n')) {
+      const t = raw.trim();
+      checkNewPage();
+      if (!t) { yPosition -= 4; continue; }
+      if (isContractHeading(t)) {
+        yPosition -= 4;
+        addWrappedBold(t, margin, maxTextWidth, 10);
+      } else {
+        addWrappedText(t, margin, maxTextWidth, 9);
+      }
+    }
+    yPosition -= 15;
+
+    // Dispositions approuvées une à une par le mandant (horodatées)
+    if (Array.isArray(data.consents) && data.consents.length > 0) {
+      checkNewPage();
+      addWrappedBold('DISPOSITIONS APPROUVEES PAR LE MANDANT', margin, maxTextWidth, 12);
+      yPosition -= 6;
+      addWrappedText(
+        `Le mandant a lu et approuve individuellement les ${data.consents.length} dispositions suivantes avant de signer :`,
+        margin, maxTextWidth, 9
+      );
+      yPosition -= 6;
+      data.consents.forEach((c, i) => {
+        checkNewPage();
+        addWrappedBold(`${i + 1}. ${c.title}`, margin, maxTextWidth, 10);
+        if (c.question) addWrappedText(c.question, margin + 12, maxTextWidth - 12, 9);
+        addWrappedText(
+          `Reponse : ${c.cta || 'Accepte'} - approuve le ${formatDateTimeCH(c.accepted_at || data.signed_at)}`,
+          margin + 12, maxTextWidth - 12, 9
+        );
+        yPosition -= 6;
+      });
+      yPosition -= 10;
+    }
+  } else if (isPurchase) {
     // ACHAT - 5 articles officiels
     addText('DISPOSITIONS DU MANDAT DE RECHERCHE - ACHAT', margin, yPosition, 12, helveticaBold);
     yPosition -= 25;
@@ -474,7 +560,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     addText('2. DUREE', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     yPosition -= lineHeight;
     addWrappedText(
-      "Le present contrat est conclu pour une duree de 6 mois a compter de sa date de signature. En l'absence de resiliation, par lettre recommandee, au moins 30 jours avant son echeance, le present contrat est repute renouvele par reconduction tacite, a chaque fois pour 3 mois supplementaires.",
+      "Le present mandat est conclu pour une periode initiale de 6 mois a compter de son activation. A defaut de denonciation ordinaire notifiee au plus tot 15 jours avant l'echeance et jusqu'au jour de l'echeance inclus (par ecrit ou dans l'application Logisorama.ch), il est reconduit tacitement pour une nouvelle periode de 6 mois, sans nouveau montant d'activation. Chaque partie conserve le droit imperatif de revoquer le mandat en tout temps (art. 404 CO), aux consequences financieres prevues a l'article 3.",
       margin, maxTextWidth, 9
     );
     yPosition -= 10;
@@ -560,7 +646,7 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
     checkNewPage();
     addText('2.1', margin, yPosition, 10, helveticaBold, rgb(0.1, 0.2, 0.4));
     addWrappedText(
-      "La commission est de 1 mois de loyer brut (charges comprises), plus la TVA au taux legal si elle est due, min. CHF 500, et n'est due qu'a la conclusion d'un bail valable resultant de l'activite d'Immo-Rama. Un montant d'activation de CHF 300.- est verse a l'ouverture du dossier et impute sur la commission. Le mandat est conclu pour 90 jours, reconduit tacitement par periodes de 90 jours; la denonciation ordinaire se notifie entre le 75e et le 90e jour (par ecrit ou dans l'application Logisorama.ch). Si Immo-Rama met fin au mandat, ou au terme sans conclusion de bail, les CHF 300.- sont rembourses sous 30 jours; en cas de resiliation anticipee du mandant, ils restent acquis. Chaque partie peut resilier avec effet immediat en tout temps (art. 404 CO).",
+      "La commission est de 1 mois de loyer brut (charges comprises), plus la TVA au taux legal si elle est due, min. CHF 500, et n'est due qu'a la conclusion d'un bail valable resultant de l'activite d'Immo-Rama. Un montant d'activation de CHF 300.- est verse a l'ouverture du dossier et impute sur la commission. Le mandat est conclu pour 90 jours, reconduit tacitement par periodes de 90 jours; la denonciation ordinaire se notifie entre le 80e et le 90e jour (par ecrit ou dans l'application Logisorama.ch). Si Immo-Rama met fin au mandat, ou au terme sans conclusion de bail, les CHF 300.- sont rembourses sous 30 jours; en cas de resiliation anticipee du mandant, ils restent acquis. Chaque partie peut resilier avec effet immediat en tout temps (art. 404 CO).",
       margin + 25, maxTextWidth - 25, 9
     );
     yPosition -= 8;
@@ -684,12 +770,15 @@ async function generateMandatPDF(data: MandatData): Promise<Uint8Array> {
   }
 
   // Signature section
-  checkNewPage();
-  yPosition = Math.min(yPosition, 200);
+  // Bloc signature : toujours entier sur la même page
+  if (yPosition < 260) {
+    page = pdfDoc.addPage([pageWidth, pageHeight]);
+    yPosition = pageHeight - margin;
+  }
 
   addText('SIGNATURE', margin, yPosition, 12, helveticaBold);
   yPosition -= 15;
-  addText(`Fait à Crissier, le ${formatDate(new Date().toISOString())}`, margin, yPosition, 10);
+  addText(`Signe electroniquement le ${formatDateTimeCH(data.signed_at || new Date().toISOString())}`, margin, yPosition, 10);
   yPosition -= 25;
 
   // Add signature image if available
@@ -821,48 +910,44 @@ const handler = async (req: Request): Promise<Response> => {
     const isPurchase = data.type_recherche === 'Acheter';
     const acompte = isPurchase ? 2500 : 300;
 
-    // Format budget without Unicode issues
-    const budgetFormatted = data.budget_max.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+    // E-mail (HTML, UTF-8) : accents conservés, montants au format suisse
+    const e = escapeEmailHtml;
+    const fullName = `${data.prenom ?? ''} ${data.nom ?? ''}`.trim();
+    const budgetLabel = formatCHF(data.budget_max) || '—';
+    const acompteLabel = formatCHF(acompte);
 
     const emailResponse = await resend.emails.send({
       from: `IMMO-RAMA <${fromEmail}>`,
       to: [data.email],
       subject: `Votre mandat de recherche signe - IMMO-RAMA`,
-html: renderCorporateEmail({ title: 'Votre mandat de recherche signé', category: 'VOTRE MANDAT', bodyHtml: `
-              <h2 style="font-size:22px;line-height:28px;color:#193d2c;margin:0 0 18px;">Bonjour ${sanitizeText(data.prenom)},</h2>
-
-              <p style="margin:0 0 18px;">Nous vous confirmons la reception de votre mandat de recherche pour ${isPurchase ? "l'achat d'un bien immobilier" : "la location d'un logement"}.</p>
-
-              <p style="margin:0 0 18px;">Vous trouverez en piece jointe votre mandat signe au format PDF.</p>
-
-              <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
-                <strong>Recapitulatif de votre recherche:</strong>
-                <ul style="margin: 10px 0;">
-                  <li style="margin-bottom:8px;">Type: ${sanitizeText(data.type_recherche)}</li>
-                  <li style="margin-bottom:8px;">Bien recherche: ${sanitizeText(data.type_bien)} - ${sanitizeText(data.pieces_recherche)} pieces</li>
-                  <li style="margin-bottom:8px;">Region: ${sanitizeText(data.region_recherche)}</li>
-                  <li style="margin-bottom:8px;">Budget: ${budgetFormatted} CHF</li>
-                </ul>
-              </div>
-
-              ${(data.payment_method ?? 'qr_invoice') === 'twint' ? `
-              <div class="bank-info" style="background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;margin:20px 0;border-radius:8px;">
-                <strong style="color:#92400e;">Paiement TWINT instantane</strong>
-                <p style="margin:10px 0 5px 0;">Acompte de <strong>${acompte} CHF</strong> a payer par TWINT au :</p>
-                <p style="font-size:20px;font-weight:bold;font-family:monospace;background:white;padding:10px;border-radius:4px;text-align:center;margin:10px 0;">079 483 91 99</p>
-                <p style="margin:5px 0;color:#92400e;"><strong>Mention obligatoire</strong> dans le message TWINT :</p>
-                <p style="background:white;padding:8px;border-radius:4px;text-align:center;font-weight:600;">${sanitizeText(data.prenom)} ${sanitizeText(data.nom)} - Acompte mandat</p>
-              </div>
-              ` : `
-              <div class="bank-info" style="background:#f3f4ed;border-left:4px solid #205a43;padding:16px;margin:20px 0;border-radius:8px;">
-                <strong style="color:#205a43;">Facture QR par email</strong>
-                <p style="margin:10px 0;">Vous recevrez votre facture QR (acompte de <strong>${acompte} CHF</strong>) par email sous quelques minutes. Vous pourrez la regler depuis votre application bancaire (e-banking, mobile banking).</p>
-              </div>
-              `}
-
-              <p style="margin:0 0 18px;">Votre dossier sera active des reception du paiement.</p>
-
-              <p style="margin:0 0 18px;">Cordialement,<br><strong>L'equipe IMMO-RAMA</strong></p>` }),
+html: renderCorporateEmail({
+        title: 'Votre mandat de recherche signé',
+        preview: 'Votre mandat signé est joint à cet e-mail (PDF).',
+        category: 'VOTRE MANDAT',
+        bodyHtml:
+          emailParagraph(data.prenom?.trim() ? `Bonjour ${e(data.prenom.trim())},` : 'Bonjour,') +
+          emailParagraph(`Nous vous confirmons la réception de votre mandat de recherche pour ${isPurchase ? "l'achat d'un bien immobilier" : "la location d'un logement"}.`) +
+          emailParagraph('Vous trouverez en pièce jointe votre mandat signé au format PDF.') +
+          emailDetails([
+            ['Type', data.type_recherche || '—'],
+            ['Bien recherché', [data.type_bien, data.pieces_recherche ? `${data.pieces_recherche} pièces` : ''].filter(Boolean).join(' - ') || '—'],
+            ['Région', data.region_recherche || '—'],
+            ['Budget', budgetLabel],
+          ], 'Récapitulatif de votre recherche') +
+          ((data.payment_method ?? 'qr_invoice') === 'twint'
+            ? emailNotice(
+              `Acompte de <strong>${e(acompteLabel)}</strong> à payer par TWINT au : <strong style="font-size:18px;">079 483 91 99</strong><br><strong>Mention obligatoire</strong> dans le message TWINT : <strong>${e(fullName)} - Acompte mandat</strong>`,
+              'warning',
+              'Paiement TWINT instantané',
+            )
+            : emailNotice(
+              `Vous recevrez votre facture QR (acompte de <strong>${e(acompteLabel)}</strong>) par email sous quelques minutes. Vous pourrez la régler depuis votre application bancaire (e-banking, mobile banking).`,
+              'info',
+              'Facture QR par email',
+            )) +
+          emailParagraph('Votre dossier sera activé dès réception du paiement.') +
+          emailParagraph("Cordialement,<br><strong>L'équipe IMMO-RAMA</strong>"),
+      }),
       attachments: [
         {
           filename: `Mandat_IMMO-RAMA_${sanitizeText(data.nom)}_${sanitizeText(data.prenom)}.pdf`,

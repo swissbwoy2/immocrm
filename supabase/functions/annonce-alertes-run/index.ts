@@ -1,6 +1,6 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("annonce-alertes-run");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailListingCard, emailParagraph, formatCHF } from '../_shared/email-shell.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
@@ -160,34 +160,28 @@ serve(async (req: Request): Promise<Response> => {
       const unsubUrl = `${FUNCTIONS_URL}/annonce-alertes-unsubscribe?token=${alerte.unsubscribe_token}`;
 
       const cards = toSend
-        .map(
-          (a: any) => `
-          <div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;margin-bottom:12px">
-            <p style="margin:0 0 4px;font-size:16px;font-weight:600">${esc(a.titre)}</p>
-            <p style="margin:0;color:#4b5563;font-size:14px">
-              ${esc(a.ville || "")}${a.nombre_pieces ? ` • ${esc(a.nombre_pieces)} pièces` : ""}${
-            a.surface_habitable ? ` • ${esc(a.surface_habitable)} m²` : ""
-          }
-            </p>
-            <p style="margin:6px 0 10px;font-size:18px;font-weight:700;color:#16a34a">
-              ${a.prix ? `CHF ${Number(a.prix).toLocaleString("fr-CH")}` : "Prix sur demande"}
-            </p>
-            <a href="${SITE_URL}/annonces/${esc(a.slug || a.id)}"
-               style="display:inline-block;background:#16a34a;color:#fff;padding:8px 14px;border-radius:8px;text-decoration:none;font-size:14px">
-               Voir l'annonce
-            </a>
-          </div>`,
+        .map((a: any) =>
+          emailListingCard({
+            title: a.titre || "Annonce Logisorama",
+            meta: [
+              a.ville || "",
+              a.nombre_pieces ? `${a.nombre_pieces} pièces` : "",
+              a.surface_habitable ? `${a.surface_habitable} m²` : "",
+            ].filter(Boolean).join(" · "),
+            price: a.prix ? formatCHF(a.prix) : "Prix sur demande",
+            url: `${SITE_URL}/annonces/${encodeURIComponent(a.slug || a.id)}`,
+            ctaLabel: "Voir l'annonce",
+          })
         )
         .join("");
 
-      const html = renderCorporateEmail({ title: `${toSend.length > 1 ? 'Nouvelles annonces' : 'Nouvelle annonce'} correspondant à votre recherche`, category: "VOTRE RECHERCHE", bodyHtml: `
-          <p style="color:#4b5563">Alerte : <strong>${esc(alerte.nom || "Ma recherche")}</strong></p>
-          ${cards}
-          <p style="color:#9ca3af;font-size:12px;margin-top:20px">
-            Vous recevez cet e-mail car vous avez créé une alerte sur Logisorama.
-            <a href="${unsubUrl}" style="color:#9ca3af">Se désinscrire de cette alerte</a>.
-          </p>
-        ` });
+      const html = renderCorporateEmail({
+        title: `${toSend.length > 1 ? 'Nouvelles annonces' : 'Nouvelle annonce'} correspondant à votre recherche`,
+        preview: `Alerte « ${alerte.nom || "Ma recherche"} » : ${toSend.length} nouvelle(s) annonce(s).`,
+        category: "VOTRE RECHERCHE",
+        bodyHtml: emailParagraph(`Alerte : <strong>${esc(alerte.nom || "Ma recherche")}</strong>`) + cards,
+        footerHtml: `Vous recevez cet e-mail car vous avez créé une alerte sur Logisorama.<br><a href="${esc(unsubUrl)}" style="color:#66736a;text-decoration:underline;">Se désinscrire de cette alerte</a>`,
+      });
 
       const ok = await sendEmail(
         optOut.email as string,

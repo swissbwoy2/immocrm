@@ -1,3 +1,4 @@
+import { toDate as toZurichDate } from '@/lib/dateZurich';
 /**
  * Gabarit UNIQUE du message d'offre envoyé au client.
  * Utilisé par les envois manuels (agent/admin) ET par les routines automatiques.
@@ -34,8 +35,9 @@ export function cleanValue(v: unknown): string | null {
 }
 
 export function formatDateVisite(dateStr: string): string {
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
+  // Valeur datetime-local (sans fuseau) = heure suisse, quel que soit le fuseau de l'appareil.
+  const d = toZurichDate(dateStr);
+  if (!d) return dateStr;
   return d.toLocaleString('fr-CH', {
     weekday: 'long',
     year: 'numeric',
@@ -68,7 +70,10 @@ export function buildOffreMessage(
   const nom = cleanValue(client?.nom);
   const salutation = [prenom, nom].filter(Boolean).join(' ');
 
-  lines.push("Nouvelle Offre pour Votre Recherche d'Appartement");
+  // Bien à vendre (prix de vente ≥ 50'000 CHF) : en-tête achat. Les deux en-têtes sont reconnus par la base
+  // comme messages d'offre automatiques (classement messagerie / notifications inchangé).
+  const venteBien = Number(offre.prix) >= 50000;
+  lines.push(venteBien ? "🏠 Nouvelle offre — un bien à vendre pour votre projet d'achat" : "Nouvelle Offre pour Votre Recherche d'Appartement");
   lines.push('');
   lines.push(`Bonjour${salutation ? ` ${salutation}` : ''} 👋,`);
   lines.push('');
@@ -86,7 +91,7 @@ export function buildOffreMessage(
   const typeBien = cleanValue(offre.type_bien);
 
   if (adresse) lines.push(`📍 Localisation : ${adresse}`);
-  if (prix) lines.push(`💰 Prix : ${prix} CHF`);
+  if (prix) lines.push(venteBien ? `💰 Prix de vente : ${prix} CHF` : `💰 Prix : ${prix} CHF`);
   if (surface) lines.push(`📐 Surface : ${surface} m²`);
   if (pieces) lines.push(`🏠 Nombre de pièces : ${pieces}`);
   if (typeBien) lines.push(`🏘️ Type de bien : ${typeBien}`);

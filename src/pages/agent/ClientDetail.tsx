@@ -32,6 +32,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getStoragePath } from '@/lib/documentUtils';
 import { useToast } from '@/hooks/use-toast';
 import { calculateDaysElapsed } from '@/utils/calculations';
+import { mandatElapsedFor, mandatRemainingFor } from '@/utils/mandatDates';
 import { Progress } from '@/components/ui/progress';
 import { ClientTypeBadge } from '@/components/ClientTypeBadge';
 import { ClientNotesManager } from '@/components/ClientNotesManager';
@@ -56,6 +57,7 @@ import {
   ReletterCriteriaCard,
   ReletterDossiersTransmisCard,
 } from '@/components/admin/ReletterDetailSections';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 interface Client {
   id: string;
@@ -541,13 +543,14 @@ export default function ClientDetail() {
     if (!client || !agentId) return;
     
     try {
-      // Vérifier si une conversation existe déjà
+      // Une seule conversation par client : on ouvre la sienne si elle existe
       const { data: existingConv } = await supabase
         .from('conversations')
         .select('id')
         .eq('client_id', client.id)
-        .eq('agent_id', agentId)
         .eq('conversation_type', 'client-agent')
+        .order('created_at', { ascending: true })
+        .limit(1)
         .maybeSingle();
       
       if (existingConv) {
@@ -647,6 +650,7 @@ export default function ClientDetail() {
       'vue': 'Vue',
       'interesse': 'Intéressé',
       'souhaite_postuler': 'Souhaite postuler',
+      'offre_envisagee': "Offre d'achat envisagée",
       'visite_planifiee': 'Visite planifiée',
       'visite_effectuee': 'Visite effectuée',
       'candidature_deposee': 'Candidature déposée',
@@ -713,7 +717,7 @@ export default function ClientDetail() {
                         reloggedCandidatureForCalc?.signature_effectuee_at || 
                         reloggedCandidatureForCalc?.date_etat_lieux || null;
   
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at, mandatEndDate);
+  const daysElapsed = mandatElapsedFor(client as any, mandatEndDate);
   const daysRemaining = 90 - daysElapsed;
   const progressPercentage = (daysElapsed / 90) * 100;
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
@@ -2311,10 +2315,10 @@ export default function ClientDetail() {
                 className="w-full h-auto"
               />
             ) : selectedDocument?.type.includes('pdf') ? (
-              <embed
+              <PdfPreview
                 src={previewUrl}
-                type="application/pdf"
                 className="w-full h-[70vh]"
+                title={selectedDocument?.nom}
               />
             ) : (
               <p className="text-center text-muted-foreground py-8">

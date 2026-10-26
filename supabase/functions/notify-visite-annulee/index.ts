@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { sendTemplateEmail } from "../_shared/transactional-email-templates/send-email.ts";
+import { formatDateTimeFR } from "../_shared/date-fr.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,9 +11,8 @@ const json = (body: unknown, status = 200) =>
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EXCLUDED = ["desiste", "refuse", "accepte", "retenu_bailleur"];
-const fmt = (d?: string | null) => d ? new Intl.DateTimeFormat("fr-CH", {
-  timeZone: "Europe/Zurich", weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
-}).format(new Date(d)) : "";
+// Europe/Zurich, fr-CH ; une date sans heure (jour seul) n'affiche jamais « 00:00 ».
+const fmt = (d?: string | null) => d ? formatDateTimeFR(d, { weekday: true, fallback: "" }) : "";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });

@@ -50,7 +50,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
         />
       </div>
 
-      {/* Dispositions du mandat + 12 consentements */}
+      {/* Mandat complet + dispositions à approuver */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
@@ -92,7 +92,7 @@ export default function MandatFormStep7({ data, onChange }: Props) {
           ) : (
             <div className="rounded-lg border border-dashed border-border bg-muted/40 p-5 text-center">
               <p className="text-xs text-muted-foreground">
-                La signature électronique se débloquera dès que les 12 dispositions auront été acceptées.
+                La signature électronique se débloquera dès que toutes les dispositions du mandat auront été acceptées.
               </p>
             </div>
           )}
@@ -102,9 +102,9 @@ export default function MandatFormStep7({ data, onChange }: Props) {
 
       {/* Alert état incomplet */}
       {!isComplete && (
-        <div className="rounded-xl border border-red-500/30 bg-red-950/15 p-3 flex items-start gap-2">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3 flex items-start gap-2">
           <AlertCircle size={15} className="text-destructive flex-shrink-0 mt-0.5" />
-          <p className="text-xs text-red-300">
+          <p className="text-sm text-red-800">
             {!hasSignature && !hasCGVAccepted && 'Veuillez signer le mandat et accepter les dispositions pour continuer.'}
             {!hasSignature && hasCGVAccepted && 'Veuillez signer le mandat pour continuer.'}
             {hasSignature && !hasCGVAccepted && 'Veuillez accepter les dispositions pour continuer.'}

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { LeadAvatar } from "@/components/whatsapp/LeadAvatar";
 
@@ -10,30 +11,26 @@ interface Props {
 }
 
 /**
- * Round avatar bubble with a gradient ring (Immo-rama palette).
- * Grey ring when the current viewer has seen all of the author's stories.
+ * Bulle de story (style Liquid Glass) : anneau vert de la marque, gris quand toutes
+ * les stories de l'auteur ont été vues. Repli sur les initiales si l'image ne charge pas.
  */
-export function StoryAvatar({ name, avatarUrl, viewed = false, size = 60, active }: Props) {
-  const ringGradient = viewed
-    ? "linear-gradient(135deg, hsl(0 0% 80%), hsl(0 0% 65%))"
-    : "linear-gradient(135deg, hsl(158 55% 38%), hsl(200 70% 45%))";
-
+export function StoryAvatar({ name, avatarUrl, viewed = false, size = 64, active }: Props) {
+  const [broken, setBroken] = useState(false);
   return (
-    <div
-      className={cn("relative rounded-full p-[2.5px]", active && "scale-105")}
-      style={{ background: ringGradient, width: size, height: size }}
+    <span
+      className={cn("imr-story-ring block", active && "scale-105")}
+      data-viewed={viewed}
+      style={{ width: size, height: size }}
     >
-      <div className="bg-background rounded-full p-[2px] w-full h-full">
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={name}
-            className="w-full h-full rounded-full object-cover"
-          />
-        ) : (
-          <LeadAvatar name={name} size={size - 9} className="w-full h-full" />
-        )}
-      </div>
-    </div>
+      <span className="imr-story-inner">
+        <span className="imr-story-media">
+          {avatarUrl && !broken ? (
+            <img src={avatarUrl} alt={name} loading="lazy" onError={() => setBroken(true)} className="h-full w-full object-cover" />
+          ) : (
+            <LeadAvatar name={name} size={size - 9} className="h-full w-full" />
+          )}
+        </span>
+      </span>
+    </span>
   );
 }

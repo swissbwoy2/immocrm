@@ -39,7 +39,7 @@ export function SelectionCarousel({ className }: { className?: string }) {
   const { data: annonces = [], isLoading } = useSelectionAnnonces();
   const scrollBy = (dx: number) => scrollerRef.current?.scrollBy({ left: dx, behavior: 'smooth' });
   const arrow =
-    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-white text-foreground ring-1 ring-inset ring-foreground/20 transition-colors duration-150 hover:ring-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground';
+    'flex h-10 w-10 cursor-pointer items-center justify-center rounded-full imr-lg-glass text-foreground active:scale-[0.94] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground';
 
   if (!isLoading && annonces.length === 0) return null;
 

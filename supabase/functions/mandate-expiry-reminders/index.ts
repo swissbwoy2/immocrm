@@ -1,6 +1,7 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("mandate-expiry-reminders");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailButtons, emailNotice, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatDateFR } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -12,7 +13,7 @@ const corsHeaders = {
 const MANDAT_DURATION_DAYS = 90;
 const REMINDER_WINDOW_DAYS = 30; // À partir de J+60 (= 30 jours restants)
 const REFUND_ELIGIBILITY_DAY = 80;
-const APP_BASE_URL = "https://immocrm.lovable.app";
+const APP_BASE_URL = "https://logisorama.ch";
 
 function daysBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
@@ -31,66 +32,29 @@ function buildEmailHtml(opts: {
 }): string {
   const { prenom, nom, daysRemaining, daysSinceSignature, endDate, renewUrl, cancelUrl, refundUrl, pauseUrl } = opts;
   const refundEligible = daysSinceSignature >= REFUND_ELIGIBILITY_DAY;
-  const endDateStr = endDate.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich',
-    day: "2-digit", month: "long", year: "numeric",
-  });
+  const endDateStr = formatDateFR(endDate);
+  const fullName = `${prenom ?? ""} ${nom ?? ""}`.trim();
 
-  return renderCorporateEmail({ title: `Votre mandat se termine dans ${daysRemaining} jour${daysRemaining > 1 ? 's' : ''}`, category: 'VOTRE MANDAT', bodyHtml: `
-        <p style="font-size:16px;margin:0 0 16px;">Bonjour ${prenom} ${nom},</p>
-        <p style="font-size:15px;line-height:1.6;color:#4b5563;margin:0 0 24px;">
-          Votre mandat de recherche immobilière arrive à échéance le <strong>${endDateStr}</strong>.
-        </p>
-        <div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;border-radius:8px;margin:0 0 28px;">
-          <p style="margin:0;font-size:14px;color:#92400e;">
-            <strong>Sans action de votre part</strong>, votre mandat sera <strong>renouvelé automatiquement</strong> pour 90 jours supplémentaires à l'échéance.
-          </p>
-        </div>
-        <p style="font-size:15px;color:#374151;margin:0 0 16px;font-weight:600;">Que souhaitez-vous faire ?</p>
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px;">
-          <tr>
-            <td style="padding:0 0 10px 0;">
-              <a href="${renewUrl}" style="display:block;background:#205a43;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-                ✓ Renouveler maintenant
-              </a>
-            </td>
-          </tr>
-          ${refundEligible ? `<tr>
-            <td style="padding:0 0 10px 0;">
-              <a href="${refundUrl}" style="display:block;background:#205a43;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-                Annuler + Demander mon remboursement
-              </a>
-            </td>
-          </tr>` : ""}
-          <tr>
-            <td style="padding:0 0 10px 0;">
-              <a href="${cancelUrl}" style="display:block;background:#f3f4f6;color:#374151;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid #d1d5db;">
-                ✗ Annuler ma recherche${!refundEligible ? " (sans remboursement)" : ""}
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:0 0 10px 0;">
-              <a href="${pauseUrl}" style="display:block;background:#f3f4ed;color:#205a43;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;border:1px solid #bfdbfe;">
-                Mettre en pause
-              </a>
-            </td>
-          </tr>
-        </table>
-        ${!refundEligible ? `<div style="background:#f3f4ed;border-left:4px solid #205a43;padding:12px;border-radius:6px;margin:0 0 16px;">
-          <p style="margin:0;font-size:13px;color:#205a43;">
-            Le remboursement deviendra disponible à partir du <strong>${REFUND_ELIGIBILITY_DAY}ème jour</strong> de votre mandat (jour actuel : ${daysSinceSignature}).
-          </p>
-        </div>` : `<div style="background:#f3f4ed;border-left:4px solid #205a43;padding:12px;border-radius:6px;margin:0 0 16px;">
-          <p style="margin:0;font-size:13px;color:#205a43;">
-            ✅ Vous êtes <strong>éligible au remboursement</strong> (sauf si vous avez trouvé par vos propres moyens).
-          </p>
-        </div>`}
-        <p style="font-size:13px;color:#6b7280;line-height:1.5;margin:0 0 8px;">
-          Vous pouvez aussi gérer votre mandat depuis votre espace client.
-        </p>
-        <p style="font-size:13px;color:#6b7280;margin:0;">
-          <a href="${APP_BASE_URL}/client/mon-contrat" style="color:#205a43;">Accéder à mon espace</a>
-        </p>` });
+  return renderCorporateEmail({
+    title: `Votre mandat se termine dans ${daysRemaining} jour${daysRemaining > 1 ? 's' : ''}`,
+    preview: `Votre mandat arrive à échéance le ${endDateStr}. Sans action, il sera renouvelé automatiquement.`,
+    category: 'VOTRE MANDAT',
+    bodyHtml:
+      emailParagraph(fullName ? `Bonjour ${escapeEmailHtml(fullName)},` : "Bonjour,") +
+      emailParagraph(`Votre mandat de recherche immobilière arrive à échéance le <strong>${escapeEmailHtml(endDateStr)}</strong>.`) +
+      emailNotice("<strong>Sans action de votre part</strong>, votre mandat sera <strong>renouvelé automatiquement</strong> pour 90 jours supplémentaires à l'échéance.", "warning") +
+      `<p style="margin:0 0 6px;font-size:16px;line-height:24px;font-weight:600;color:#15261d;">Que souhaitez-vous faire ?</p>` +
+      emailButtons([
+        { label: "✓ Renouveler maintenant", url: renewUrl, variant: "primary" },
+        ...(refundEligible ? [{ label: "Annuler + Demander mon remboursement", url: refundUrl, variant: "secondary" as const }] : []),
+        { label: `✗ Annuler ma recherche${!refundEligible ? " (sans remboursement)" : ""}`, url: cancelUrl, variant: "secondary" },
+        { label: "Mettre en pause", url: pauseUrl, variant: "secondary" },
+      ]) +
+      (!refundEligible
+        ? emailNotice(`Le remboursement deviendra disponible à partir du <strong>${REFUND_ELIGIBILITY_DAY}ème jour</strong> de votre mandat (jour actuel : ${daysSinceSignature}).`, "info")
+        : emailNotice("✅ Vous êtes <strong>éligible au remboursement</strong> (sauf si vous avez trouvé par vos propres moyens).", "info")) +
+      emailParagraph(`Vous pouvez aussi gérer votre mandat depuis votre espace client : <a href="${APP_BASE_URL}/client/mon-contrat" style="color:#205a43;text-decoration:underline;">Accéder à mon espace</a>`, true),
+  });
 }
 
 serve(async (req) => {
@@ -275,43 +239,26 @@ serve(async (req) => {
             const { data: profile } = await supabase
               .from("profiles").select("prenom, nom, email").eq("id", client.user_id).maybeSingle();
             if (profile?.email) {
-              const newEndStr = newOfficialEnd.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
+              const newEndStr = formatDateFR(newOfficialEnd);
               const refundWindowStart = new Date(newSignatureDate);
               refundWindowStart.setDate(refundWindowStart.getDate() + REFUND_ELIGIBILITY_DAY);
               const refundWindowEnd = new Date(newSignatureDate);
               refundWindowEnd.setDate(refundWindowEnd.getDate() + MANDAT_DURATION_DAYS);
-              const refundStartStr = refundWindowStart.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
-              const refundEndStr = refundWindowEnd.toLocaleDateString("fr-CH", { timeZone: 'Europe/Zurich', day: "2-digit", month: "long", year: "numeric" });
-              const autoRenewHtml = renderCorporateEmail({ title: 'Votre mandat a été renouvelé automatiquement pour 90 jours', category: 'VOTRE MANDAT', bodyHtml: `
-                    <p style="font-size:16px;margin:0 0 16px;">Bonjour ${profile.prenom ?? ""} ${profile.nom ?? ""},</p>
-                    <p style="font-size:15px;line-height:1.6;color:#4b5563;margin:0 0 20px;">
-                      Votre mandat de recherche a été <strong>renouvelé automatiquement pour une nouvelle période de 90 jours</strong>, jusqu'au <strong>${newEndStr}</strong>. Nous continuons activement les recherches pour vous.
-                    </p>
-                    <div style="background:#fef2f2;border-left:4px solid #dc2626;padding:16px;border-radius:8px;margin:0 0 20px;">
-                      <p style="margin:0;font-size:14px;color:#991b1b;font-weight:600;">
-                        Aucun remboursement n'est possible pendant cette période.
-                      </p>
-                    </div>
-                    <div style="background:#f3f4ed;border-left:4px solid #205a43;padding:16px;border-radius:8px;margin:0 0 20px;">
-                      <p style="margin:0 0 8px;font-size:14px;color:#205a43;">
-                        <strong>Fenêtre de remboursement</strong>
-                      </p>
-                      <p style="margin:0;font-size:14px;color:#205a43;line-height:1.6;">
-                        Pour bénéficier d'un remboursement, vous devez en faire la demande pendant la <strong>fenêtre de 10 jours</strong>, valable du <strong>80ème au 90ème jour</strong> de votre mandat de recherche — soit entre le <strong>${refundStartStr}</strong> et le <strong>${refundEndStr}</strong>. Un rappel automatique vous sera envoyé au 80ème jour.
-                      </p>
-                    </div>
-                    <div style="background:#f9fafb;border-left:4px solid #6b7280;padding:14px;border-radius:8px;margin:0 0 24px;">
-                      <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.6;">
-                        Sans action de votre part, le mandat se renouvelle automatiquement de 90 jours en 90 jours.
-                      </p>
-                    </div>
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px;">
-                      <tr><td>
-                        <a href="${APP_BASE_URL}/client/mon-contrat" style="display:block;background:#205a43;color:white;text-align:center;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-                          Accéder à mon espace
-                        </a>
-                      </td></tr>
-                    </table>` });
+              const refundStartStr = formatDateFR(refundWindowStart);
+              const refundEndStr = formatDateFR(refundWindowEnd);
+              const renewName = `${profile.prenom ?? ""} ${profile.nom ?? ""}`.trim();
+              const autoRenewHtml = renderCorporateEmail({
+                title: 'Votre mandat a été renouvelé automatiquement pour 90 jours',
+                preview: `Votre mandat est renouvelé jusqu'au ${newEndStr}.`,
+                category: 'VOTRE MANDAT',
+                bodyHtml:
+                  emailParagraph(renewName ? `Bonjour ${escapeEmailHtml(renewName)},` : "Bonjour,") +
+                  emailParagraph(`Votre mandat de recherche a été <strong>renouvelé automatiquement pour une nouvelle période de 90 jours</strong>, jusqu'au <strong>${escapeEmailHtml(newEndStr)}</strong>. Nous continuons activement les recherches pour vous.`) +
+                  emailNotice("<strong>Aucun remboursement n'est possible pendant cette période.</strong>", "danger") +
+                  emailNotice(`Pour bénéficier d'un remboursement, vous devez en faire la demande pendant la <strong>fenêtre de 10 jours</strong>, valable du <strong>80ème au 90ème jour</strong> de votre mandat de recherche — soit entre le <strong>${escapeEmailHtml(refundStartStr)}</strong> et le <strong>${escapeEmailHtml(refundEndStr)}</strong>. Un rappel automatique vous sera envoyé au 80ème jour.`, "info", "Fenêtre de remboursement") +
+                  emailNotice("Sans action de votre part, le mandat se renouvelle automatiquement de 90 jours en 90 jours.", "neutral") +
+                  emailButton("Accéder à mon espace", `${APP_BASE_URL}/client/mon-contrat`),
+              });
               await sendTrackedEmail("https://api.resend.com/emails", {
                 method: "POST",
                 headers: { Authorization: `Bearer ${resendApiKey}`, "Content-Type": "application/json" },
@@ -382,7 +329,7 @@ serve(async (req) => {
             user_id: client.user_id,
             type: "mandate_expiring",
             title: `⏰ Votre mandat se termine dans ${daysRemaining} jour${daysRemaining > 1 ? "s" : ""}`,
-            message: `Sans action, il sera renouvelé automatiquement le ${endDate.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}.`,
+            message: `Sans action, il sera renouvelé automatiquement le ${formatDateFR(endDate)}.`,
             link: "/client/mon-contrat",
             metadata: { client_id: client.id, days_remaining: daysRemaining, token },
           });

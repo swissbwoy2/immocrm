@@ -1,8 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNativeCamera } from "@/hooks/useNativeCamera";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Image, Video, FileText, Mic, X, Loader2 } from "lucide-react";
+import { Image, Video, FileText, Mic, X, Loader2, Paperclip } from "lucide-react";
+import { DossierDocumentPicker } from "@/components/messaging/DossierDocumentPicker";
+import type { ClientDossierContext, FiledDocument } from "@/lib/clientDossier";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useVideoConverter, ConversionResult } from "@/hooks/useVideoConverter";
@@ -27,6 +29,12 @@ interface MessageAttachmentUploaderProps {
   conversationId: string;
   /** Optionnel : rend l'aperçu contrôlé par le parent (vidé automatiquement après envoi). */
   value?: AttachmentData | null;
+  /**
+   * Client : le menu propose les pièces du dossier ; chaque fichier est classé dans le dossier dès l'envoi
+   * puis annoncé dans la conversation par onDocumentFiled. Sans ces deux props, menu habituel.
+   */
+  dossier?: ClientDossierContext | null;
+  onDocumentFiled?: (doc: FiledDocument) => Promise<boolean | void> | boolean | void;
 }
 
 const normalizeAttachmentType = (mimeType: string): 'image' | 'video' | 'document' | 'audio' => {
@@ -36,8 +44,10 @@ const normalizeAttachmentType = (mimeType: string): 'image' | 'video' | 'documen
   return 'document'; // Par défaut pour PDF, DOC, XLSX, etc.
 };
 
-export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, value }: MessageAttachmentUploaderProps) => {
+export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, value, dossier, onDocumentFiled }: MessageAttachmentUploaderProps) => {
   const [uploading, setUploading] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const dossierMode = !!dossier && !!onDocumentFiled;
   const [recording, setRecording] = useState(false);
   const [internalPreview, setInternalPreview] = useState<AttachmentData | null>(null);
   const isControlled = value !== undefined;
@@ -46,11 +56,57 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, v
   const [pendingFile, setPendingFile] = useState<{ file: File; type: 'image' | 'video' | 'document'; result: ConversionResult } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  // Champs dédiés aux pièces du dossier : hors du menu, ils restent montés même si le menu se ferme.
+  const dossierInputRef = useRef<HTMLInputElement>(null);
+  const dossierResolveRef = useRef<((file: File | null) => void) | null>(null);
+  const nativePhotoRef = useRef(false);
+  const [dossierBusy, setDossierBusy] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const { toast } = useToast();
   const { takePhoto, isNative } = useNativeCamera();
   const { convertToMp4, isConverting, conversionProgress, needsConversion, resetProgress } = useVideoConverter();
+
+  const resolveDossierFile = (file: File | null) => {
+    const resolve = dossierResolveRef.current;
+    dossierResolveRef.current = null;
+    resolve?.(file);
+  };
+
+  useEffect(() => {
+    const input = dossierInputRef.current;
+    if (!input) return;
+    const onCancel = () => resolveDossierFile(null);
+    input.addEventListener('cancel', onCancel);
+    return () => input.removeEventListener('cancel', onCancel);
+  });
+
+  const pickDossierFile = async ({ camera, accept }: { camera: boolean; accept: string }): Promise<File | null> => {
+    if (camera && isNative) {
+      if (nativePhotoRef.current) return null;
+      nativePhotoRef.current = true;
+      try {
+        return await takePhoto();
+      } finally {
+        nativePhotoRef.current = false;
+      }
+    }
+    const input = dossierInputRef.current;
+    if (!input) return null;
+    resolveDossierFile(null); // un choix précédent resté sans réponse
+    input.accept = accept;
+    if (camera) input.setAttribute('capture', 'environment');
+    else input.removeAttribute('capture');
+    return new Promise<File | null>((resolve) => {
+      dossierResolveRef.current = resolve;
+      input.click();
+    });
+  };
+
+  const handleMenuOpenChange = (open: boolean) => {
+    if (!open && dossierBusy) return; // envoi en cours : le menu reste ouvert
+    setMenuOpen(open);
+  };
 
   const uploadFile = async (fileToUpload: File) => {
     const fileExt = fileToUpload.name.split('.').pop();
@@ -330,6 +386,18 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, v
         }}
       />
 
+      {dossierMode && (
+        <input
+          ref={dossierInputRef}
+          type="file"
+          className="hidden"
+          onChange={(e) => {
+            resolveDossierFile(e.target.files?.[0] ?? null);
+            e.target.value = '';
+          }}
+        />
+      )}
+
       {uploading ? (
         <Button variant="ghost" size="sm" disabled>
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -338,6 +406,68 @@ export const MessageAttachmentUploader = ({ onAttachmentReady, conversationId, v
         <Button variant="ghost" size="sm" onClick={stopRecording} className="text-red-500">
           <Mic className="h-4 w-4 animate-pulse" />
         </Button>
+      ) : dossierMode ? (
+        <Popover open={menuOpen} onOpenChange={handleMenuOpenChange}>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" title="Ajouter un document" aria-label="Ajouter un document">
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-2" align="start">
+            <DossierDocumentPicker
+              dossier={dossier!}
+              onFiled={onDocumentFiled!}
+              pickFile={pickDossierFile}
+              onBusyChange={setDossierBusy}
+              onDone={() => { setDossierBusy(false); setMenuOpen(false); }}
+            />
+            <div className="border-t border-border/60 mt-2 pt-2 flex flex-col gap-0.5">
+              <p className="text-[10px] font-semibold uppercase text-muted-foreground px-2 pb-1">
+                Photo / vidéo (sans classer)
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start w-full"
+                disabled={dossierBusy}
+                onClick={() => { setMenuOpen(false); void triggerCamera('image'); }}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Prendre une photo
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start w-full"
+                disabled={dossierBusy}
+                onClick={() => { setMenuOpen(false); void triggerCamera('video'); }}
+              >
+                <Video className="h-4 w-4 mr-2" />
+                Filmer une vidéo
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start w-full"
+                disabled={dossierBusy}
+                onClick={() => { setMenuOpen(false); triggerFileInput('image/*,video/*'); }}
+              >
+                <Image className="h-4 w-4 mr-2" />
+                Photo ou vidéo de la galerie
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start w-full"
+                disabled={dossierBusy}
+                onClick={() => { setMenuOpen(false); void startRecording(); }}
+              >
+                <Mic className="h-4 w-4 mr-2" />
+                Message vocal
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
       ) : (
         <Popover>
           <PopoverTrigger asChild>

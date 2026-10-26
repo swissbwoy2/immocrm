@@ -1,3 +1,4 @@
+import { EMAIL_THEME } from "./email-brand.ts";
 // @deno-types="npm:@types/sanitize-html@2.16.0"
 import sanitizeHtml from "npm:sanitize-html@2.17.0";
 
@@ -114,7 +115,8 @@ export function recipientHtml(html: string, token: string): string {
     .replaceAll("{{{RESEND_UNSUBSCRIBE_URL}}}", url)
     .replaceAll("{{unsubscribe_url}}", url);
   if (!hadPlaceholder) {
-    const footer = `<p style="text-align:center;font:12px Arial;color:#6b7280;padding:20px"><a href="${url}" style="color:#6b7280">Se désinscrire des newsletters Logisorama</a></p>`;
+    // Pied commun (même typo / couleurs que email-brand.ts)
+    const footer = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" style="padding:20px 16px 28px;font-family:${EMAIL_THEME.font};font-size:12px;line-height:19px;color:${EMAIL_THEME.faint};"><strong style="color:${EMAIL_THEME.muted};">Immo-Rama.ch</strong> · Crissier (VD) · <a href="https://logisorama.ch" style="color:${EMAIL_THEME.muted};text-decoration:underline;">logisorama.ch</a><br><a href="${url}" style="color:${EMAIL_THEME.muted};text-decoration:underline;">Se désinscrire des newsletters Logisorama</a></td></tr></table>`;
     result = /<\/body>/i.test(result)
       ? result.replace(/<\/body>/i, footer + "</body>")
       : result + footer;

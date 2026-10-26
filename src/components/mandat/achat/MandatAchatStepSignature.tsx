@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { MandatFormData } from '../types';
 import SignaturePad from '../SignaturePad';
-import { LandingCheckbox } from '@/components/forms-premium/LandingCheckbox';
+import MandatLegalConsents from '../MandatLegalConsents';
+import { LEGAL_CHECKBOXES_ACHAT } from './achatMandat';
 import { LandingInput } from '@/components/forms-premium/LandingInput';
 import {
   FileCheck, PenLine, CheckCircle2, AlertCircle,
@@ -111,7 +112,8 @@ function horizonLabel(mois: number): string {
 
 export default function MandatAchatStepSignature({ data, onChange }: Props) {
   const hasSignature = !!data.signature_data;
-  const hasCGVAccepted = data.cgv_acceptees;
+  // Toutes les dispositions du mandat d'achat approuvées (indépendant d'un ancien brouillon).
+  const hasCGVAccepted = LEGAL_CHECKBOXES_ACHAT.every((cb) => (data as any)[cb.key] === true);
   const isComplete = hasSignature && hasCGVAccepted;
   const [signatureTimestamp] = useState(() => new Date().toLocaleString('fr-CH'));
 
@@ -183,9 +185,34 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
             <span className="text-sm" style={{ color: C.inkSoft }}>Solde à la conclusion de l'acte (commission − activation)</span>
             <strong className="text-base" style={{ color: C.ink }}>1 % du prix − activation CHF 2&apos;500.–</strong>
           </div>
-          <div className="flex justify-between items-center py-2">
+          <div className="flex justify-between items-center gap-3 py-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
             <span className="text-sm" style={{ color: C.inkSoft }}>Durée du mandat</span>
-            <strong className="text-base" style={{ color: C.ink }}>6 mois, reconduction tacite 6 mois</strong>
+            <strong className="text-base text-right" style={{ color: C.ink }}>6 mois, reconduction tacite de 6 mois</strong>
+          </div>
+          <div className="flex justify-between items-center gap-3 py-2" style={{ borderBottom: `1px solid ${C.borderSoft}` }}>
+            <span className="text-sm" style={{ color: C.inkSoft }}>Délai de dénonciation (sans reconduction)</span>
+            <strong className="text-base text-right" style={{ color: C.ink }}>Dans les 15 derniers jours de la période</strong>
+          </div>
+          <div className="py-2 space-y-1.5">
+            <span className="text-sm font-semibold" style={{ color: C.forest }}>Remboursement de l'activation de CHF 2&apos;500.–</span>
+            <ul className="space-y-1">
+              <li className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: C.ink }}>
+                <CheckCircle2 size={14} className="mt-1 flex-shrink-0" style={{ color: C.forest }} />
+                <span>Remboursée intégralement sous 30 jours si Immo-Rama met fin au mandat avant l'échéance.</span>
+              </li>
+              <li className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: C.ink }}>
+                <CheckCircle2 size={14} className="mt-1 flex-shrink-0" style={{ color: C.forest }} />
+                <span>Remboursée sous 30 jours après l'échéance si vous dénoncez le mandat dans les 15 derniers jours et qu'aucune acquisition n'a eu lieu.</span>
+              </li>
+              <li className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: C.ink }}>
+                <AlertCircle size={14} className="mt-1 flex-shrink-0" style={{ color: C.gold }} />
+                <span>Acquise à Immo-Rama si vous résiliez vous-même le mandat avant cette fenêtre (rémunération des démarches déjà engagées, art. 404 CO).</span>
+              </li>
+              <li className="flex items-start gap-2 text-sm leading-relaxed" style={{ color: C.ink }}>
+                <CheckCircle2 size={14} className="mt-1 flex-shrink-0" style={{ color: C.forest }} />
+                <span>Imputée sur la commission en cas d'achat ; si la commission est inférieure, l'excédent vous est remboursé sous 30 jours.</span>
+              </li>
+            </ul>
           </div>
         </div>
       </Section>
@@ -226,6 +253,14 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
         </ul>
       </Section>
 
+      {/* 7. Mandat complet + dispositions à approuver une à une */}
+      <Section title="7. Mandat complet et dispositions à approuver" icon={<FileCheck size={15} />}>
+        <p className="text-sm leading-relaxed" style={{ color: C.inkSoft }}>
+          Lisez le mandat complet puis approuvez chaque disposition. La signature se débloque lorsque toutes les dispositions sont acceptées.
+        </p>
+        <MandatLegalConsents data={data} onChange={onChange} />
+      </Section>
+
       {/* Code promo */}
       <div className="rounded-xl p-4" style={{ background: C.cardBg, border: `1px solid ${C.border}` }}>
         <div className="flex items-center gap-2 mb-2">
@@ -253,7 +288,7 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
           <div className="flex items-center gap-2">
             <PenLine size={16} style={{ color: hasSignature ? C.forest : C.gold }} />
             <h3 className="text-base font-semibold" style={{ color: C.forest }}>
-              7. Signature électronique <span style={{ color: '#C0392B' }}>*</span>
+              8. Signature électronique <span style={{ color: '#C0392B' }}>*</span>
             </h3>
           </div>
           {hasSignature && (
@@ -275,31 +310,29 @@ export default function MandatAchatStepSignature({ data, onChange }: Props) {
         </div>
 
         <p className="text-sm mb-2 leading-relaxed" style={{ color: C.inkSoft }}>
-          En signant, je confirme avoir lu et accepté le présent mandat de recherche immobilière (achat), ses honoraires (commission de 1 % du prix de vente, min. CHF 500, + TVA si due), son périmètre de mission, ses autorisations et ses limites de responsabilité.
+          En signant, je confirme avoir lu et accepté le présent mandat de recherche immobilière (achat), ses honoraires (commission de 1 % du prix de vente, min. CHF 500, + TVA si due), le montant d'activation de CHF 2'500 imputé sur la commission et ses règles de remboursement, sa durée de 6 mois reconductible, son périmètre de mission, ses autorisations et ses limites de responsabilité.
         </p>
-        <SignaturePad value={data.signature_data} onChange={(value) => onChange({ signature_data: value })} />
+        {hasCGVAccepted ? (
+          <SignaturePad value={data.signature_data} onChange={(value) => onChange({ signature_data: value })} />
+        ) : (
+          <div className="rounded-lg p-5 text-center" style={{ background: C.cardAlt, border: `1px dashed ${C.border}` }}>
+            <p className="text-sm" style={{ color: C.inkSoft }}>
+              La signature électronique se débloquera dès que toutes les dispositions du mandat auront été acceptées (section 7).
+            </p>
+          </div>
+        )}
         <p className="text-[11px] mt-2" style={{ color: C.inkSoft }}>
           L'adresse IP et l'horodatage exact sont enregistrés côté serveur lors de la soumission.
         </p>
-      </div>
-
-      {/* Acceptation */}
-      <div className="rounded-xl p-4" style={{ background: C.cardAlt, border: `1px solid ${C.border}` }}>
-        <LandingCheckbox
-          checked={data.cgv_acceptees}
-          onCheckedChange={(checked) => onChange({ cgv_acceptees: checked })}
-          required
-          label="Je déclare avoir lu et accepté l'intégralité du présent mandat de recherche immobilière (achat) : la commission de 1 % du prix de vente (min. CHF 500, + TVA si due), le montant d'activation de CHF 2’500 imputé sur la commission, le périmètre de mission, les autorisations de transmission de données et les limites de responsabilité. Je comprends que le mandat est conclu pour une période initiale de 6 mois reconductible tacitement par périodes de 6 mois, et que chaque partie peut y mettre fin en tout temps conformément à l'art. 404 CO, aux conséquences financières prévues."
-        />
       </div>
 
       {!isComplete && (
         <div className="rounded-xl p-3 flex items-start gap-2" style={{ background: '#FDECEA', border: '1px solid #E5A29A' }}>
           <AlertCircle size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#A93226' }} />
           <p className="text-sm" style={{ color: '#7B241C' }}>
-            {!hasSignature && !hasCGVAccepted && 'Veuillez signer le mandat et accepter les conditions pour continuer.'}
+            {!hasSignature && !hasCGVAccepted && 'Veuillez accepter toutes les dispositions du mandat (section 7), puis signer pour continuer.'}
             {!hasSignature && hasCGVAccepted && 'Veuillez signer le mandat pour continuer.'}
-            {hasSignature && !hasCGVAccepted && 'Veuillez accepter les conditions du mandat pour continuer.'}
+            {hasSignature && !hasCGVAccepted && 'Veuillez accepter toutes les dispositions du mandat (section 7) pour continuer.'}
           </p>
         </div>
       )}

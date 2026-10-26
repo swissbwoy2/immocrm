@@ -1,4 +1,4 @@
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "../_shared/tracked-resend.ts";
 
@@ -108,34 +108,20 @@ Deno.serve(async (req) => {
     }
 
     const resend = new Resend(RESEND_KEY, "staff-send-mandate-for-signature");
-    const html = renderCorporateEmail({ title: 'Votre mandat de recherche est prêt à signer', category: "VOTRE MANDAT", bodyHtml: `<h2 style="font-size:20px;color:#205a43;margin:0 0 16px;">Bonjour ${prenom} ${nom},</h2>
-          <p style="font-size:15px;line-height:1.6;color:#333;margin:0 0 16px;">
-            Votre agent a pré-rempli votre <strong>mandat de recherche immobilière</strong>.
-            Il ne vous reste plus qu'à le vérifier, accepter les clauses et le signer en ligne.
-          </p>
-          <p style="font-size:15px;line-height:1.6;color:#333;margin:0 0 24px;">
-            La signature prend moins de 2 minutes.
-          </p>
-          <div style="text-align:center;margin:32px 0;">
-            <a href="${signLink}"
-               style="display:inline-block;background:#205a43;color:#ffffff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-              Vérifier et signer mon mandat
-            </a>
-          </div>
-          <p style="font-size:13px;color:#666;line-height:1.6;margin:24px 0 0;">
-            Ou copiez ce lien dans votre navigateur :<br>
-            <span style="word-break:break-all;color:#205a43;">${signLink}</span>
-          </p>
-          <hr style="border:none;border-top:1px solid #eee;margin:32px 0;">
-          <p style="font-size:12px;color:#999;line-height:1.6;margin:0;">
-            Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.
-          </p>
-          <p style="font-size:12px;color:#999;line-height:1.6;margin:16px 0 0;">
-            <strong>Christ Ramazani</strong><br>
-            Directeur d'agence — Logisorama<br>
-            Chemin de l'Esparcette 4, 1023 Crissier
-          </p>
-        ` });
+    const fullName = `${prenom} ${nom}`.trim();
+    const html = renderCorporateEmail({
+      title: 'Votre mandat de recherche est prêt à signer',
+      preview: "Votre agent a pré-rempli votre mandat : vérifiez-le et signez-le en ligne en moins de 2 minutes.",
+      category: "VOTRE MANDAT",
+      bodyHtml:
+        emailParagraph(fullName ? `Bonjour ${escapeEmailHtml(fullName)},` : "Bonjour,") +
+        emailParagraph("Votre agent a pré-rempli votre <strong>mandat de recherche immobilière</strong>. Il ne vous reste plus qu'à le vérifier, accepter les clauses et le signer en ligne.") +
+        emailParagraph("La signature prend moins de 2 minutes.") +
+        emailButton("Vérifier et signer mon mandat", signLink) +
+        emailParagraph(`Ou copiez ce lien dans votre navigateur :<br><a href="${escapeEmailHtml(signLink)}" style="color:#205a43;word-break:break-all;">${escapeEmailHtml(signLink)}</a>`, true) +
+        emailParagraph("Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet email.", true),
+      signatureHtml: `<strong style="color:#15261d;">Christ Ramazani</strong><br>Directeur d'agence — Logisorama<br>Chemin de l'Esparcette 4, 1023 Crissier`,
+    });
 
     const { error: emailErr } = await resend.emails.send({
       from: FROM,

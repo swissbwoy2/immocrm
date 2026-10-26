@@ -1,10 +1,9 @@
-import { motion } from "framer-motion";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, Megaphone, MapPin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { fr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { DASH_CARD } from "@/components/client/dashboard/DashPrimitives";
 import { metaInitials, metaFullName, getSourceBadge, type MetaLead } from "./types";
 
 interface Props {
@@ -18,17 +17,17 @@ export function MetaLeadCard({ lead, onClick, compact }: Props) {
   const dateRef = lead.lead_created_time_meta || lead.created_at;
 
   return (
-    <motion.div layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-      <Card
+    <div>
+      <div
         onClick={onClick}
         className={cn(
-          "group cursor-pointer p-3 hover:shadow-md hover:border-primary/40 transition-all",
-          "active:scale-[0.99] bg-card/80 backdrop-blur-sm"
+          DASH_CARD,
+          "group cursor-pointer p-3 transition-colors hover:bg-muted/50"
         )}
       >
         <div className="flex items-start gap-3">
           <div className={cn(
-            "flex-shrink-0 rounded-full bg-gradient-to-br from-[#1877F2] to-[#1877F2]/60 text-white font-semibold flex items-center justify-center",
+            "flex-shrink-0 rounded-full bg-primary/10 text-primary font-semibold flex items-center justify-center",
             compact ? "h-8 w-8 text-xs" : "h-10 w-10 text-sm"
           )}>
             {metaInitials(lead)}
@@ -51,11 +50,11 @@ export function MetaLeadCard({ lead, onClick, compact }: Props) {
             </div>
 
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5", src.className)}>
+              <Badge variant="outline" className={cn("text-[10px] py-0 px-1.5 rounded-full", src.className)}>
                 {src.label}
               </Badge>
               {lead.campaign_name && (
-                <Badge variant="outline" className="text-[10px] py-0 px-1.5 gap-1 max-w-[140px]">
+                <Badge variant="outline" className="text-[10px] py-0 px-1.5 gap-1 max-w-[140px] rounded-full">
                   <Megaphone className="h-3 w-3 flex-shrink-0" />
                   <span className="truncate">{lead.campaign_name}</span>
                 </Badge>
@@ -66,7 +65,7 @@ export function MetaLeadCard({ lead, onClick, compact }: Props) {
             </div>
           </div>
         </div>
-      </Card>
-    </motion.div>
+      </div>
+    </div>
   );
 }

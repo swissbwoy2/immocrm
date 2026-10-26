@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotifications } from '@/hooks/useNotifications';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 interface Props {
   profile: { prenom?: string; nom?: string; parcours_type?: string } | null;
@@ -67,6 +68,7 @@ export default function RenovationClientDashboard({ profile }: Props) {
             ) : undefined
           }
         />
+        <MaJourneeBanner role="client" />
 
         {/* Projects card */}
         <motion.div

@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DETAIL_DIALOG, DetailHeader, DetailBody, KeyFacts, DetailSection, DetailText, DetailActions } from '@/components/details/DetailPrimitives';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { StatusBadge } from './statusBadges';
 import { toast } from 'sonner';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Props {
   offer: any;
@@ -43,48 +43,44 @@ export function OfferPreviewDialog({ offer, open, onOpenChange }: Props) {
     setIsEditing(true);
   };
 
+  const nbBiens = Array.isArray(offer.property_result_ids) ? offer.property_result_ids.length : 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Aperçu de l'offre</DialogTitle>
-        </DialogHeader>
+      <DialogContent className={DETAIL_DIALOG}>
+        <DetailHeader
+          titleAs={DialogTitle}
+          descriptionAs={DialogDescription}
+          eyebrow="Aperçu de l'offre"
+          title={offer.message_subject || 'Message au client'}
+          subtitle={offer.channel ? <span className="capitalize">Canal : {offer.channel}</span> : undefined}
+          badge={<StatusBadge type="offer" value={offer.status} />}
+        />
 
-        <ScrollArea className="max-h-[60vh]">
-          <div className="space-y-4 py-2">
-            <div className="flex items-center gap-2">
-              <StatusBadge type="offer" value={offer.status} />
-              {offer.channel && <span className="text-xs text-muted-foreground capitalize">{offer.channel}</span>}
-            </div>
+        <DetailBody>
+          {offer.property_result_ids && (
+            <KeyFacts items={[{ label: 'Biens liés', value: `${nbBiens} bien${nbBiens > 1 ? 's' : ''}` }]} />
+          )}
 
-            {offer.message_subject && (
-              <div>
-                <Label className="text-xs text-muted-foreground">Sujet</Label>
-                <p className="text-sm font-medium">{offer.message_subject}</p>
+          <DetailSection title="Message">
+            {isEditing ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="offer-preview-body" className="sr-only">Message</Label>
+                <Textarea
+                  id="offer-preview-body"
+                  value={editBody}
+                  onChange={(e) => setEditBody(e.target.value)}
+                  rows={12}
+                  className="text-[15px]"
+                />
               </div>
+            ) : (
+              <DetailText>{offer.message_body || 'Aucun contenu'}</DetailText>
             )}
+          </DetailSection>
+        </DetailBody>
 
-            <div>
-              <Label className="text-xs text-muted-foreground">Message</Label>
-              {isEditing ? (
-                <Textarea value={editBody} onChange={(e) => setEditBody(e.target.value)} rows={10} />
-              ) : (
-                <pre className="text-sm whitespace-pre-wrap bg-muted rounded-lg p-3 mt-1">
-                  {offer.message_body || 'Aucun contenu'}
-                </pre>
-              )}
-            </div>
-
-            {offer.property_result_ids && (
-              <div>
-                <Label className="text-xs text-muted-foreground">Biens liés</Label>
-                <p className="text-xs text-muted-foreground">{Array.isArray(offer.property_result_ids) ? offer.property_result_ids.length : 0} bien(s)</p>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-
-        <DialogFooter>
+        <DetailActions>
           {isEditing ? (
             <>
               <Button variant="outline" onClick={() => setIsEditing(false)}>Annuler</Button>
@@ -92,13 +88,13 @@ export function OfferPreviewDialog({ offer, open, onOpenChange }: Props) {
             </>
           ) : (
             <>
-              {['brouillon', 'pret'].includes(offer.status) && (
-                <Button variant="outline" onClick={handleEdit}>Modifier</Button>
-              )}
               <Button variant="outline" onClick={() => onOpenChange(false)}>Fermer</Button>
+              {['brouillon', 'pret'].includes(offer.status) && (
+                <Button onClick={handleEdit}>Modifier</Button>
+              )}
             </>
           )}
-        </DialogFooter>
+        </DetailActions>
       </DialogContent>
     </Dialog>
   );

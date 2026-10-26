@@ -9,7 +9,10 @@ const config: CapacitorConfig = {
     cleartext: false,
   },
   ios: {
-    contentInset: 'automatic',
+    // 'never' : la vue web occupe tout l'écran (sous la barre d'état et l'indicateur d'accueil).
+    // Les marges de sécurité sont gérées en CSS (env(safe-area-inset-*), viewport-fit=cover).
+    // 'automatic' rétrécissait l'app : bandes vides en haut et en bas.
+    contentInset: 'never',
     preferredContentMode: 'mobile',
     backgroundColor: '#ffffff'
   },

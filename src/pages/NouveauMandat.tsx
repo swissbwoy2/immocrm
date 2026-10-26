@@ -13,7 +13,8 @@ import MandatFormStep4 from '@/components/mandat/MandatFormStep4';
 import MandatFormStep5 from '@/components/mandat/MandatFormStep5';
 import MandatFormStep6 from '@/components/mandat/MandatFormStep6';
 import MandatFormStep7 from '@/components/mandat/MandatFormStep7';
-import { LEGAL_CHECKBOXES } from '@/components/mandat-v3/types';
+import { legalCheckboxesFor } from '@/components/mandat/achat/achatMandat';
+import { acceptedConsentsFor, contractTextFor, contractTitleFor } from '@/components/mandat/mandatContrats';
 import MandatAchatStepSignature from '@/components/mandat/achat/MandatAchatStepSignature';
 import MandatAchatStepProject from '@/components/mandat/achat/MandatAchatStepProject';
 import MandatAchatStepFinancing from '@/components/mandat/achat/MandatAchatStepFinancing';
@@ -52,7 +53,7 @@ const PURCHASE_STEPS: StepDef[] = [
   { key: 'financement', title: 'Financement', component: MandatAchatStepFinancing, icon: '💰' },
   { key: 'situation_perso', title: 'Situation personnelle', component: MandatAchatStepPersonal, icon: '👤' },
   { key: 'co_acquereurs', title: 'Co-acquéreurs', component: MandatFormStep5, icon: '👥' },
-  { key: 'docs', title: 'Documents', component: MandatFormStep6, icon: '📄' },
+  // Pas d'étape Documents à l'achat : les justificatifs sont demandés ultérieurement, dans l'espace client.
   { key: 'signature', title: 'Signature', component: MandatAchatStepSignature, icon: '✍️' },
 ];
 
@@ -126,7 +127,9 @@ export default function NouveauMandat() {
 
   const steps = formData.journey === 'purchase' ? PURCHASE_STEPS : RENTAL_STEPS;
   const currentStepDef = steps[currentStep] ?? steps[0];
-  const allLegalAccepted = LEGAL_CHECKBOXES.every((cb) => (formData as any)[cb.key] === true);
+  // Dispositions du parcours choisi (achat : mandat d'achat révisé ; location : mandat de location).
+  const allLegalAccepted = legalCheckboxesFor(formData.journey, formData.type_recherche)
+    .every((cb) => (formData as any)[cb.key] === true);
 
   const validateStep = (step: number): boolean => {
     const def = steps[step];
@@ -213,7 +216,7 @@ export default function NouveauMandat() {
         return;
       }
 
-      const isPurchase = formData.journey === 'purchase' || formData.type_recherche === 'Acheter';
+      const isPurchase = formData.journey ? formData.journey === 'purchase' : formData.type_recherche === 'Acheter';
       // ⚠️ Activation exacte : CHF 2'500 pour achat (imputee sur commission 1 %), CHF 300 pour location.
       const montantAcompte = isPurchase ? 2500 : 300;
 
@@ -335,7 +338,13 @@ export default function NouveauMandat() {
         signature_data: formData.signature_data,
         cgv_acceptees: formData.cgv_acceptees,
         cgv_acceptees_at: new Date().toISOString(),
-        legal_consents: formData.legal_consents_at as any,
+        // Horodatage de chaque disposition + copie exacte du mandat affiché et signé (pour « Mon contrat » et l'admin)
+        legal_consents: {
+          ...(formData.legal_consents_at || {}),
+          _contrat_titre: contractTitleFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+          _contrat_texte: contractTextFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+          _contrat_signe_le: new Date().toISOString(),
+        } as any,
         code_promo: formData.code_promo,
         payment_method: formData.payment_method ?? 'qr_invoice',
         montant_acompte: montantAcompte,
@@ -431,7 +440,7 @@ export default function NouveauMandat() {
             vehicules: formData.vehicules,
             numero_plaques: formData.numero_plaques,
             decouverte_agence: formData.decouverte_agence,
-            type_recherche: formData.type_recherche,
+            type_recherche: isPurchase ? 'Acheter' : formData.type_recherche,
             nombre_occupants: formData.nombre_occupants,
             type_bien: formData.type_bien,
             pieces_recherche: formData.pieces_recherche,
@@ -442,7 +451,13 @@ export default function NouveauMandat() {
             candidats: formData.candidats,
             signature_data: formData.signature_data,
             code_promo: formData.code_promo,
-            payment_method: formData.payment_method ?? 'qr_invoice'
+            payment_method: formData.payment_method ?? 'qr_invoice',
+            // Mandat réellement affiché et signé + dispositions approuvées (horodatées)
+            demande_id: demandeMandatId,
+            contract_title: contractTitleFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+            contract_text: contractTextFor(formData.journey, isPurchase ? 'Acheter' : formData.type_recherche),
+            consents: acceptedConsentsFor({ ...formData, type_recherche: isPurchase ? 'Acheter' : formData.type_recherche }),
+            signed_at: new Date().toISOString(),
           }
         });
         console.log('Mandat PDF email sent');
@@ -487,7 +502,7 @@ export default function NouveauMandat() {
               employeur: formData.employeur,
               revenus_mensuels: formData.revenus_mensuels,
               decouverte_agence: formData.decouverte_agence,
-              type_recherche: formData.type_recherche,
+              type_recherche: isPurchase ? 'Acheter' : formData.type_recherche,
               nombre_occupants: formData.nombre_occupants,
               type_bien: formData.type_bien,
               pieces_recherche: formData.pieces_recherche,

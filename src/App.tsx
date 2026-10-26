@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { KeyboardInset } from "@/components/mobile/KeyboardInset";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -34,6 +35,9 @@ const ChasseurAppartement = lazyWithRetry(() => import("./pages/ChasseurAppartem
 const FunnelCourtier = lazyWithRetry(() => import("./pages/funnel/FunnelCourtier"));
 const FunnelMandat = lazyWithRetry(() => import("./pages/funnel/FunnelMandat"));
 const FunnelAnalyse = lazyWithRetry(() => import("./pages/funnel/FunnelAnalyse"));
+const SeoHubPage = lazyWithRetry(() => import("./pages/public-site/seo/SeoHubPage"));
+const SeoZonePage = lazyWithRetry(() => import("./pages/public-site/seo/SeoZonePage"));
+const AgencePage = lazyWithRetry(() => import("./pages/public-site/seo/AgencePage"));
 const RendezVousBureau = lazyWithRetry(() => import("./pages/RendezVousBureau"));
 const RelouerMonAppartement = lazyWithRetry(() => import("./pages/RelouerMonAppartement"));
 const FormulaireRelouer = lazyWithRetry(() => import("./pages/FormulaireRelouer"));
@@ -101,11 +105,12 @@ const AdminNotifications = lazyWithRetry(() => import("./pages/admin/Notificatio
 const SupportClient = lazyWithRetry(() => import("./pages/support/SupportClient"));
 const SupportStaff = lazyWithRetry(() => import("./pages/support/SupportStaff"));
 const AdminParametres = lazyWithRetry(() => import("./pages/admin/Parametres"));
+const AdminSteeve = lazyWithRetry(() => import("./pages/admin/Steeve"));
 const AdminWhatsAppNotifications = lazyWithRetry(() => import("./pages/admin/WhatsAppNotifications"));
 const AdminEnvoyerEmail = lazyWithRetry(() => import("./pages/admin/EnvoyerEmail"));
 const AdminEnvoyerOffre = lazyWithRetry(() => import("./pages/admin/EnvoyerOffre"));
 const AdminHistoriqueEmails = lazyWithRetry(() => import("./pages/admin/HistoriqueEmails"));
-const AdminBoiteReception = lazyWithRetry(() => import("./pages/admin/BoiteReception"));
+const AdminBoiteReception = lazyWithRetry(() => import("./pages/admin/BoiteMail"));
 const AdminCalendrier = lazyWithRetry(() => import("./pages/admin/Calendrier"));
 const AdminVisites = lazyWithRetry(() => import("./pages/admin/Visites"));
 const AdminPortailBannieres = lazyWithRetry(() => import("./pages/admin/PortailBannieres"));
@@ -211,7 +216,6 @@ const ClientParametres = lazyWithRetry(() => import("./pages/client/Parametres")
 const ClientAnnonces = lazyWithRetry(() => import("./pages/client/Annonces"));
 const ClientCarte = lazyWithRetry(() => import("./pages/client/Carte"));
 const ClientBiensProposes = lazyWithRetry(() => import("./pages/client/BiensProposes"));
-const ClientBiensSelectionnes = lazyWithRetry(() => import("./pages/client/BiensSelectionnes"));
 const ClientFinancementAchat = lazyWithRetry(() => import("./pages/client/FinancementAchat"));
 
 // Apporteur pages
@@ -304,6 +308,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
+      <KeyboardInset />
       <IOSAppInterstitial />
       <ScrollToTop />
       <BrowserRouter
@@ -348,6 +353,10 @@ const App = () => (
               <Route path="/courtier" element={<FunnelCourtier />} />
               <Route path="/courtier/mandat" element={<FunnelMandat />} />
               <Route path="/analyse-dossier" element={<FunnelAnalyse />} />
+              {/* Pages de référencement local (zones, hub, agence) */}
+              <Route path="/recherche-appartement" element={<SeoHubPage />} />
+              <Route path="/recherche-appartement/:slug" element={<SeoZonePage />} />
+              <Route path="/agence-immobiliere-crissier" element={<AgencePage />} />
               <Route path="/rendez-vous" element={<RendezVousBureau />} />
               <Route path="/first-login" element={<FirstLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -424,6 +433,7 @@ const App = () => (
               <Route path="/admin/messagerie" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminMessagerie /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminParametres /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/steeve" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminSteeve /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/whatsapp-notifications" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminWhatsAppNotifications /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/envoyer-email" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminEnvoyerEmail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/comptes-rendus" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminComptesRendus /></AppLayout></ProtectedRoute>} />
@@ -531,7 +541,8 @@ const App = () => (
               <Route path="/client/annonces" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientAnnonces /></AppLayout></ProtectedRoute>} />
               <Route path="/client/carte" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientCarte /></AppLayout></ProtectedRoute>} />
               <Route path="/client/biens-proposes" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientBiensProposes /></AppLayout></ProtectedRoute>} />
-              <Route path="/client/biens-selectionnes" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientBiensSelectionnes /></AppLayout></ProtectedRoute>} />
+              {/* Ancienne page « Biens sélectionnés » : regroupée dans Biens proposés (filtre « En cours »). */}
+              <Route path="/client/biens-selectionnes" element={<Navigate to="/client/biens-proposes?filtre=en_cours" replace />} />
               <Route path="/client/financement" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><ClientFinancementAchat /></AppLayout></ProtectedRoute>} />
               <Route path="/client/renovation" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><RenovationProjectsPage /></AppLayout></ProtectedRoute>} />
               <Route path="/client/renovation/:id" element={<ProtectedRoute allowedRoles={['client']}><AppLayout><RenovationProjectPage /></AppLayout></ProtectedRoute>} />

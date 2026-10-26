@@ -7,6 +7,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // Limites mémoire : nombre de messages relus par passage et taille max lue par message (pièces jointes ignorées au-delà).
 const MAX_EMAILS_PER_SYNC = 40;
 const MAX_BODY_BYTES = 150000;
+// Nouveaux e-mails lus en entier par passage : après un arrêt, le retard est rattrapé sur plusieurs
+// passages au lieu de tout relire d'un coup et de dépasser les ressources (erreur 546).
+const MAX_NEW_EMAILS_PER_RUN = 10;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,32 +45,36 @@ class SimpleImapClient {
     console.log('[IMAP] Connected');
   }
 
+  // Lit jusqu'à la ligne de fin de la commande. Seule la fin de la réponse est testée à chaque
+  // bloc reçu (et non toute la réponse accumulée) : l'ancien balayage complet après chaque bloc
+  // de 64 Ko dépassait le temps de calcul autorisé (erreur 546 WORKER_RESOURCE_LIMIT).
   private async readUntilTag(expectedTag: string): Promise<string> {
     const buf = new Uint8Array(65536);
-    let fullResponse = '';
+    const chunks: string[] = [];
+    let totalLength = 0;
+    let tail = '';
     let attempts = 0;
     const maxAttempts = 500;
-    
+    const tagPattern = expectedTag === '*' ? null : new RegExp(`^${expectedTag} (OK|NO|BAD)`, 'm');
+
     while (attempts < maxAttempts) {
       attempts++;
-      
+
       try {
         const n = await this.conn!.read(buf);
         if (n === null) break;
-        
-        const chunk = this.decoder.decode(buf.subarray(0, n));
-        fullResponse += chunk;
-        
-        if (expectedTag === '*' && fullResponse.includes('* OK')) {
-          return fullResponse;
+
+        const chunk = this.decoder.decode(buf.subarray(0, n), { stream: true });
+        chunks.push(chunk);
+        totalLength += chunk.length;
+        const window = tail + chunk;
+
+        if (tagPattern ? tagPattern.test(window) : window.includes('* OK')) {
+          return chunks.join('');
         }
-        
-        const tagPattern = new RegExp(`^${expectedTag} (OK|NO|BAD)`, 'm');
-        if (tagPattern.test(fullResponse)) {
-          return fullResponse;
-        }
-        
-        if (fullResponse.length > 10 * 1024 * 1024) {
+        tail = window.slice(-1024);
+
+        if (totalLength > 10 * 1024 * 1024) {
           console.log('[IMAP] Response too large, stopping');
           break;
         }
@@ -76,8 +83,8 @@ class SimpleImapClient {
         break;
       }
     }
-    
-    return fullResponse;
+
+    return chunks.join('');
   }
 
   private async sendCommand(command: string): Promise<string> {
@@ -105,33 +112,56 @@ class SimpleImapClient {
     return messageCount;
   }
 
-  async fetchEmails(start: number, end: number, imapUser: string): Promise<ParsedEmail[]> {
-    const emails: ParsedEmail[] = [];
-    
+  // Lecture légère des derniers messages : numéro, UID et Message-ID seulement, sans le corps.
+  // La clé produite est identique à celle de parseSingleFetch, pour reconnaître les e-mails déjà enregistrés.
+  async fetchMessageKeys(start: number, end: number): Promise<{ seq: number; key: string | null }[]> {
     if (start < 1) start = 1;
-    if (end < start) return emails;
+    if (end < start) return [];
+
+    const response = await this.sendCommand(
+      `FETCH ${start}:${end} (UID BODY.PEEK[HEADER.FIELDS (MESSAGE-ID)])`
+    );
+
+    const keys: { seq: number; key: string | null }[] = [];
+    const fetchRegex = /\* (\d+) FETCH \(/g;
+    const positions: { start: number; seq: number }[] = [];
+    let match;
+    while ((match = fetchRegex.exec(response)) !== null) {
+      positions.push({ start: match.index, seq: parseInt(match[1]) });
+    }
+
+    for (let i = 0; i < positions.length; i++) {
+      const endPos = i < positions.length - 1 ? positions[i + 1].start : response.length;
+      const data = response.substring(positions[i].start, endPos);
+      const uidMatch = data.match(/UID\s+(\d+)/i);
+      const msgIdMatch = data.match(/^Message-ID:\s*<([^>]+)>/mi);
+      const key = (msgIdMatch && sanitizeForPostgres(msgIdMatch[1].substring(0, 100)))
+        || (uidMatch ? `uid_${uidMatch[1]}` : null);
+      keys.push({ seq: positions[i].seq, key });
+    }
+
+    console.log(`[IMAP] ${keys.length} message keys read`);
+    return keys;
+  }
+
+  // Lecture complète des seuls messages demandés (numéros de séquence), du plus récent au plus ancien.
+  async fetchEmailsBySeqs(seqs: number[], imapUser: string): Promise<ParsedEmail[]> {
+    const emails: ParsedEmail[] = [];
+    const ordered = [...new Set(seqs)].filter(n => n >= 1).sort((a, b) => b - a).slice(0, MAX_NEW_EMAILS_PER_RUN);
 
     // Petits lots + corps tronqué : évite le dépassement de mémoire du serveur (erreur 546 WORKER_RESOURCE_LIMIT)
-    const batchSize = 10;
-    let currentStart = end;
-    
-    while (currentStart >= start && emails.length < MAX_EMAILS_PER_SYNC) {
-      const currentEnd = currentStart;
-      const batchStart = Math.max(start, currentStart - batchSize + 1);
-      
-      console.log(`[IMAP] Fetching ${batchStart}:${currentEnd}...`);
-      
+    const batchSize = 5;
+    for (let i = 0; i < ordered.length; i += batchSize) {
+      const batch = ordered.slice(i, i + batchSize);
+      console.log(`[IMAP] Fetching ${batch.join(',')}...`);
+
       const response = await this.sendCommand(
-        `FETCH ${batchStart}:${currentEnd} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID CONTENT-TYPE CONTENT-TRANSFER-ENCODING)] BODY.PEEK[TEXT]<0.${MAX_BODY_BYTES}>)`
+        `FETCH ${batch.join(',')} (UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO SUBJECT DATE MESSAGE-ID CONTENT-TYPE CONTENT-TRANSFER-ENCODING)] BODY.PEEK[TEXT]<0.${MAX_BODY_BYTES}>)`
       );
-      
+
       const batchEmails = this.parseAllFetchResponses(response, imapUser);
       console.log(`[IMAP] Parsed ${batchEmails.length} emails from batch`);
-      
       emails.push(...batchEmails);
-      currentStart = batchStart - 1;
-      
-      if (emails.length >= MAX_EMAILS_PER_SYNC) break;
     }
 
     console.log(`[IMAP] Total: ${emails.length} emails`);
@@ -601,8 +631,55 @@ async function syncUserEmails(
     const messageCount = await client.selectInbox();
     // Derniers messages seulement (relève toutes les 5 min : largement suffisant, et bien plus léger)
     const startMsg = Math.max(1, messageCount - (MAX_EMAILS_PER_SYNC - 1));
-    const fetchedEmails = await client.fetchEmails(startMsg, messageCount, config.imap_user);
-    
+    const allSeqs: number[] = [];
+    for (let n = startMsg; n <= messageCount; n++) allSeqs.push(n);
+
+    // Seuls les messages absents de la base sont relus en entier ; ceux déjà enregistrés sont ignorés.
+    // En cas d'erreur de vérification, repli sur l'ancien comportement (relire les derniers messages).
+    const keyed = messageCount > 0 ? await client.fetchMessageKeys(startMsg, messageCount) : [];
+    let seqsToFetch = allSeqs;
+    if (keyed.length > 0) {
+      try {
+        const dbIdOf = (key: string) => `${config.imap_user}_${key}`;
+        const dbIds = keyed.filter(k => k.key).map(k => dbIdOf(k.key as string));
+        const known = new Set<string>();
+        const isInfoMailbox = config.imap_user.toLowerCase() === 'info@immo-rama.ch';
+        // Lots de 15 identifiants : la requête reste courte (identifiants de messages longs dans l'URL).
+        for (let i = 0; i < dbIds.length; i += 15) {
+          const chunk = dbIds.slice(i, i + 15);
+          const { data: existing, error: existingError } = await supabaseAdmin
+            .from('received_emails')
+            .select('message_id')
+            .eq('user_id', config.user_id)
+            .in('message_id', chunk);
+          if (existingError) throw existingError;
+          for (const row of existing || []) known.add(row.message_id);
+
+          // Comportement conservé : les e-mails immobilier.ch encore sans HTML sont relus pour compléter leur corps.
+          if (isInfoMailbox) {
+            const { data: incomplete, error: incompleteError } = await supabaseAdmin
+              .from('received_emails')
+              .select('message_id')
+              .eq('user_id', config.user_id)
+              .eq('from_email', 'mail@immobilier.ch')
+              .is('body_html', null)
+              .in('message_id', chunk);
+            if (incompleteError) throw incompleteError;
+            for (const row of incomplete || []) known.delete(row.message_id);
+          }
+        }
+        seqsToFetch = keyed.filter(k => !k.key || !known.has(dbIdOf(k.key))).map(k => k.seq);
+      } catch (checkError) {
+        console.error('[SYNC] Vérification des e-mails déjà enregistrés impossible, relecture complète :', checkError);
+        seqsToFetch = allSeqs;
+      }
+    }
+    console.log(`[SYNC] ${seqsToFetch.length} new message(s) to read`);
+
+    const fetchedEmails = seqsToFetch.length > 0
+      ? await client.fetchEmailsBySeqs(seqsToFetch, config.imap_user)
+      : [];
+
     await client.logout();
     
     const emailsToInsert = fetchedEmails.map(email => ({
@@ -646,13 +723,12 @@ async function syncUserEmails(
         if(error) throw error;
       }
     }
-    // OPTIM Cloud: only update last_sync_at when new emails were actually fetched
-    if (fetchedEmails.length > 0) {
-      await supabaseAdmin
-        .from('imap_configurations')
-        .update({ last_sync_at: new Date().toISOString() })
-        .eq('id', config.id);
-    }
+    // Date de la dernière relève réussie (même sans nouvel e-mail) : elle sert de témoin de bon fonctionnement.
+    // Les passages sans nouvel e-mail ne relisent plus aucun corps, cette seule écriture reste légère.
+    await supabaseAdmin
+      .from('imap_configurations')
+      .update({ last_sync_at: new Date().toISOString() })
+      .eq('id', config.id);
 
     console.log(`[SYNC] User ${config.user_id}: ${fetchedEmails.length} emails synced`);
     return { success: true, count: fetchedEmails.length };

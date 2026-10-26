@@ -4,7 +4,36 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
-import { computeDeterministic, finalStatus, nextBackoffSeconds } from "./logic.ts";
+import { computeDeterministic, finalStatus, isRcItem, nextBackoffSeconds } from "./logic.ts";
+import { anthropicCaller, costOf } from "../_shared/steeve/anthropic.ts";
+
+const CLAUDE_MODEL = "claude-haiku-5-5";
+const TRIAGE_INSTRUCTIONS =
+  "Tu qualifies un dossier de candidature locative suisse pour l'équipe interne. " +
+  "Utilise uniquement les faits fournis ; n'invente aucune donnée. " +
+  "Tu ne soumets jamais la candidature et ne contactes personne. " +
+  "Si des pièces obligatoires manquent, readiness doit être 'blocked'. L'attestation RC ménage n'est jamais obligatoire : ne bloque jamais un dossier pour elle. Réponds en français, de façon concise.";
+
+/** Triage par Claude (Steeve) : même schéma que l'ancienne analyse, réponse structurée imposée. */
+async function callClaude(apiKey: string, facts: unknown) {
+  try {
+    const resp = await anthropicCaller(apiKey)({
+      model: CLAUDE_MODEL,
+      max_tokens: 700,
+      system: [{ type: "text", text: TRIAGE_INSTRUCTIONS }],
+      tools: [{ name: "postulation_triage", description: "Résultat du triage du dossier.", input_schema: AI_SCHEMA }],
+      tool_choice: { type: "tool", name: "postulation_triage" },
+      messages: [{ role: "user", content: JSON.stringify(facts) }],
+    });
+    const use: any = resp.content.find((b: any) => b.type === "tool_use");
+    if (!use?.input) return { error: "claude_empty" };
+    return { result: use.input, responseId: `claude:${costOf(CLAUDE_MODEL, resp.usage).toFixed(5)}usd` };
+  } catch (e) {
+    const msg = String((e as Error)?.message ?? "");
+    if (/ 429| 5\d\d|délai|timeout|aborted/i.test(msg)) throw new TransientError("claude_transient");
+    return { error: "claude_error" };
+  }
+}
 
 const OPENAI_TIMEOUT_MS = 20_000;
 const DEFAULT_MODEL = "gpt-5-mini";
@@ -42,7 +71,7 @@ async function callOpenAI(apiKey: string, model: string, facts: unknown) {
           "Tu qualifies un dossier de candidature locative suisse pour l'équipe interne. " +
           "Utilise uniquement les faits fournis ; n'invente aucune donnée. " +
           "Tu ne soumets jamais la candidature et ne contactes personne. " +
-          "Si des pièces obligatoires manquent, readiness doit être 'blocked'. Réponds en français, de façon concise.",
+          "Si des pièces obligatoires manquent, readiness doit être 'blocked'. L'attestation RC ménage n'est jamais obligatoire : ne bloque jamais un dossier pour elle. Réponds en français, de façon concise.",
         input: [{ role: "user", content: JSON.stringify(facts) }],
         text: { format: { type: "json_schema", name: "postulation_triage", strict: true, schema: AI_SCHEMA } },
       }),
@@ -82,10 +111,23 @@ async function processJob(db: any, job: any) {
   const det = computeDeterministic({ offre, client, candidates: candidates ?? [], documents: docs ?? [] });
 
   const apiKey = Deno.env.get("OPENAI_API_KEY");
+  const claudeKey = Deno.env.get("ANTHROPIC_API_KEY");
   let ai: any = null;
   let aiError: string | null = null;
   let responseId: string | null = null;
-  if (apiKey) {
+  let aiSource = "openai";
+  if (claudeKey) {
+    aiSource = "claude";
+    const facts = { offre: det.offerFacts, dossier: det.profileFacts, documents_presents: det.presentTypes, manquants_calcules: det.missing, indicateurs: det.indicators };
+    let r: any;
+    try {
+      r = await callClaude(claudeKey, facts);
+    } catch (e) {
+      if (e instanceof TransientError && job.attempt_count < job.max_attempts) throw e;
+      r = { error: (e as Error)?.message || "claude_error" };
+    }
+    if ("result" in r) { ai = r.result; responseId = r.responseId; } else { aiError = r.error; }
+  } else if (apiKey) {
     const model = Deno.env.get("OPENAI_POSTULATION_MODEL") || DEFAULT_MODEL;
     // Faits minimaux, sans nom, e-mail, téléphone ni contenu de document.
     const facts = { offre: det.offerFacts, dossier: det.profileFacts, documents_presents: det.presentTypes, manquants_calcules: det.missing, indicateurs: det.indicators };
@@ -100,9 +142,15 @@ async function processJob(db: any, job: any) {
     if ("result" in r) { ai = r.result; responseId = r.responseId; } else { aiError = r.error; responseId = (r as any).responseId ?? null; }
   }
 
+  // RC ménage : jamais bloquante, même si l'IA la cite.
+  if (ai && Array.isArray(ai.missing_items)) {
+    const blocking = ai.missing_items.filter((m: string) => !isRcItem(String(m)));
+    if (ai.readiness === "blocked" && blocking.length === 0 && ai.missing_items.length > 0) ai.readiness = "ready";
+    ai.missing_items = blocking;
+  }
   const status = finalStatus(det.missing, ai);
   const ai_result = {
-    source: ai ? "openai" : "deterministic",
+    source: ai ? aiSource : "deterministic",
     analyzed_at: new Date().toISOString(),
     deterministic: { missing: det.missing, indicators: det.indicators, priority: det.priority },
     ai,
@@ -110,6 +158,7 @@ async function processJob(db: any, job: any) {
     readiness: status,
     priority: ai?.priority ?? det.priority,
     missing_items: Array.from(new Set([...det.missing, ...(ai?.missing_items ?? [])])),
+    optional_items: det.optional,
     concise_staff_summary: ai?.concise_staff_summary ?? det.summary,
     recommended_next_actions: ai?.recommended_next_actions ?? det.actions,
   };

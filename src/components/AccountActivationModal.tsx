@@ -107,7 +107,7 @@ export function AccountActivationModal({ isOpen, onClose, userId, userName }: Ac
   };
 
   const handleLogout = async () => {
-    await withAuthStorageRemoval(() => supabase.auth.signOut());
+    await withAuthStorageRemoval(() => supabase.auth.signOut({ scope: 'local' }));
     navigate('/login');
   };
 

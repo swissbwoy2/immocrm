@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { SpaceSwitcher } from '@/components/RoleSwitcher';
 import logoLogisorama from '@/assets/logisorama-logo.png';
+
+const SteevePartnerChat = lazy(() => import('@/components/steeve/SteevePartnerChat').then((m) => ({ default: m.SteevePartnerChat })));
 
 interface AnnonceurLayoutProps {
   children: React.ReactNode;
@@ -349,6 +351,11 @@ export function AnnonceurLayout({ children }: AnnonceurLayoutProps) {
           {children}
         </div>
       </main>
+
+      {/* Steeve : assistant de l'annonceur (ses annonces, visites, candidatures, messages). */}
+      <Suspense fallback={null}>
+        <SteevePartnerChat role="annonceur" />
+      </Suspense>
     </div>
   );
 }

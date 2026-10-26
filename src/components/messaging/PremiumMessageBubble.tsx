@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Check, CheckCheck } from 'lucide-react';
 import { formatSwissTime } from '@/lib/dateUtils';
 import { MessageAttachment } from '@/components/MessageAttachment';
+import { isSteeveSender, STEEVE_DISPLAY_NAME } from '@/lib/steeve';
 
 interface MessagePayload {
   type?: string;
@@ -16,6 +17,8 @@ interface PremiumMessageBubbleProps {
   timestamp: string;
   read?: boolean;
   senderName?: string;
+  /** messages.sender_type : 'assistant' affiche le nom de Steeve. */
+  senderType?: string | null;
   attachmentUrl?: string | null;
   attachmentName?: string | null;
   attachmentType?: string | null;
@@ -26,10 +29,10 @@ interface PremiumMessageBubbleProps {
 }
 
 /**
- * WhatsApp-style message bubble.
- * Outgoing → green-tinted bubble on the right.
- * Incoming → white/dark bubble on the left.
- * API kept identical to the previous "premium" version.
+ * Bulle de message sobre (design de l'app).
+ * Envoyé → bulle primary à droite. Reçu → bulle muted à gauche.
+ * Les pièces jointes s'affichent en cartes au-dessus du texte, hors de la bulle colorée.
+ * API inchangée.
  */
 export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   content,
@@ -37,6 +40,7 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   timestamp,
   read = false,
   senderName,
+  senderType,
   attachmentUrl,
   attachmentName,
   attachmentType,
@@ -45,94 +49,111 @@ export const PremiumMessageBubble: React.FC<PremiumMessageBubbleProps> = ({
   className,
 }) => {
   const formattedTime = formatSwissTime(timestamp);
-  const hasAttachments =
-    !!attachmentUrl || (payload?.medias && payload.medias.length > 0);
+  const displayedSenderName = isSteeveSender(senderType) ? STEEVE_DISPLAY_NAME : senderName;
+  const medias = payload?.medias && payload.medias.length > 0 ? payload.medias : null;
+  const hasAttachments = !!attachmentUrl || !!medias;
+  const hasText = !!content;
+
+  const meta = (onPrimary: boolean) => (
+    <span
+      className={cn(
+        'inline-flex items-center gap-0.5 text-[10px] leading-none whitespace-nowrap',
+        onPrimary ? 'text-primary-foreground/75' : 'text-muted-foreground',
+      )}
+    >
+      <span>{formattedTime}</span>
+      {isSent && (
+        <span className="inline-flex" aria-label={read ? 'Lu' : 'Envoyé'}>
+          {read ? <CheckCheck className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+        </span>
+      )}
+    </span>
+  );
 
   return (
     <div
       className={cn(
-        'flex w-full max-w-full mb-1.5 min-w-0 animate-wa-bubble',
+        'flex w-full max-w-full mb-1.5 min-w-0',
         isSent ? 'justify-end' : 'justify-start',
         className,
       )}
     >
-      <div className="flex flex-col max-w-[88%] sm:max-w-[75%] md:max-w-[65%] min-w-0">
-        {!isSent && senderName && (
-          <span className="text-[11px] text-muted-foreground mb-0.5 ml-3 font-medium">
-            {senderName}
+      <div
+        className={cn(
+          'flex flex-col gap-1 max-w-[85%] sm:max-w-[75%] md:max-w-[65%] min-w-0',
+          isSent ? 'items-end' : 'items-start',
+        )}
+      >
+        {!isSent && displayedSenderName && (
+          <span className="text-[11px] text-muted-foreground px-3 font-medium">
+            {displayedSenderName}
           </span>
         )}
 
-        <div
-          className={cn(
-            'relative px-3 py-1.5 text-sm shadow-sm break-words max-w-full min-w-0 overflow-hidden',
-            isSent
-              ? 'rounded-2xl rounded-br-md bg-[hsl(var(--whatsapp-bubble-out))] text-foreground'
-              : 'rounded-2xl rounded-bl-md bg-[hsl(var(--whatsapp-bubble-in))] text-foreground border border-border/40',
-          )}
-        >
-          {/* Multiple medias */}
-          {payload?.medias && payload.medias.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 mb-2 min-w-0">
-              {payload.medias.map((media: any, idx) => (
+        {/* Pièces jointes : cartes posées au-dessus de la bulle */}
+        {hasAttachments && (
+          <div className="flex flex-col gap-1.5 min-w-0 max-w-full">
+            {medias && (
+              <div className="grid grid-cols-2 gap-1.5 min-w-0">
+                {medias.map((media: any, idx) => (
+                  <div key={idx} className="min-w-0 overflow-hidden rounded-2xl border border-border/70 bg-card p-1">
+                    <MessageAttachment
+                      url={media?.url || ''}
+                      type={media?.type || media?.mime || 'application/octet-stream'}
+                      name={media?.name || 'Fichier joint'}
+                      size={media?.size || 0}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            {attachmentUrl && (
+              <div className="min-w-0 max-w-full overflow-hidden rounded-2xl border border-border/70 bg-card p-1">
                 <MessageAttachment
-                  key={idx}
-                  url={media?.url || ''}
-                  type={media?.type || media?.mime || 'application/octet-stream'}
-                  name={media?.name || 'Fichier joint'}
-                  size={media?.size || 0}
+                  url={attachmentUrl}
+                  type={attachmentType || 'application/octet-stream'}
+                  name={attachmentName || 'Fichier joint'}
+                  size={attachmentSize || 0}
                 />
-              ))}
-            </div>
-          )}
+              </div>
+            )}
+            {!hasText && <div className="px-2">{meta(false)}</div>}
+          </div>
+        )}
 
-          {/* Single attachment */}
-          {attachmentUrl && (
-            <div className="mb-2">
-              <MessageAttachment
-                url={attachmentUrl}
-                type={attachmentType || 'application/octet-stream'}
-                name={attachmentName || 'Fichier joint'}
-                size={attachmentSize || 0}
-              />
-            </div>
-          )}
+        {/* Message sans texte ni pièce jointe : on garde l'heure */}
+        {!hasText && !hasAttachments && (
+          <div
+            className={cn(
+              'px-3 py-2 rounded-2xl',
+              isSent ? 'rounded-br-md bg-primary' : 'rounded-bl-md bg-muted',
+            )}
+          >
+            {meta(isSent)}
+          </div>
+        )}
 
-          {/* Text content */}
-          {content && (
+        {/* Texte */}
+        {hasText && (
+          <div
+            className={cn(
+              'relative px-3 py-2 text-sm break-words max-w-full min-w-0 overflow-hidden rounded-2xl',
+              isSent
+                ? 'rounded-br-md bg-primary text-primary-foreground'
+                : 'rounded-bl-md bg-muted text-foreground',
+            )}
+          >
             <p
-              className={cn(
-                'whitespace-pre-wrap leading-relaxed',
-                hasAttachments ? '' : 'pr-12',
-              )}
+              className="whitespace-pre-wrap leading-relaxed"
               style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
             >
               <LinkifiedText text={content} />
+              {/* Réserve la place de l'heure en fin de dernière ligne */}
+              <span aria-hidden className={cn('inline-block', isSent ? 'w-12' : 'w-9')} />
             </p>
-          )}
-
-          {/* Time + ticks */}
-          <div
-            className={cn(
-              'flex items-center gap-0.5 text-[10px] leading-none',
-              hasAttachments
-                ? 'justify-end mt-1'
-                : 'absolute bottom-1 right-2',
-              isSent ? 'text-foreground/55' : 'text-muted-foreground',
-            )}
-          >
-            <span>{formattedTime}</span>
-            {isSent && (
-              <span className="inline-flex">
-                {read ? (
-                  <CheckCheck className="h-3 w-3 text-[hsl(var(--whatsapp-tick))]" />
-                ) : (
-                  <Check className="h-3 w-3" />
-                )}
-              </span>
-            )}
+            <span className="absolute bottom-1.5 right-2.5">{meta(isSent)}</span>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

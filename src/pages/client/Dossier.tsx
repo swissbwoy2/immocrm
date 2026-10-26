@@ -1,14 +1,16 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { 
-  Mail, Phone, MapPin, Calendar, Users, DollarSign, 
+import {
+  Mail, Phone, MapPin, Calendar, Users, DollarSign,
   Home, Building2, Briefcase, Heart, Car, Upload, FileText,
-  Download, Trash2, User, MessageSquare, Edit, RefreshCw,
-  Sparkles, Wallet, Search, FolderOpen, CheckCircle2, XCircle
+  Download, Trash2, User, Edit, RefreshCw,
+  Wallet, Search, CheckCircle2, XCircle, PawPrint, Music,
+  Image as ImageIcon, File as FileGenericIcon, Clock, TrendingUp, AlertTriangle,
+  type LucideIcon,
 } from 'lucide-react';
 import { calculateDaysElapsed, calculateDaysRemaining, formatTimeRemaining } from '@/utils/calculations';
+import { getMandatDates } from '@/utils/mandatDates';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +34,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { MissingDocumentsAlert } from '@/components/MissingDocumentsAlert';
 import { ExtraitPoursuitesHeroCard } from '@/components/ExtraitPoursuitesHeroCard';
@@ -42,22 +43,291 @@ import { usePurchaseSolvabilityCheck } from '@/hooks/usePurchaseSolvabilityCheck
 import { usePurchaseProject, computeProgression } from '@/hooks/usePurchaseProject';
 import { getBuyerAnnualIncome, getBuyerMonthlyIncome, parseZones, formatZones } from '@/lib/buyerProfile';
 import { isPurchaseBuyer } from '@/lib/journey';
-import { formatCHF } from '@/lib/purchaseFinancing';
+import { formatCHF, libelleStatutBancaire } from '@/lib/purchaseFinancing';
 import { SolvabilityAlert } from '@/components/SolvabilityAlert';
 import { PurchaseSolvabilityAlert } from '@/components/PurchaseSolvabilityAlert';
 import { ClientCandidatesManager } from '@/components/ClientCandidatesManager';
 import { CandidateDocumentsSection } from '@/components/CandidateDocumentsSection';
 import { Progress } from '@/components/ui/progress';
-import { 
-  PremiumPageHeader,
-  PremiumMandatProgress,
-  PremiumFinanceCard,
-  PremiumDossierSection,
-  PremiumInfoGrid,
-  PremiumAgentCard,
-  PremiumDocumentCard,
-  PremiumDocumentEmptyState
-} from '@/components/premium';
+import { PremiumAgentCard } from '@/components/premium';
+import {
+  DASH_CARD,
+  DashPage,
+  DashPageHeader,
+  DashSection,
+  DashEmptyState,
+  DashBadge,
+  TodoCard,
+} from '@/components/client/dashboard/DashPrimitives';
+
+/* ------------------------------------------------------------------ */
+/* Briques locales (même rendu que le tableau de bord achat)           */
+/* ------------------------------------------------------------------ */
+
+/** Pastille ronde d'icône. */
+function IconDot({ icon: Icon, tone = 'primary', size = 'md' }: { icon: LucideIcon; tone?: 'primary' | 'muted' | 'amber' | 'success'; size?: 'md' | 'lg' }) {
+  const toneCls = {
+    primary: 'bg-primary/10 text-primary',
+    muted: 'bg-muted text-foreground',
+    amber: 'bg-amber-500/10 text-amber-600',
+    success: 'bg-emerald-500/10 text-emerald-600',
+  }[tone];
+  const sizeCls = size === 'lg' ? 'h-10 w-10' : 'h-9 w-9';
+  return (
+    <span className={`flex ${sizeCls} shrink-0 items-center justify-center rounded-full ${toneCls}`}>
+      <Icon className={size === 'lg' ? 'h-5 w-5' : 'h-[18px] w-[18px]'} />
+    </span>
+  );
+}
+
+/** Carte titrée d'un bloc d'informations. */
+function InfoCard({ icon, title, action, children }: { icon: LucideIcon; title: string; action?: ReactNode; children: ReactNode }) {
+  return (
+    <div className={`${DASH_CARD} p-4 md:p-5`}>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconDot icon={icon} />
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        </div>
+        {action}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** Montant clé (revenu, budget, capacité) : pastille d'icône, libellé, valeur en CHF. */
+function FinanceTile({ title, value, icon, badge, currency = 'CHF' }: { title: string; value: number; icon: LucideIcon; badge?: string; currency?: string }) {
+  return (
+    <div className={`${DASH_CARD} p-4 md:p-5`}>
+      <div className="flex items-center gap-3">
+        <IconDot icon={icon} />
+        <p className="min-w-0 text-sm text-muted-foreground">{title}</p>
+      </div>
+      <p className="mt-3 text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+        {(value || 0).toLocaleString('fr-CH')} <span className="text-sm font-medium text-muted-foreground">{currency}</span>
+      </p>
+      {badge && (
+        <div className="mt-2">
+          <DashBadge tone="muted">{badge}</DashBadge>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Valeur simple : libellé + chiffre, détail éventuel dessous. */
+function ValueTile({ label, value, valueClassName = 'text-foreground', className = 'rounded-xl border border-border/70 bg-card p-4', children }: {
+  label: string; value: ReactNode; valueClassName?: string; className?: string; children?: ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className={`mt-1 text-xl font-semibold tabular-nums ${valueClassName}`}>{value}</p>
+      {children}
+    </div>
+  );
+}
+
+interface InfoItem {
+  icon: LucideIcon;
+  label: string;
+  value: ReactNode;
+}
+
+/** Grille libellé / valeur (remplace PremiumInfoGrid, mêmes données). */
+function InfoGrid({ items, columns = 2 }: { items: InfoItem[]; columns?: 1 | 2 }) {
+  return (
+    <div className={`grid grid-cols-1 gap-3 ${columns === 2 ? 'md:grid-cols-2' : ''}`}>
+      {items.map((item, index) => {
+        const Icon = item.icon;
+        return (
+          <div key={index} className="flex min-w-0 items-start gap-3 rounded-xl border border-border/70 p-3">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Icon className="h-[18px] w-[18px]" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">{item.label}</p>
+              <div className="truncate text-sm font-medium text-foreground">
+                {item.value || <span className="text-muted-foreground">Non renseigné</span>}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Carte document (remplace PremiumDocumentCard, mêmes actions). */
+function DocCard({ document: doc, onDownload, onDelete }: { document: any; onDownload: (doc: any) => void; onDelete: (doc: any) => void }) {
+  const type: string = doc.type || '';
+  const Icon = type.includes('pdf') ? FileText : type.includes('image') ? ImageIcon : FileGenericIcon;
+  const fileType = type.includes('pdf') ? 'PDF' : type.includes('png') ? 'PNG' : (type.includes('jpeg') || type.includes('jpg')) ? 'JPG' : 'Fichier';
+  const size = (bytes: number) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  };
+  return (
+    <div className={`${DASH_CARD} flex flex-col p-4`}>
+      <div className="flex items-start gap-3">
+        <IconDot icon={Icon} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-foreground" title={doc.nom}>{doc.nom}</p>
+          <div className="mt-1 flex items-center gap-2">
+            <DashBadge tone="muted">{fileType}</DashBadge>
+            <span className="text-xs text-muted-foreground">{size(doc.taille)}</span>
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        Ajouté le {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
+      </p>
+      <div className="mt-3 flex gap-2">
+        <Button size="sm" variant="outline" className="flex-1 rounded-full" onClick={() => onDownload(doc)}>
+          <Download className="mr-1.5 h-3.5 w-3.5" />
+          Télécharger
+        </Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          className="rounded-full hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => onDelete(doc)}
+          aria-label={`Supprimer ${doc.nom}`}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/** État vide des documents (remplace PremiumDocumentEmptyState). */
+function DocEmptyState({ onUpload }: { onUpload: () => void }) {
+  return (
+    <DashEmptyState
+      icon={FileText}
+      title="Aucun document uploadé"
+      action={
+        <Button onClick={onUpload} size="sm" className="rounded-full">
+          Ajouter un document
+        </Button>
+      }
+    />
+  );
+}
+
+/** Progression du mandat de recherche location (remplace PremiumMandatProgress, mêmes données). */
+function MandatProgressCard({ daysElapsed, daysRemaining, startDate, isRelogged, reloggedStatus, totalDays = 90 }: {
+  daysElapsed: number;
+  daysRemaining: number;
+  startDate: string;
+  isRelogged: boolean;
+  reloggedStatus: 'signature_effectuee' | 'etat_lieux_fixe' | 'cles_remises' | null;
+  totalDays?: number;
+}) {
+  if (isRelogged) {
+    const reloggedLabel = reloggedStatus === 'cles_remises'
+      ? 'Relogé !'
+      : reloggedStatus === 'etat_lieux_fixe'
+        ? 'EDL fixé'
+        : reloggedStatus === 'signature_effectuee'
+          ? 'Bail signé'
+          : 'Relogé';
+    return (
+      <div className={`${DASH_CARD} p-4 md:p-5`}>
+        <div className="flex items-start gap-3">
+          <IconDot icon={Home} tone="success" size="lg" />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground">Mandat terminé avec succès !</h3>
+              <DashBadge tone="success">Succès</DashBadge>
+            </div>
+            <p className="mt-1 text-sm font-medium text-foreground">{reloggedLabel}</p>
+            <p className="text-sm text-muted-foreground">Félicitations ! Le client a trouvé son logement.</p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-2xl font-semibold tabular-nums text-foreground">100%</p>
+            <p className="text-xs text-muted-foreground">Terminé</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const pct = Math.min((daysElapsed / totalDays) * 100, 100);
+  const endDate = new Date(new Date(startDate).getTime() + totalDays * 24 * 60 * 60 * 1000);
+  const status = daysRemaining <= 0
+    ? { label: 'Expiré', tone: 'danger' as const, icon: AlertTriangle, bar: 'bg-destructive' }
+    : daysElapsed < totalDays * 0.5
+      ? { label: 'En bonne voie', tone: 'success' as const, icon: TrendingUp, bar: 'bg-emerald-500' }
+      : daysElapsed < totalDays * 0.75
+        ? { label: 'Mi-parcours', tone: 'warning' as const, icon: Clock, bar: 'bg-amber-500' }
+        : { label: 'Fin proche', tone: 'warning' as const, icon: AlertTriangle, bar: 'bg-amber-500' };
+  const StatusIcon = status.icon;
+
+  return (
+    <div className={`${DASH_CARD} p-4 md:p-5`}>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <IconDot icon={Calendar} />
+          <h3 className="text-base font-semibold text-foreground">Progression du mandat</h3>
+        </div>
+        <DashBadge tone={status.tone}>
+          <StatusIcon className="mr-1 h-3 w-3" />
+          {status.label}
+        </DashBadge>
+      </div>
+
+      <div className="mt-4 flex items-end justify-between gap-3">
+        <div>
+          <p className="text-3xl font-semibold tabular-nums tracking-tight text-foreground">{Math.ceil(daysRemaining)}</p>
+          <p className="text-sm text-muted-foreground">jours restants</p>
+        </div>
+        <div className="text-right">
+          <p className="text-lg font-semibold tabular-nums text-foreground">{Math.round(pct)}%</p>
+          <p className="text-xs text-muted-foreground">{Math.floor(daysElapsed)}/{totalDays}j</p>
+        </div>
+      </div>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+        <div className={`h-full rounded-full ${status.bar} transition-[width] duration-500`} style={{ width: `${pct}%` }} />
+      </div>
+
+      <div className="mt-3 flex justify-between gap-2 text-xs text-muted-foreground">
+        <div className="text-left">
+          <p className="font-medium text-foreground">Début</p>
+          <p>{new Date(startDate).toLocaleDateString('fr-CH')}</p>
+        </div>
+        <div className="text-center">
+          <p className="font-medium text-foreground">Mi-parcours</p>
+          <p>45 jours</p>
+        </div>
+        <div className="text-right">
+          <p className="font-medium text-foreground">Fin</p>
+          <p>{endDate.toLocaleDateString('fr-CH')}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Statut légal (poursuites, curatelle) : libellé + pastille Oui / Non. */
+function LegalStatusRow({ label, flagged, okLabel }: { label: string; flagged: boolean; okLabel: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-4">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <DashBadge tone={flagged ? 'danger' : 'success'}>
+        {flagged ? (
+          <><XCircle className="mr-1 h-3 w-3" /> Oui</>
+        ) : (
+          <><CheckCircle2 className="mr-1 h-3 w-3" /> {okLabel}</>
+        )}
+      </DashBadge>
+    </div>
+  );
+}
 
 export default function Dossier() {
   const navigate = useNavigate();
@@ -89,6 +359,7 @@ export default function Dossier() {
     justificatif_carte_credit: 'charges', justificatif_pension_alimentaire: 'charges',
     justificatif_charges_fixes: 'charges',
     decision_taxation: 'fiscalite', declaration_fiscale: 'fiscalite',
+    extrait_poursuites: 'autre',
     accord_transmission: 'autorisation', consentement_donnees: 'autorisation',
     autre: 'autre',
   };
@@ -414,28 +685,25 @@ export default function Dossier() {
 
   if (!client || !profile) {
     return (
-      <div className="flex-1 flex items-center justify-center p-4">
-        <Card className="max-w-md backdrop-blur-xl bg-card/80 border-border/50 shadow-2xl">
-          <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <User className="w-8 h-8 text-white" />
-            </div>
-            <h2 className="text-xl font-semibold mb-2">Profil non chargé</h2>
-            <p className="text-muted-foreground mb-4">
-              Impossible de charger votre profil client. Cliquez sur le bouton ci-dessous pour réessayer.
-            </p>
-            <div className="space-y-2">
-              <Button onClick={loadData} className="w-full group relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Rafraîchir
-              </Button>
-              <Button onClick={handleInitializeProfile} variant="outline" className="w-full">
-                Forcer le chargement
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex flex-1 items-center justify-center p-4">
+        <div className={`${DASH_CARD} w-full max-w-md p-6 text-center`}>
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 text-amber-600">
+            <User className="h-7 w-7" />
+          </span>
+          <h2 className="mt-4 text-lg font-semibold text-foreground">Profil non chargé</h2>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
+            Impossible de charger votre profil client. Cliquez sur le bouton ci-dessous pour réessayer.
+          </p>
+          <div className="mt-5 space-y-2">
+            <Button onClick={loadData} className="w-full rounded-full">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Rafraîchir
+            </Button>
+            <Button onClick={handleInitializeProfile} variant="outline" className="w-full rounded-full">
+              Forcer le chargement
+            </Button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -481,251 +749,222 @@ export default function Dossier() {
     ];
 
     return (
-      <div className="relative flex-1 overflow-y-auto">
-        <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-          <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-        </div>
-        <div className="relative z-10 p-4 md:p-8 space-y-6">
-          <PremiumPageHeader
-            title="Mon dossier achat"
-            subtitle="Votre dossier d'accompagnement à l'achat immobilier"
-            icon={FolderOpen}
-            action={<Badge className="bg-primary/10 text-primary border-primary/20">Acheteur</Badge>}
-            className="mb-6"
-          />
+      <DashPage className="space-y-8">
+        <DashPageHeader
+          title="Mon dossier achat"
+          subtitle="Votre dossier d'accompagnement à l'achat immobilier"
+          action={
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              Acheteur
+            </span>
+          }
+        />
 
-          <Card className="backdrop-blur-xl bg-card/80 border-border/50 shadow-xl">
-            <CardHeader>
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div>
-                  <CardTitle>{isActive ? "Projet d'achat actif" : "Projet d'achat en attente d'activation"}</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">Durée contractuelle du mandat achat : 6 mois à compter de l'activation par Immo-Rama.ch.</p>
+        {/* Mandat d'achat */}
+        <DashSection title="Mon mandat d'achat">
+          <div className={`${DASH_CARD} p-4 md:p-5`}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-3">
+                <IconDot icon={FileText} />
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold text-foreground">
+                    {isActive ? "Projet d'achat actif" : "Projet d'achat en attente d'activation"}
+                  </h3>
+                  <p className="mt-1 text-sm text-muted-foreground">Durée contractuelle du mandat achat : 6 mois à compter de l'activation par Immo-Rama.ch.</p>
                 </div>
-                <Badge variant={isActive ? 'default' : 'secondary'}>{isActive ? 'Actif' : 'En attente'}</Badge>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
+              <DashBadge tone={isActive ? 'success' : 'muted'}>{isActive ? 'Actif' : 'En attente'}</DashBadge>
+            </div>
+            <div className="mt-4">
               {isActive ? (
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Mandat achat actif — 6 mois</span>
-                    <span>{progression.pourcentage}%</span>
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-foreground">Mandat achat actif — 6 mois</span>
+                    <span className="font-semibold tabular-nums text-foreground">{progression.pourcentage}%</span>
                   </div>
-                  <Progress value={progression.pourcentage} className="h-3" />
+                  <Progress value={progression.pourcentage} className="h-2" />
                   <p className="text-xs text-muted-foreground">Progression du mandat d'accompagnement à l'achat (durée contractuelle 6 mois).</p>
                 </div>
               ) : (
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm">
-                  Votre suivi démarrera après activation par votre conseiller.
+                <div className="flex items-start gap-3 rounded-xl bg-amber-500/10 p-3 text-sm text-foreground">
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <span>Votre suivi démarrera après activation par votre conseiller.</span>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
+        </DashSection>
 
-          <PremiumDossierSection title="Financement achat" icon={Wallet} delay={100}>
-            {!financingComplete ? (
-              <div className="rounded-xl border border-primary/20/20 bg-blue-500/10 p-4">
-                <p className="font-semibold text-primary dark:text-blue-300">Financement à compléter</p>
-                <p className="text-sm text-muted-foreground mt-1">Votre conseiller complétera votre capacité d'achat, vos fonds propres et votre statut bancaire.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <PremiumFinanceCard title="Revenu annuel retenu" value={computed.revenuTotal} icon={DollarSign} variant="default" delay={0} />
-                <PremiumFinanceCard title="Fonds propres disponibles" value={computed.fondsPropresTotal} icon={Wallet} variant="success" delay={50} />
-                <PremiumFinanceCard title="Prix cible" value={computed.prixCible} icon={Home} variant="warning" delay={100} />
-                <PremiumFinanceCard title="Capacité d'achat" value={computed.capaciteAchatMax} icon={Search} variant="success" delay={150} />
-                <PremiumFinanceCard title="Hypothèque estimée" value={computed.montantHypothecaire} icon={Building2} variant="info" delay={200} />
-                <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
-                  <p className="text-sm text-muted-foreground">Fonds propres requis</p>
-                  <p className="text-xl font-bold">{fmt(computed.fondsPropresRequis)}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
-                  <p className="text-sm text-muted-foreground">Charges théoriques mensuelles</p>
-                  <p className="text-xl font-bold">{fmt(computed.chargesMensuelles)}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
-                  <p className="text-sm text-muted-foreground">Taux d'effort</p>
-                  <p className="text-xl font-bold">{computed.tauxEffort.toFixed(1)}%</p>
-                </div>
-                <div className="p-4 rounded-xl bg-muted/30 border border-border/30">
-                  <p className="text-sm text-muted-foreground">Statut bancaire</p>
-                  <p className="text-xl font-bold">{financing?.statut_bancaire || 'À évaluer'}</p>
-                </div>
-              </div>
-            )}
-          </PremiumDossierSection>
-
-          <PremiumDossierSection
-            title="Documents achat"
-            icon={FileText}
-            delay={200}
-            action={
-              <Button onClick={() => setUploadDialogOpen(true)} size="sm" className="group relative overflow-hidden">
-                <Upload className="w-4 h-4 mr-2" />
-                Ajouter un document
-              </Button>
-            }
-          >
-            {(() => {
-              const categories = [...new Set(achatDocuments.map(d => d.category))];
-              return (
-                <div className="space-y-4 mb-6">
-                  {categories.map(cat => (
-                    <div key={cat}>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{cat}</p>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {achatDocuments.filter(d => d.category === cat).map(doc => (
-                          <div key={doc.label} className="flex items-center gap-2 p-3 rounded-lg bg-muted/30 border border-border/30 hover:border-primary/30 transition-colors">
-                            <FileText className="w-4 h-4 text-primary shrink-0" />
-                            <span className="text-sm">{doc.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              );
-            })()}
-            {documents.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {documents.map((doc, index) => (
-                  <PremiumDocumentCard key={doc.id} document={doc} onDownload={handleDownload} onDelete={(doc) => { setSelectedDoc(doc); setDeleteDialogOpen(true); }} delay={index * 50} />
-                ))}
-              </div>
-            ) : (
-              <PremiumDocumentEmptyState onUpload={() => setUploadDialogOpen(true)} />
-            )}
-          </PremiumDossierSection>
-
-          {agent && (
-            <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="relative p-2 bg-primary/10 rounded-xl"><User className="w-5 h-5 text-primary" /></div>
-                <h2 className="text-xl font-semibold">Mon conseiller</h2>
-              </div>
-              <PremiumAgentCard agent={agent} onMessage={() => navigate('/client/messagerie')} onCall={() => window.location.href = `tel:${agent.telephone}`} />
+        {/* Financement achat */}
+        <DashSection title="Financement achat">
+          {!financingComplete ? (
+            <TodoCard
+              icon={Wallet}
+              tone="primary"
+              title="Financement à compléter"
+              description="Votre conseiller complétera votre capacité d'achat, vos fonds propres et votre statut bancaire."
+            />
+          ) : (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <FinanceTile title="Revenu annuel retenu" value={computed.revenuTotal} icon={DollarSign} />
+              <FinanceTile title="Fonds propres disponibles" value={computed.fondsPropresTotal} icon={Wallet} />
+              <FinanceTile title="Prix cible" value={computed.prixCible} icon={Home} />
+              <FinanceTile title="Capacité d'achat" value={computed.capaciteAchatMax} icon={Search} />
+              <FinanceTile title="Hypothèque estimée" value={computed.montantHypothecaire} icon={Building2} />
+              <ValueTile className={`${DASH_CARD} p-4 md:p-5`} label="Fonds propres requis" value={fmt(computed.fondsPropresRequis)} />
+              <ValueTile className={`${DASH_CARD} p-4 md:p-5`} label="Charges théoriques mensuelles" value={fmt(computed.chargesMensuelles)} />
+              <ValueTile className={`${DASH_CARD} p-4 md:p-5`} label="Taux d'effort" value={`${computed.tauxEffort.toFixed(1)}%`} />
+              <ValueTile className={`${DASH_CARD} p-4 md:p-5`} label="Statut bancaire" value={libelleStatutBancaire(financing?.statut_bancaire)} />
             </div>
           )}
-        </div>
+        </DashSection>
+
+        {/* Documents achat */}
+        <DashSection
+          title="Documents achat"
+          action={
+            <Button onClick={() => setUploadDialogOpen(true)} size="sm" className="shrink-0 rounded-full" aria-label="Ajouter un document">
+              <Upload className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Ajouter un document</span>
+              <span className="sm:hidden">Ajouter</span>
+            </Button>
+          }
+        >
+          {(() => {
+            const categories = [...new Set(achatDocuments.map(d => d.category))];
+            return (
+              <div className={`${DASH_CARD} space-y-5 p-4 md:p-5`}>
+                {categories.map(cat => (
+                  <div key={cat}>
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{cat}</p>
+                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                      {achatDocuments.filter(d => d.category === cat).map(doc => (
+                        <div key={doc.label} className="flex items-center gap-2 rounded-xl border border-border/70 p-3">
+                          <FileText className="h-4 w-4 shrink-0 text-primary" />
+                          <span className="text-sm text-foreground">{doc.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+          {documents.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {documents.map((doc) => (
+                <DocCard key={doc.id} document={doc} onDownload={handleDownload} onDelete={(doc) => { setSelectedDoc(doc); setDeleteDialogOpen(true); }} />
+              ))}
+            </div>
+          ) : (
+            <DocEmptyState onUpload={() => setUploadDialogOpen(true)} />
+          )}
+        </DashSection>
+
+        {agent && (
+          <DashSection title="Mon conseiller">
+            <PremiumAgentCard agent={agent} onMessage={() => navigate('/client/messagerie')} onCall={() => window.location.href = `tel:${agent.telephone}`} />
+          </DashSection>
+        )}
 
         {/* Upload Dialog achat */}
         <Dialog open={uploadDialogOpen} onOpenChange={(open) => { setUploadDialogOpen(open); if (!open) setSelectedDocType('piece_identite'); }}>
-          <DialogContent className="backdrop-blur-xl bg-card/95 border-border/50">
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2"><Upload className="w-5 h-5 text-primary" />Ajouter un document achat</DialogTitle>
+              <DialogTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" />Ajouter un document achat</DialogTitle>
               <DialogDescription>Formats acceptés : PDF, JPG, PNG (max 5 MB)</DialogDescription>
             </DialogHeader>
             <div className="space-y-2">
               <Label className="text-sm font-medium">Type de document</Label>
               <Select value={selectedDocType} onValueChange={setSelectedDocType}>
-                <SelectTrigger className="bg-background/50 border-border/50 focus:border-primary/50">
+                <SelectTrigger>
                   <SelectValue placeholder="Choisir le type..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="piece_identite">🪪 Pièce d'identité</SelectItem>
-                  <SelectItem value="permis_sejour">🪪 Permis de séjour</SelectItem>
-                  <SelectItem value="certificat_salaire">💰 Certificat de salaire annuel</SelectItem>
-                  <SelectItem value="fiche_salaire_1">💰 Fiche de salaire 1</SelectItem>
-                  <SelectItem value="fiche_salaire_2">💰 Fiche de salaire 2</SelectItem>
-                  <SelectItem value="fiche_salaire_3">💰 Fiche de salaire 3</SelectItem>
-                  <SelectItem value="contrat_travail">📝 Contrat de travail</SelectItem>
-                  <SelectItem value="attestation_employeur">👔 Attestation employeur</SelectItem>
-                  <SelectItem value="releve_bancaire_fonds_propres">🏦 Relevé bancaire fonds propres</SelectItem>
-                  <SelectItem value="attestation_3a">🏦 Attestation 3e pilier (3a)</SelectItem>
-                  <SelectItem value="attestation_lpp">🏦 Attestation LPP</SelectItem>
-                  <SelectItem value="attestation_epl">🏦 Attestation EPL</SelectItem>
-                  <SelectItem value="attestation_libre_passage">🏦 Attestation libre passage</SelectItem>
-                  <SelectItem value="justificatif_placements">📊 Justificatif placements</SelectItem>
-                  <SelectItem value="justificatif_donation">🎁 Justificatif donation / hoirie</SelectItem>
-                  <SelectItem value="justificatif_credit_prive">💳 Justificatif crédit privé</SelectItem>
-                  <SelectItem value="justificatif_leasing">🚗 Justificatif leasing</SelectItem>
-                  <SelectItem value="justificatif_carte_credit">💳 Justificatif carte de crédit</SelectItem>
-                  <SelectItem value="justificatif_pension_alimentaire">👶 Justificatif pension alimentaire</SelectItem>
-                  <SelectItem value="decision_taxation">📋 Décision de taxation</SelectItem>
-                  <SelectItem value="declaration_fiscale">📋 Déclaration fiscale</SelectItem>
-                  <SelectItem value="accord_transmission">✅ Accord de transmission partenaires</SelectItem>
-                  <SelectItem value="consentement_donnees">✅ Consentement traitement données</SelectItem>
-                  <SelectItem value="autre">📄 Autre document achat</SelectItem>
+                  <SelectItem value="piece_identite">Pièce d'identité</SelectItem>
+                  <SelectItem value="permis_sejour">Permis de séjour</SelectItem>
+                  <SelectItem value="extrait_poursuites">Extrait des poursuites</SelectItem>
+                  <SelectItem value="certificat_salaire">Certificat de salaire annuel</SelectItem>
+                  <SelectItem value="fiche_salaire_1">Fiche de salaire 1</SelectItem>
+                  <SelectItem value="fiche_salaire_2">Fiche de salaire 2</SelectItem>
+                  <SelectItem value="fiche_salaire_3">Fiche de salaire 3</SelectItem>
+                  <SelectItem value="contrat_travail">Contrat de travail</SelectItem>
+                  <SelectItem value="attestation_employeur">Attestation employeur</SelectItem>
+                  <SelectItem value="releve_bancaire_fonds_propres">Relevé bancaire fonds propres</SelectItem>
+                  <SelectItem value="attestation_3a">Attestation 3e pilier (3a)</SelectItem>
+                  <SelectItem value="attestation_lpp">Attestation LPP</SelectItem>
+                  <SelectItem value="attestation_epl">Attestation EPL</SelectItem>
+                  <SelectItem value="attestation_libre_passage">Attestation libre passage</SelectItem>
+                  <SelectItem value="justificatif_placements">Justificatif placements</SelectItem>
+                  <SelectItem value="justificatif_donation">Justificatif donation / hoirie</SelectItem>
+                  <SelectItem value="justificatif_credit_prive">Justificatif crédit privé</SelectItem>
+                  <SelectItem value="justificatif_leasing">Justificatif leasing</SelectItem>
+                  <SelectItem value="justificatif_carte_credit">Justificatif carte de crédit</SelectItem>
+                  <SelectItem value="justificatif_pension_alimentaire">Justificatif pension alimentaire</SelectItem>
+                  <SelectItem value="decision_taxation">Décision de taxation</SelectItem>
+                  <SelectItem value="declaration_fiscale">Déclaration fiscale</SelectItem>
+                  <SelectItem value="accord_transmission">Accord de transmission partenaires</SelectItem>
+                  <SelectItem value="consentement_donnees">Consentement traitement données</SelectItem>
+                  <SelectItem value="autre">Autre document achat</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${dragActive ? 'border-primary bg-primary/10 scale-[1.02]' : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
-              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4"><Upload className="w-8 h-8 text-primary" /></div>
-              <p className="text-sm font-medium mb-2">Glissez-déposez votre fichier ici</p>
-              <p className="text-xs text-muted-foreground mb-4">ou</p>
-              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="group"><Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />Sélectionner un fichier</Button>
+            <div className={`rounded-2xl border-2 border-dashed p-8 text-center transition-colors duration-150 ${dragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/40'}`} onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}>
+              <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary"><Upload className="h-7 w-7" /></span>
+              <p className="mb-2 text-sm font-medium text-foreground">Glissez-déposez votre fichier ici</p>
+              <p className="mb-4 text-xs text-muted-foreground">ou</p>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} className="rounded-full"><Upload className="mr-2 h-4 w-4" />Sélectionner un fichier</Button>
               <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" className="hidden" onChange={(e) => { if (e.target.files?.[0]) handleFileUpload(e.target.files[0]); }} />
             </div>
-            <DialogFooter><Button variant="outline" onClick={() => setUploadDialogOpen(false)}>Annuler</Button></DialogFooter>
+            <DialogFooter><Button variant="outline" className="rounded-full" onClick={() => setUploadDialogOpen(false)}>Annuler</Button></DialogFooter>
           </DialogContent>
         </Dialog>
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent className="backdrop-blur-xl bg-card/95 border-border/50">
+          <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2"><Trash2 className="w-5 h-5 text-red-500" />Supprimer le document</AlertDialogTitle>
+              <AlertDialogTitle className="flex items-center gap-2"><Trash2 className="h-5 w-5 text-destructive" />Supprimer le document</AlertDialogTitle>
               <AlertDialogDescription>Êtes-vous sûr de vouloir supprimer "{selectedDoc?.nom}" ? Cette action est irréversible.</AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter><AlertDialogCancel>Annuler</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Supprimer</AlertDialogAction></AlertDialogFooter>
+            <AlertDialogFooter><AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel><AlertDialogAction onClick={handleDelete} className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">Supprimer</AlertDialogAction></AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </DashPage>
     );
   }
 
-  const daysElapsed = calculateDaysElapsed(client.date_ajout || client.created_at);
-  const daysRemaining = calculateDaysRemaining(client.date_ajout || client.created_at);
+  // Source unique de vérité (identique à « Mon contrat » et au tableau de bord) : date de signature du mandat,
+  // jours de pause, échéance officielle et reconduction de 90 jours.
+  const mandatInfo = getMandatDates(client as any);
+  const daysElapsed = mandatInfo.daysSinceSignature;
+  const daysRemaining = mandatInfo.daysRemaining;
+  const mandatCycleStart = (mandatInfo.cycleStart ?? new Date(client.date_ajout || client.created_at)).toISOString();
   const budgetRecommande = Math.round((client.revenus_mensuels || 0) / 3);
 
   return (
-    <div className="relative flex-1 overflow-y-auto">
-      <div className="pointer-events-none absolute inset-0 overflow-hidden z-0" aria-hidden>
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/4 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
-      </div>
-      {/* Floating particles background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {[...Array(8)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-2 h-2 rounded-full bg-primary/10 animate-float"
-            style={{
-              left: `${10 + i * 12}%`,
-              top: `${15 + (i % 4) * 20}%`,
-              animationDelay: `${i * 0.8}s`,
-              animationDuration: `${5 + i}s`
-            }}
-          />
-        ))}
-      </div>
+    <DashPage className="space-y-8">
+      <DashPageHeader
+        title="Mon dossier"
+        subtitle="Toutes vos informations personnelles"
+        action={
+          <Button onClick={handleEditProfileClick} className="rounded-full">
+            <Edit className="mr-2 h-4 w-4" />
+            Modifier mes informations
+          </Button>
+        }
+      />
 
-      <div className="relative z-10 p-4 md:p-8 space-y-6">
-        {/* Premium Header */}
-        <PremiumPageHeader 
-          title="Mon dossier"
-          subtitle="Toutes vos informations personnelles"
-          icon={FolderOpen}
-          action={
-            <Button onClick={handleEditProfileClick} className="group relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              <Edit className="w-4 h-4 mr-2" />
-              Modifier mes informations
-            </Button>
-          }
-          className="mb-6"
-        />
-
-        {/* Premium Mandat Progress */}
+      {/* Mon mandat : progression + alertes du dossier */}
+      <DashSection title="Mon mandat">
         {(() => {
           // Check if client is relogged - need to load candidatures
           const isRelogged = client.statut === 'reloge';
-          
+
           return (
-            <PremiumMandatProgress
+            <MandatProgressCard
               daysElapsed={daysElapsed}
               daysRemaining={daysRemaining}
-              startDate={client.date_ajout || client.created_at}
+              startDate={mandatCycleStart}
               isRelogged={isRelogged}
               reloggedStatus={isRelogged ? 'cles_remises' : null}
             />
@@ -733,182 +972,139 @@ export default function Dossier() {
         })()}
 
         {/* Extrait de poursuites — bandeau hero */}
-        <ExtraitPoursuitesHeroCard showWhenValid className="mb-6" />
+        <ExtraitPoursuitesHeroCard showWhenValid />
 
         {/* Alerte documents manquants */}
         <MissingDocumentsAlert documents={documents} />
+      </DashSection>
 
-        {/* Situation financière */}
-        <PremiumDossierSection title="Situation financière" icon={Wallet} delay={100}>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <PremiumFinanceCard
-              title="Revenu mensuel"
-              value={client.revenus_mensuels || 0}
-              icon={DollarSign}
-              variant="default"
-              delay={0}
-            />
-            
-            <PremiumFinanceCard
-              title={isAcheteur ? "Prix d'achat recherché" : "Budget maximum"}
-              value={client.budget_max || 0}
-              icon={DollarSign}
-              variant="warning"
-              delay={50}
-            />
-            
-            {isAcheteur ? (
-              <PremiumFinanceCard
-                title="Prix max finançable"
-                value={purchaseSolvabilityResult.prixAchatMax}
-                icon={Home}
-                variant="info"
-                badge="Règle 33% charges"
-                delay={100}
-              />
-            ) : (
-              <PremiumFinanceCard
-                title="Budget recommandé"
-                value={budgetRecommande}
-                icon={DollarSign}
-                variant="success"
-                badge="Règle du tiers"
-                delay={100}
-              />
-            )}
-          </div>
+      {/* Situation financière */}
+      <DashSection title="Situation financière">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <FinanceTile
+            title="Revenu mensuel"
+            value={client.revenus_mensuels || 0}
+            icon={DollarSign}
+          />
 
-          {/* Section Capacité d'achat pour les acheteurs */}
-          {isAcheteur && (
-            <div className="p-4 rounded-xl bg-blue-500/5 border border-primary/20/20 mb-6">
-              <h4 className="font-medium flex items-center gap-2 mb-4">
-                <Home className="w-5 h-5 text-primary" />
-                Capacité d'achat
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="p-3 rounded-lg bg-background/50 backdrop-blur-sm">
-                  <p className="text-sm text-muted-foreground">Prix max finançable</p>
-                  <p className="font-bold text-lg">{purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF</p>
-                </div>
-                <div className="p-3 rounded-lg bg-background/50 backdrop-blur-sm">
-                  <p className="text-sm text-muted-foreground">Apport disponible</p>
-                  <p className="font-bold text-lg">{(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF</p>
-                  <p className="text-xs text-muted-foreground">
-                    Requis (26%): {purchaseSolvabilityResult.apportRequis.toLocaleString('fr-CH')} CHF
-                  </p>
-                  {purchaseSolvabilityResult.apportManquant > 0 && (
-                    <p className="text-xs text-red-500">
-                      Manque: {purchaseSolvabilityResult.apportManquant.toLocaleString('fr-CH')} CHF
-                    </p>
-                  )}
-                </div>
-                <div className="p-3 rounded-lg bg-background/50 backdrop-blur-sm">
-                  <p className="text-sm text-muted-foreground">Charges mensuelles estimées</p>
-                  <p className="font-bold text-lg">{purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF</p>
-                  <p className="text-xs text-muted-foreground">Intérêts + amortissement + entretien</p>
-                </div>
-                <div className="p-3 rounded-lg bg-background/50 backdrop-blur-sm">
-                  <p className="text-sm text-muted-foreground">Taux d'effort</p>
-                  <p className={`font-bold text-lg ${purchaseSolvabilityResult.tauxEffort > 33 ? 'text-red-500' : 'text-green-600'}`}>
-                    {purchaseSolvabilityResult.tauxEffort}%
-                  </p>
-                  <p className="text-xs text-muted-foreground">Maximum recommandé: 33%</p>
-                </div>
-              </div>
-            </div>
+          <FinanceTile
+            title={isAcheteur ? "Prix d'achat recherché" : "Budget maximum"}
+            value={client.budget_max || 0}
+            icon={DollarSign}
+          />
+
+          {isAcheteur ? (
+            <FinanceTile
+              title="Prix max finançable"
+              value={purchaseSolvabilityResult.prixAchatMax}
+              icon={Home}
+              badge="Règle 33% charges"
+            />
+          ) : (
+            <FinanceTile
+              title="Budget recommandé"
+              value={budgetRecommande}
+              icon={DollarSign}
+              badge="Règle du tiers"
+            />
           )}
+        </div>
 
+        {/* Section Capacité d'achat pour les acheteurs */}
+        {isAcheteur && (
+          <InfoCard icon={Home} title="Capacité d'achat">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <ValueTile label="Prix max finançable" value={`${purchaseSolvabilityResult.prixAchatMax.toLocaleString('fr-CH')} CHF`} />
+              <ValueTile label="Apport disponible" value={`${(client.apport_personnel || 0).toLocaleString('fr-CH')} CHF`}>
+                <p className="text-xs text-muted-foreground">
+                  Requis (26%): {purchaseSolvabilityResult.apportRequis.toLocaleString('fr-CH')} CHF
+                </p>
+                {purchaseSolvabilityResult.apportManquant > 0 && (
+                  <p className="text-xs text-destructive">
+                    Manque: {purchaseSolvabilityResult.apportManquant.toLocaleString('fr-CH')} CHF
+                  </p>
+                )}
+              </ValueTile>
+              <ValueTile label="Charges mensuelles estimées" value={`${purchaseSolvabilityResult.chargesMensuelles.toLocaleString('fr-CH')} CHF`}>
+                <p className="text-xs text-muted-foreground">Intérêts + amortissement + entretien</p>
+              </ValueTile>
+              <ValueTile
+                label="Taux d'effort"
+                value={`${purchaseSolvabilityResult.tauxEffort}%`}
+                valueClassName={purchaseSolvabilityResult.tauxEffort > 33 ? 'text-destructive' : 'text-emerald-600 dark:text-emerald-400'}
+              >
+                <p className="text-xs text-muted-foreground">Maximum recommandé: 33%</p>
+              </ValueTile>
+            </div>
+          </InfoCard>
+        )}
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {/* Détails des charges */}
-          <div className="mb-6">
-            <h4 className="font-medium flex items-center gap-2 mb-4">
-              <DollarSign className="w-5 h-5 text-primary" />
-              Détails des charges
-            </h4>
-            <PremiumInfoGrid
-              columns={2}
-              items={[
-                { 
-                  icon: Home, 
-                  label: 'Loyer actuel', 
-                  value: client.loyer_actuel ? `${client.loyer_actuel.toLocaleString('fr-CH')} CHF/mois` : '-' 
-                },
-                { 
-                  icon: DollarSign, 
-                  label: 'Charges mensuelles', 
-                  value: client.charges_mensuelles ? `${client.charges_mensuelles.toLocaleString('fr-CH')} CHF/mois` : '-' 
-                },
-                { 
-                  icon: DollarSign, 
-                  label: 'Charges extraordinaires', 
-                  value: client.charges_extraordinaires 
-                    ? `Oui${client.montant_charges_extra ? ` (${client.montant_charges_extra.toLocaleString('fr-CH')} CHF)` : ''}`
-                    : 'Non'
-                },
-                { 
-                  icon: DollarSign, 
-                  label: 'Autres crédits en cours', 
-                  value: client.autres_credits ? 'Oui' : 'Non'
-                },
-                { 
-                  icon: DollarSign, 
-                  label: 'Apport personnel disponible', 
-                  value: client.apport_personnel ? `${client.apport_personnel.toLocaleString('fr-CH')} CHF` : '-' 
-                },
-              ]}
-            />
-          </div>
+          <InfoCard icon={DollarSign} title="Détails des charges">
+            <InfoGrid
+                columns={1}
+                items={[
+                  {
+                    icon: Home,
+                    label: 'Loyer actuel',
+                    value: client.loyer_actuel ? `${client.loyer_actuel.toLocaleString('fr-CH')} CHF/mois` : '-'
+                  },
+                  {
+                    icon: DollarSign,
+                    label: 'Charges mensuelles',
+                    value: client.charges_mensuelles ? `${client.charges_mensuelles.toLocaleString('fr-CH')} CHF/mois` : '-'
+                  },
+                  {
+                    icon: DollarSign,
+                    label: 'Charges extraordinaires',
+                    value: client.charges_extraordinaires
+                      ? `Oui${client.montant_charges_extra ? ` (${client.montant_charges_extra.toLocaleString('fr-CH')} CHF)` : ''}`
+                      : 'Non'
+                  },
+                  {
+                    icon: DollarSign,
+                    label: 'Autres crédits en cours',
+                    value: client.autres_credits ? 'Oui' : 'Non'
+                  },
+                  {
+                    icon: DollarSign,
+                    label: 'Apport personnel disponible',
+                    value: client.apport_personnel ? `${client.apport_personnel.toLocaleString('fr-CH')} CHF` : '-'
+                  },
+                ]}
+              />
+          </InfoCard>
 
           {/* Statuts légaux */}
-          <div>
-            <h4 className="font-medium flex items-center gap-2 mb-4">
-              <FileText className="w-5 h-5 text-primary" />
-              Statuts légaux
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30">
-                <p className="text-sm text-muted-foreground">Poursuites / Actes de défaut</p>
-                <Badge variant={client.poursuites ? "destructive" : "secondary"} className={client.poursuites ? "" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"}>
-                  {client.poursuites ? (
-                    <><XCircle className="w-3 h-3 mr-1" /> Oui</>
-                  ) : (
-                    <><CheckCircle2 className="w-3 h-3 mr-1" /> Aucune</>
-                  )}
-                </Badge>
-              </div>
-              
-              <div className="flex items-center justify-between p-4 rounded-xl bg-muted/30 backdrop-blur-sm border border-border/30">
-                <p className="text-sm text-muted-foreground">Sous curatelle</p>
-                <Badge variant={client.curatelle ? "destructive" : "secondary"} className={client.curatelle ? "" : "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"}>
-                  {client.curatelle ? (
-                    <><XCircle className="w-3 h-3 mr-1" /> Oui</>
-                  ) : (
-                    <><CheckCircle2 className="w-3 h-3 mr-1" /> Non</>
-                  )}
-                </Badge>
-              </div>
+          <InfoCard icon={FileText} title="Statuts légaux">
+            <div className="space-y-3">
+              <LegalStatusRow label="Poursuites / Actes de défaut" flagged={!!client.poursuites} okLabel="Aucune" />
+              <LegalStatusRow label="Sous curatelle" flagged={!!client.curatelle} okLabel="Non" />
             </div>
-          </div>
-        </PremiumDossierSection>
+          </InfoCard>
+        </div>
 
         {/* Solvabilité - Alerte détaillée */}
         {isAcheteur ? (
           <PurchaseSolvabilityAlert result={purchaseSolvabilityResult} />
         ) : (
-          <SolvabilityAlert result={solvabilityResult} />
+          <SolvabilityAlert result={solvabilityResult} appearance="client" />
         )}
 
         {/* Gestion des candidats */}
-        <ClientCandidatesManager 
+        <ClientCandidatesManager
           clientId={client.id}
           clientRevenus={client.revenus_mensuels || 0}
           budgetDemande={client.budget_max || 0}
           onCandidatesChange={refreshCandidates}
         />
+      </DashSection>
 
-        {/* Informations personnelles */}
-        <PremiumDossierSection title="Informations personnelles" icon={User} delay={200}>
-          <PremiumInfoGrid
-            columns={2}
+      {/* Mon profil */}
+      <DashSection title="Mon profil">
+        <InfoCard icon={User} title="Informations personnelles">
+          <InfoGrid
             items={[
               { icon: Mail, label: 'Email', value: profile.email },
               { icon: Phone, label: 'Téléphone', value: profile.telephone || 'Non renseigné' },
@@ -916,12 +1112,10 @@ export default function Dossier() {
               { icon: Building2, label: 'Nationalité / Permis', value: `${client.nationalite || 'Non renseigné'} • ${client.type_permis || 'Non renseigné'}` },
             ]}
           />
-        </PremiumDossierSection>
+        </InfoCard>
 
-        {/* Situation professionnelle */}
-        <PremiumDossierSection title="Situation professionnelle" icon={Briefcase} delay={300}>
-          <PremiumInfoGrid
-            columns={2}
+        <InfoCard icon={Briefcase} title="Situation professionnelle">
+          <InfoGrid
             items={[
               { icon: Briefcase, label: 'Profession', value: client.profession || '-' },
               { icon: Building2, label: 'Employeur', value: client.employeur || '-' },
@@ -935,12 +1129,14 @@ export default function Dossier() {
                 : { icon: DollarSign, label: 'Revenu mensuel net', value: `${(client.revenus_mensuels || 0).toLocaleString('fr-CH')} CHF` },
             ]}
           />
-        </PremiumDossierSection>
+        </InfoCard>
+      </DashSection>
 
+      {/* Ma recherche */}
+      <DashSection title="Ma recherche">
         {/* Critères de recherche */}
-        <PremiumDossierSection title="Critères de recherche" icon={Search} delay={400}>
-          <PremiumInfoGrid
-            columns={2}
+        <InfoCard icon={Search} title="Critères de recherche">
+          <InfoGrid
             items={[
               { icon: Home, label: 'Type de bien', value: client.type_bien || 'Non renseigné' },
               { icon: Home, label: 'Nombre de pièces souhaité', value: client.pieces ? `${client.pieces} pièces` : 'Non renseigné' },
@@ -951,117 +1147,103 @@ export default function Dossier() {
 
           {/* Souhaits particuliers */}
           {(client.souhaits_particuliers || client.animaux !== null || client.vehicules !== null || client.instrument_musique !== null) && (
-            <div className="mt-6 pt-6 border-t border-border/30">
-              <h4 className="font-medium flex items-center gap-2 mb-4">
-                <Heart className="w-5 h-5 text-primary" />
+            <div className="mt-5 border-t border-border/70 pt-5">
+              <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Heart className="h-4 w-4 text-primary" />
                 Souhaits particuliers
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                <div className="p-3 rounded-xl bg-muted/30 flex items-center gap-2">
-                  <span>🐾</span>
-                  <span className="text-sm">Animaux: {client.animaux ? 'Oui' : 'Non'}</span>
+              <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="flex items-center gap-2 rounded-xl border border-border/70 p-3">
+                  <PawPrint className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-sm text-foreground">Animaux: {client.animaux ? 'Oui' : 'Non'}</span>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 flex items-center gap-2">
-                  <span>🚗</span>
-                  <span className="text-sm">Véhicules: {client.vehicules ? 'Oui' : 'Non'}</span>
+                <div className="flex items-center gap-2 rounded-xl border border-border/70 p-3">
+                  <Car className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-sm text-foreground">Véhicules: {client.vehicules ? 'Oui' : 'Non'}</span>
                 </div>
-                <div className="p-3 rounded-xl bg-muted/30 flex items-center gap-2">
-                  <span>🎵</span>
-                  <span className="text-sm">Instrument: {client.instrument_musique ? 'Oui' : 'Non'}</span>
+                <div className="flex items-center gap-2 rounded-xl border border-border/70 p-3">
+                  <Music className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <span className="text-sm text-foreground">Instrument: {client.instrument_musique ? 'Oui' : 'Non'}</span>
                 </div>
                 {client.numero_plaques && (
-                  <div className="p-3 rounded-xl bg-muted/30 flex items-center gap-2">
-                    <Car className="w-4 h-4 text-primary" />
-                    <span className="text-sm">Plaques: {client.numero_plaques}</span>
+                  <div className="flex items-center gap-2 rounded-xl border border-border/70 p-3">
+                    <Car className="h-4 w-4 shrink-0 text-primary" />
+                    <span className="truncate text-sm text-foreground">Plaques: {client.numero_plaques}</span>
                   </div>
                 )}
               </div>
               {client.souhaits_particuliers && (
-                <div className="p-4 rounded-xl bg-muted/30 backdrop-blur-sm">
-                  <p className="text-sm text-muted-foreground mb-1">Notes</p>
-                  <p className="text-sm">{client.souhaits_particuliers}</p>
+                <div className="rounded-xl bg-muted/40 p-4">
+                  <p className="mb-1 text-xs text-muted-foreground">Notes</p>
+                  <p className="text-sm text-foreground">{client.souhaits_particuliers}</p>
                 </div>
               )}
             </div>
           )}
+        </InfoCard>
 
-          {/* Logement actuel */}
-          <div className="mt-6 pt-6 border-t border-border/30">
-            <h4 className="font-medium flex items-center gap-2 mb-4">
-              <Home className="w-5 h-5 text-primary" />
-              Logement actuel
-            </h4>
-            <PremiumInfoGrid
-              columns={2}
-              items={[
-                { icon: Home, label: 'Loyer actuel', value: client.loyer_actuel ? `${client.loyer_actuel.toLocaleString('fr-CH')} CHF/mois` : '-' },
-                { icon: Home, label: 'Nombre de pièces', value: client.pieces_actuel ? `${client.pieces_actuel} pièces` : '-' },
-                { icon: Calendar, label: 'Depuis le', value: client.depuis_le ? new Date(client.depuis_le).toLocaleDateString('fr-CH') : '-' },
-                { icon: Building2, label: 'Gérance actuelle', value: client.gerance_actuelle || '-' },
-                { icon: Phone, label: 'Contact gérance', value: client.contact_gerance || '-' },
-                { icon: FileText, label: 'Motif de changement', value: client.motif_changement || '-' },
-              ]}
-            />
-          </div>
-        </PremiumDossierSection>
+        {/* Logement actuel */}
+        <InfoCard icon={Home} title="Logement actuel">
+          <InfoGrid
+            items={[
+              { icon: Home, label: 'Loyer actuel', value: client.loyer_actuel ? `${client.loyer_actuel.toLocaleString('fr-CH')} CHF/mois` : '-' },
+              { icon: Home, label: 'Nombre de pièces', value: client.pieces_actuel ? `${client.pieces_actuel} pièces` : '-' },
+              { icon: Calendar, label: 'Depuis le', value: client.depuis_le ? new Date(client.depuis_le).toLocaleDateString('fr-CH') : '-' },
+              { icon: Building2, label: 'Gérance actuelle', value: client.gerance_actuelle || '-' },
+              { icon: Phone, label: 'Contact gérance', value: client.contact_gerance || '-' },
+              { icon: FileText, label: 'Motif de changement', value: client.motif_changement || '-' },
+            ]}
+          />
+        </InfoCard>
+      </DashSection>
 
-        {/* Mon agent */}
-        {agent && (
-          <div className="animate-fade-in" style={{ animationDelay: '500ms' }}>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative p-2 bg-primary/10 rounded-xl">
-                <User className="w-5 h-5 text-primary" />
-              </div>
-              <h2 className="text-xl font-semibold">Mon agent</h2>
-            </div>
-            <PremiumAgentCard
-              agent={agent}
-              onMessage={() => navigate('/client/messagerie')}
-              onCall={() => window.location.href = `tel:${agent.telephone}`}
-            />
+      {/* Mon agent */}
+      {agent && (
+        <DashSection title="Mon agent">
+          <PremiumAgentCard
+            agent={agent}
+            onMessage={() => navigate('/client/messagerie')}
+            onCall={() => window.location.href = `tel:${agent.telephone}`}
+          />
+        </DashSection>
+      )}
+
+      {/* Mes documents */}
+      <DashSection
+        title="Mes documents"
+        action={
+          <Button onClick={() => setUploadDialogOpen(true)} size="sm" className="shrink-0 rounded-full" aria-label="Ajouter un document">
+            <Upload className="mr-2 h-4 w-4" />
+            <span className="hidden sm:inline">Ajouter un document</span>
+            <span className="sm:hidden">Ajouter</span>
+          </Button>
+        }
+      >
+        {documents.length > 0 ? (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {documents.map((doc) => (
+              <DocCard
+                key={doc.id}
+                document={doc}
+                onDownload={handleDownload}
+                onDelete={(doc) => {
+                  setSelectedDoc(doc);
+                  setDeleteDialogOpen(true);
+                }}
+              />
+            ))}
           </div>
+        ) : (
+          <DocEmptyState onUpload={() => setUploadDialogOpen(true)} />
         )}
-
-        {/* Mes documents */}
-        <PremiumDossierSection 
-          title="Mes documents" 
-          icon={FileText} 
-          delay={600}
-          action={
-            <Button onClick={() => setUploadDialogOpen(true)} size="sm" className="group relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-              <Upload className="w-4 h-4 mr-2" />
-              Ajouter un document
-            </Button>
-          }
-        >
-          {documents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {documents.map((doc, index) => (
-                <PremiumDocumentCard
-                  key={doc.id}
-                  document={doc}
-                  onDownload={handleDownload}
-                  onDelete={(doc) => {
-                    setSelectedDoc(doc);
-                    setDeleteDialogOpen(true);
-                  }}
-                  delay={index * 50}
-                />
-              ))}
-            </div>
-          ) : (
-            <PremiumDocumentEmptyState onUpload={() => setUploadDialogOpen(true)} />
-          )}
-        </PremiumDossierSection>
-      </div>
+      </DashSection>
 
       {/* Upload Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="backdrop-blur-xl bg-card/95 border-border/50">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Upload className="w-5 h-5 text-primary" />
+              <Upload className="h-5 w-5 text-primary" />
               Ajouter un document
             </DialogTitle>
             <DialogDescription>
@@ -1070,29 +1252,29 @@ export default function Dossier() {
           </DialogHeader>
 
           <div
-            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
+            className={`rounded-2xl border-2 border-dashed p-8 text-center transition-colors duration-150 ${
               dragActive
-                ? 'border-primary bg-primary/10 scale-[1.02]'
-                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30'
+                ? 'border-primary bg-primary/5'
+                : 'border-border hover:border-primary/50 hover:bg-muted/40'
             }`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
             onDrop={handleDrop}
           >
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <Upload className="w-8 h-8 text-primary" />
-            </div>
-            <p className="text-sm font-medium mb-2">
+            <span className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Upload className="h-7 w-7" />
+            </span>
+            <p className="mb-2 text-sm font-medium text-foreground">
               Glissez-déposez votre fichier ici
             </p>
-            <p className="text-xs text-muted-foreground mb-4">ou</p>
+            <p className="mb-4 text-xs text-muted-foreground">ou</p>
             <Button
               variant="outline"
               onClick={() => fileInputRef.current?.click()}
-              className="group"
+              className="rounded-full"
             >
-              <Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
+              <Upload className="mr-2 h-4 w-4" />
               Sélectionner un fichier
             </Button>
             <input
@@ -1109,7 +1291,7 @@ export default function Dossier() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadDialogOpen(false)}>
+            <Button variant="outline" className="rounded-full" onClick={() => setUploadDialogOpen(false)}>
               Annuler
             </Button>
           </DialogFooter>
@@ -1118,10 +1300,10 @@ export default function Dossier() {
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="backdrop-blur-xl bg-card/95 border-border/50">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              <Trash2 className="w-5 h-5 text-red-500" />
+              <Trash2 className="h-5 w-5 text-destructive" />
               Supprimer le document
             </AlertDialogTitle>
             <AlertDialogDescription>
@@ -1129,8 +1311,8 @@ export default function Dossier() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Annuler</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogCancel className="rounded-full">Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Supprimer
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -1151,16 +1333,14 @@ export default function Dossier() {
 
       {/* Candidate Documents Section - affichée comme section additionnelle */}
       {client && candidates.length > 0 && (
-        <div className="p-4 md:p-8 pt-0">
-          <CandidateDocumentsSection
-            clientId={client.id}
-            clientUserId={user?.id || ''}
-            clientName={profile ? `${profile.prenom} ${profile.nom}` : ''}
-            candidates={candidates}
-            onDocumentsChange={loadData}
-          />
-        </div>
+        <CandidateDocumentsSection
+          clientId={client.id}
+          clientUserId={user?.id || ''}
+          clientName={profile ? `${profile.prenom} ${profile.nom}` : ''}
+          candidates={candidates}
+          onDocumentsChange={loadData}
+        />
       )}
-    </div>
+    </DashPage>
   );
 }

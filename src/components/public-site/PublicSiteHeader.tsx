@@ -41,7 +41,7 @@ export function PublicSiteHeader() {
               <div className="flex items-center gap-3">
                 <motion.button
                   onClick={() => setMenuOpen(true)}
-                  className="p-2 rounded-lg hover:bg-primary/10 transition-colors"
+                  className="imr-lg-plain rounded-full p-2"
                   aria-label="Menu"
                   whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
                   whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
@@ -66,7 +66,7 @@ export function PublicSiteHeader() {
                   asChild
                   variant="outline"
                   size="sm"
-                  className="border-primary/30 hover:border-primary/30 hover:bg-primary/10 transition-all duration-300"
+                  className="min-w-9"
                 >
                   <Link to="/login">
                     <LogIn className="h-4 w-4 sm:mr-2" />
@@ -82,7 +82,7 @@ export function PublicSiteHeader() {
                   <Button
                     asChild
                     size="sm"
-                    className="luxury-shimmer-btn luxury-cta-glow bg-primary text-primary-foreground hover:bg-primary/90 border-0"
+                    
                   >
                     <Link to="/rendez-vous">
                       <Calendar className="h-4 w-4 sm:mr-2" />

@@ -59,18 +59,15 @@ export function PremiumEventFilters({
     .filter(v => v !== 'all').length;
 
   return (
-    <div className="relative overflow-hidden bg-card rounded-2xl border border-border/50 p-4 space-y-4 shadow-xl">
-      {/* Background effects */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
-      
-      <div className="relative z-10">
+    <div className="relative space-y-4 overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)] md:p-5">
+      <div className="relative">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-4 pb-3 border-b border-border/50">
-          <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
-            <Filter className="h-4 w-4 text-primary" />
-          </div>
+        <div className="mb-4 flex items-center gap-3 border-b border-border/70 pb-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Filter className="h-4 w-4" />
+          </span>
           <div>
-            <h3 className="font-semibold text-sm">Filtres</h3>
+            <h3 className="text-base font-semibold">Filtres</h3>
             {activeFiltersCount > 0 && (
               <p className="text-xs text-muted-foreground">
                 {activeFiltersCount} filtre{activeFiltersCount > 1 ? 's' : ''} actif{activeFiltersCount > 1 ? 's' : ''}
@@ -89,14 +86,14 @@ export function PremiumEventFilters({
             </label>
             <Select value={selectedAgent} onValueChange={onAgentChange}>
               <SelectTrigger className={cn(
-                "h-9 rounded-xl bg-background/50 border-border/50 transition-all",
-                "hover:bg-background/80 hover:border-primary/30",
+                "h-10 rounded-full border-border bg-background transition-colors",
+                "hover:border-foreground/60",
                 "focus:ring-2 focus:ring-primary/20",
-                selectedAgent !== 'all' && "border-primary/50 bg-primary/5"
+                selectedAgent !== 'all' && "border-foreground"
               )}>
                 <SelectValue placeholder="Tous les agents" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-border/70 bg-popover">
                 <SelectItem value="all" className="rounded-lg">Tous les agents</SelectItem>
                 {agents.map((agent) => (
                   <SelectItem key={agent.id} value={agent.id} className="rounded-lg">
@@ -115,14 +112,14 @@ export function PremiumEventFilters({
             </label>
             <Select value={selectedClient} onValueChange={onClientChange}>
               <SelectTrigger className={cn(
-                "h-9 rounded-xl bg-background/50 border-border/50 transition-all",
-                "hover:bg-background/80 hover:border-primary/30",
+                "h-10 rounded-full border-border bg-background transition-colors",
+                "hover:border-foreground/60",
                 "focus:ring-2 focus:ring-primary/20",
-                selectedClient !== 'all' && "border-primary/50 bg-primary/5"
+                selectedClient !== 'all' && "border-foreground"
               )}>
                 <SelectValue placeholder="Tous les clients" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl max-h-60">
+              <SelectContent className="rounded-xl border-border/70 bg-popover max-h-60">
                 <SelectItem value="all" className="rounded-lg">Tous les clients</SelectItem>
                 {clients.map((client) => (
                   <SelectItem key={client.id} value={client.id} className="rounded-lg">
@@ -141,14 +138,14 @@ export function PremiumEventFilters({
             </label>
             <Select value={selectedEventType} onValueChange={onEventTypeChange}>
               <SelectTrigger className={cn(
-                "h-9 rounded-xl bg-background/50 border-border/50 transition-all",
-                "hover:bg-background/80 hover:border-primary/30",
+                "h-10 rounded-full border-border bg-background transition-colors",
+                "hover:border-foreground/60",
                 "focus:ring-2 focus:ring-primary/20",
-                selectedEventType !== 'all' && "border-primary/50 bg-primary/5"
+                selectedEventType !== 'all' && "border-foreground"
               )}>
                 <SelectValue placeholder="Tous les types" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-border/70 bg-popover">
                 <SelectItem value="all" className="rounded-lg">Tous les types</SelectItem>
                 {eventTypes.map((type) => (
                   <SelectItem key={type.value} value={type.value} className="rounded-lg">
@@ -167,14 +164,14 @@ export function PremiumEventFilters({
             </label>
             <Select value={selectedStatus} onValueChange={onStatusChange}>
               <SelectTrigger className={cn(
-                "h-9 rounded-xl bg-background/50 border-border/50 transition-all",
-                "hover:bg-background/80 hover:border-primary/30",
+                "h-10 rounded-full border-border bg-background transition-colors",
+                "hover:border-foreground/60",
                 "focus:ring-2 focus:ring-primary/20",
-                selectedStatus !== 'all' && "border-primary/50 bg-primary/5"
+                selectedStatus !== 'all' && "border-foreground"
               )}>
                 <SelectValue placeholder="Tous les statuts" />
               </SelectTrigger>
-              <SelectContent className="rounded-xl border-border/50 bg-popover/95 backdrop-blur-xl">
+              <SelectContent className="rounded-xl border-border/70 bg-popover">
                 <SelectItem value="all" className="rounded-lg">Tous les statuts</SelectItem>
                 {statuses.map((status) => (
                   <SelectItem key={status.value} value={status.value} className="rounded-lg">
