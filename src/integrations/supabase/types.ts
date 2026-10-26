@@ -17746,6 +17746,7 @@ export type Database = {
         Args: { p_limite?: number }
         Returns: Json
       }
+      admin_steeve_objectifs: { Args: never; Returns: Json }
       admin_steeve_operateur: {
         Args: { p_limit?: number; p_statut?: string }
         Returns: Json
@@ -19059,6 +19060,10 @@ export type Database = {
         Args: { p_canal: string; p_client_id: string; p_offre_id: string }
         Returns: Json
       }
+      steeve_gros_loyer: {
+        Args: { p_pieces: number; p_prix: number }
+        Returns: boolean
+      }
       steeve_journal_client: {
         Args: {
           p_cle: string
@@ -19244,6 +19249,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      steeve_visites_sans_retour: { Args: { p_limit?: number }; Returns: Json }
       track_email_click: {
         Args: { _log_id: string; _url: string }
         Returns: undefined
