@@ -17616,6 +17616,14 @@ export type Database = {
           statut: string
         }[]
       }
+      admin_steeve_fixer_visite: {
+        Args: { p_debut: string; p_fin?: string; p_offre_id: string }
+        Returns: Json
+      }
+      admin_steeve_inscrire_visite: {
+        Args: { p_creneau?: string; p_offre_id: string }
+        Returns: Json
+      }
       admin_steeve_journal: {
         Args: { p_limit?: number }
         Returns: {
