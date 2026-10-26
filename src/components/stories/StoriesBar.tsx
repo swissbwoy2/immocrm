@@ -14,6 +14,7 @@ import {
 } from "@/components/public-site/showcase/useShowcase";
 import { ExternalListingPlaceholder } from "@/components/public/ExternalListingPlaceholder";
 import { useSourcedListingAccess } from "@/hooks/useSourcedListingAccess";
+import { MesVisitesBubbles, useMesVisitesAVenir } from "@/components/client/dashboard/MesVisitesAVenirBand";
 
 
 interface Props {
@@ -96,8 +97,13 @@ export function StoriesBar({ className, showVisites = true }: Props) {
   const [selectedVisit, setSelectedVisit] = useState<ShowcaseItem | null>(null);
 
   const canPublish = userRole === "admin" || userRole === "agent";
+  // Un client ne voit que SES visites à venir, jamais celles des autres clients de l'agence.
+  const isClient = userRole === "client";
+  const mesVisites = useMesVisitesAVenir(isClient && showVisites);
+  const showShowcase = showVisites && !isClient && visites.length > 0;
+  const showMesVisites = showVisites && isClient && mesVisites.length > 0;
 
-  if (!loading && groups.length === 0 && !canPublish && (!showVisites || visites.length === 0)) return null;
+  if (!loading && groups.length === 0 && !canPublish && !showShowcase && !showMesVisites) return null;
 
 
   return (
@@ -135,7 +141,19 @@ export function StoriesBar({ className, showVisites = true }: Props) {
             </button>
           ))}
 
-          {showVisites && visites.length > 0 && (
+          {showMesVisites && (
+            <div className="flex shrink-0 snap-start items-stretch gap-2.5">
+              {groups.length > 0 && <span className="my-2 w-px shrink-0 bg-black/[0.08] dark:bg-white/10" aria-hidden />}
+              <div className="flex flex-col gap-2">
+                <span className="imr-lg-glass w-fit rounded-full px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide text-primary">
+                  Mes visites à venir · {mesVisites.length}
+                </span>
+                <MesVisitesBubbles visites={mesVisites} />
+              </div>
+            </div>
+          )}
+
+          {showShowcase && (
             <div className="flex shrink-0 snap-start items-stretch gap-2.5">
               {(canPublish || groups.length > 0) && <span className="my-2 w-px shrink-0 bg-black/[0.08] dark:bg-white/10" aria-hidden />}
               <div className="flex flex-col gap-2">
