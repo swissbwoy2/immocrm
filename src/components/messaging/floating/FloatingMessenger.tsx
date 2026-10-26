@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useFloatingMessenger } from '@/hooks/useFloatingMessenger';
@@ -12,6 +12,9 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { MessageSquare, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SteevePartnerHeader, SteevePartnerPanel } from '@/components/steeve/SteevePartnerChat';
+
+const SteevePartnerChat = lazy(() => import('@/components/steeve/SteevePartnerChat').then((m) => ({ default: m.SteevePartnerChat })));
 
 const panelVariants: Variants = {
   hidden: { opacity: 0, y: 20, scale: 0.95, transformOrigin: 'bottom right' },
@@ -30,7 +33,18 @@ const panelMobileVariants: Variants = {
 
 export function FloatingMessenger() {
   const { user, userRole, loading } = useAuth();
-  const { isOpen, close, toggle, activeConversationId, setActiveConversation, unreadCount, hasNew, busy, cue, react } = useFloatingMessenger();
+  // Admin et propriétaire : un clic sur Steeve ouvre la conversation avec Steeve ; la flèche ramène aux messages.
+  const steeveSpace = userRole === 'admin' ? 'admin' as const : userRole === 'proprietaire' ? 'proprietaire' as const : null;
+  const [steeveOpen, setSteeveOpen] = useState(false);
+  const { isOpen, close, toggle, activeConversationId, setActiveConversation, unreadCount, hasNew, busy, setBusy, cue, react } = useFloatingMessenger();
+  useEffect(() => {
+    if (isOpen) {
+      if (steeveSpace) setSteeveOpen(true);
+      return;
+    }
+    const t = setTimeout(() => setSteeveOpen(false), 250);
+    return () => clearTimeout(t);
+  }, [isOpen, steeveSpace]);
   const { tapLight } = useHapticFeedback();
   // Un nouveau message arrivé messagerie fermée : Steeve le signale une fois (sans ouvrir la messagerie).
   useEffect(() => {
@@ -48,34 +62,43 @@ export function FloatingMessenger() {
     }
   }, [isOpen, setActiveConversation]);
 
-  // Client avec une seule conversation : la bulle s'ouvre directement sur elle (le bouton retour garde la liste).
+  // Client : Steeve ouvre directement sa conversation (Steeve y répond), la plus récente s'il en a plusieurs ;
+  // le bouton retour garde la liste.
+  // La recherche n'est jamais annulée par un nouveau rendu : seul compte l'état réel au moment de la réponse
+  // (messagerie toujours ouverte, aucune conversation choisie entre-temps).
   const autoOpenedRef = useRef(false);
+  const isOpenRef = useRef(isOpen);
+  const activeRef = useRef(activeConversationId);
+  isOpenRef.current = isOpen;
+  activeRef.current = activeConversationId;
+  const userId = user?.id ?? null;
   useEffect(() => {
     if (!isOpen) {
       autoOpenedRef.current = false;
       return;
     }
-    if (userRole !== 'client' || !user || activeConversationId || autoOpenedRef.current) return;
+    if (userRole !== 'client' || !userId || activeRef.current || autoOpenedRef.current) return;
     autoOpenedRef.current = true;
-    let cancelled = false;
-    (async () => {
-      const { data: cli } = await supabase.from('clients').select('id').eq('user_id', user.id).maybeSingle();
-      if (!cli || cancelled) return;
+    void (async () => {
+      const { data: cli } = await supabase.from('clients').select('id').eq('user_id', userId).maybeSingle();
+      if (!cli) return;
       const { data: convs } = await supabase
         .from('conversations')
         .select('id')
         .eq('client_id', cli.id)
         .eq('conversation_type', 'client-agent')
-        .limit(2);
-      if (!cancelled && convs && convs.length === 1) setActiveConversation(convs[0].id);
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .limit(1);
+      if (isOpenRef.current && !activeRef.current && convs?.[0]) setActiveConversation(convs[0].id);
     })();
-    return () => { cancelled = true; };
-  }, [isOpen, userRole, user, activeConversationId, setActiveConversation]);
+  }, [isOpen, userRole, userId, setActiveConversation]);
 
   // Don't render until auth loaded; only for logged-in users with eligible roles
   if (loading || !user || !userRole) return null;
   // Candidat : Steeve l'aide à trouver et l'invite à activer son mandat (même assistant que sur le site).
   if (userRole === 'candidat') return <SteeveCandidatChat />;
+  // Apporteur : pas de messagerie flottante, Steeve répond sur ses recommandations et commissions.
+  if (userRole === 'apporteur') return <Suspense fallback={null}><SteevePartnerChat role="apporteur" /></Suspense>;
   const eligibleRoles = ['admin', 'agent', 'client', 'proprietaire'];
   if (!eligibleRoles.includes(userRole)) return null;
 
@@ -128,7 +151,12 @@ export function FloatingMessenger() {
               }
               style={isMobile ? { paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
             >
-              {!activeConversationId ? (
+              {steeveOpen && steeveSpace ? (
+                <>
+                  <SteevePartnerHeader onBack={() => setSteeveOpen(false)} backLabel="Voir les messages" onClose={close} />
+                  <SteevePartnerPanel role={steeveSpace} onBusy={setBusy} />
+                </>
+              ) : !activeConversationId ? (
                 <>
                   {/* Header — list view */}
                   <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-3">
@@ -146,6 +174,19 @@ export function FloatingMessenger() {
                     </Button>
                   </div>
 
+                  {steeveSpace && (
+                    <button
+                      type="button"
+                      onClick={() => setSteeveOpen(true)}
+                      className="flex w-full items-center gap-3 border-b border-border/70 px-4 py-3 text-left hover:bg-muted/60"
+                    >
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">S</span>
+                      <span className="min-w-0 leading-tight">
+                        <span className="block text-sm font-medium">Steeve</span>
+                        <span className="block text-xs text-muted-foreground">{steeveSpace === 'admin' ? 'Copilote : chiffres, dossiers, journal' : 'Vos immeubles, baux, tickets et échéances'}</span>
+                      </span>
+                    </button>
+                  )}
                   <FloatingConversationList onSelect={setActiveConversation} />
                 </>
               ) : (

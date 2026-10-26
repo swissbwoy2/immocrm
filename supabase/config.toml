@@ -183,6 +183,8 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = true
   [functions.steeve-operator]
     verify_jwt = false
+  [functions.steeve-partner]
+    verify_jwt = true
   [functions.sync-google-calendar]
     verify_jwt = true
   [functions.track-email-click]
