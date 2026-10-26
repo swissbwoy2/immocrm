@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 /** Chat lié à une annonce (table conversations, type 'annonce'), côté candidat ou annonceur. */
-export function ConversationsAnnoncePanel({ userId, mode, initialId }: { userId: string; mode: 'candidat' | 'annonceur'; initialId?: string | null }) {
+export function ConversationsAnnoncePanel({ userId, mode, initialId, className }: { userId: string; mode: 'candidat' | 'annonceur'; initialId?: string | null; /** Classes de la racine (ex. pleine hauteur). Sans valeur : rendu inchangé. */ className?: string }) {
   const qc = useQueryClient();
   const [sel, setSel] = useState<string | null>(initialId ?? null);
   const [text, setText] = useState('');
@@ -60,7 +60,7 @@ export function ConversationsAnnoncePanel({ userId, mode, initialId }: { userId:
   const conv = convs.find((c) => c.id === sel);
 
   return (
-    <div className="grid min-h-[50vh] overflow-hidden rounded-2xl border border-border/70 bg-card md:grid-cols-[300px_1fr]">
+    <div className={cn('grid min-h-[50vh] overflow-hidden rounded-2xl border border-border/70 bg-card md:grid-cols-[300px_1fr]', className)}>
       <ul className={cn('flex flex-col gap-0.5 overflow-y-auto p-2 md:border-r md:border-border/70', sel && 'hidden md:flex')}>
         {convs.map((c) => (
           <li key={c.id}>

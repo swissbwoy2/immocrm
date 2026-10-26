@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Clipboard, Search, Loader2, CheckCircle2, Calendar, FolderOpen, FileCheck, MessageSquare, ShieldCheck, Clock } from 'lucide-react';
+import { Clipboard, Search, Loader2, CheckCircle2, Calendar, FolderOpen, FileCheck, MessageSquare, ShieldCheck, Clock, ChevronRight, LifeBuoy } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { useCandidatCandidatures, RETENU_BAILLEUR } from '@/hooks/useCandidatCandidatures';
+import { useCandidatCandidatures, RETENU_BAILLEUR, statutLabel } from '@/hooks/useCandidatCandidatures';
 import { PremiumDashboardHeader } from '@/components/premium';
 import { PortailBannieres } from '@/components/public/PortailBannieres';
 import { MesOffresRecuesBand } from '@/components/client/dashboard/MesOffresRecuesBand';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
-import { DashPage, DashSection, DashSectionLink, LinkRow, StatTile, TodoCard } from '@/components/client/dashboard/DashPrimitives';
+import { DASH_CARD, DashBadge, DashPage, DashSection, DashSectionLink, LinkRow, StatTile, TodoCard } from '@/components/client/dashboard/DashPrimitives';
+import { CANDIDATURE_CLOSED, CandidatureRow, candidatureTone } from '@/components/candidat/candidatParts';
+import { formatZurichDateTime } from '@/lib/dateZurich';
 import { MesCreditsCard } from '@/components/credits/MesCreditsCard';
 import { StoriesBar } from '@/components/stories/StoriesBar';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -64,6 +66,11 @@ export default function CandidatDashboard() {
   const enCours = data.filter((c) => !['refuse', 'refusee', 'desiste'].includes(c.statut)).length;
   const retenues = data.filter((c) => c.statut === RETENU_BAILLEUR).length;
   const candidaturesAvecOffre = data.filter((c) => c.source === 'candidature');
+  const nowMs = Date.now();
+  const visitesAVenir = data
+    .filter((c) => !c.annulee && c.date_visite && new Date(c.date_visite).getTime() >= nowMs)
+    .sort((a, b) => a.date_visite!.localeCompare(b.date_visite!));
+  const candidaturesEnCours = data.filter((c) => !CANDIDATURE_CLOSED.includes(c.statut));
 
   // Point d'entrée unique de l'essai : start_candidat_trial() (mêmes contrôles et messages que CandidatActivationGate).
   const runTrialRpc = async () => {
@@ -148,16 +155,14 @@ export default function CandidatDashboard() {
           </div>
         )}
 
-        <MesCreditsCard />
-
-        {/* 3. Mes candidatures */}
-        <DashSection title="Mes candidatures" action={<DashSectionLink label="Tout voir" onClick={() => navigate('/candidat/candidatures')} />}>
+        {/* 3. Ma recherche : candidatures, visites (même ordre que le tableau client) */}
+        <DashSection title="Ma recherche" action={<DashSectionLink label="Tout voir" onClick={() => navigate('/candidat/candidatures')} />}>
           <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
             <StatTile
-              icon={FileText}
+              icon={FileCheck}
               label="Candidatures"
               value={isLoading ? '—' : `${data.length} au total`}
-              count={0}
+              count={retenues}
               onClick={() => navigate('/candidat/candidatures')}
             />
             <StatTile
@@ -168,13 +173,14 @@ export default function CandidatDashboard() {
               onClick={() => navigate('/candidat/candidatures')}
             />
             <StatTile
-              icon={FileCheck}
-              label="Retenues"
-              value={isLoading ? '—' : retenues > 0 ? `${retenues} retenue${retenues > 1 ? 's' : ''}` : 'Aucune'}
-              count={retenues}
-              onClick={() => navigate('/candidat/candidatures')}
+              icon={Calendar}
+              label="Agenda"
+              value={isLoading ? '—' : visitesAVenir.length > 0 ? `${visitesAVenir.length} à venir` : 'Aucune visite'}
+              count={visitesAVenir.length}
+              onClick={() => navigate('/candidat/agenda')}
             />
           </div>
+
           {candidaturesAvecOffre.length > 0 && (
             <MesOffresRecuesBand
               title="Offres / candidatures"
@@ -182,23 +188,79 @@ export default function CandidatDashboard() {
               onItemClick={() => navigate('/candidat/candidatures')}
             />
           )}
-          <LinkRow icon={FileCheck} label="Mes candidatures" sub={`${data.length} candidature${data.length > 1 ? 's' : ''}`} onClick={() => navigate('/candidat/candidatures')} />
+
+          {visitesAVenir.length > 0 && (
+            <div className={`${DASH_CARD} p-4 md:p-5`}>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-foreground">Mes visites à venir</h3>
+                <DashSectionLink label="Agenda" onClick={() => navigate('/candidat/agenda')} />
+              </div>
+              <div className="-mx-2 space-y-0.5">
+                {visitesAVenir.slice(0, 3).map((c) => (
+                  <CandidatureRow
+                    key={`v-${c.source}-${c.id}`}
+                    c={c}
+                    sub={<span className="font-medium text-primary">{formatZurichDateTime(c.date_visite, { weekday: true, year: false })}</span>}
+                    onClick={() => navigate('/candidat/agenda')}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!isLoading && data.length === 0 && (
+            <div className={`${DASH_CARD} p-5 text-center`}>
+              <p className="font-semibold text-foreground">Aucune candidature pour le moment</p>
+              <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+                Réservez une visite depuis une annonce : vos visites et vos candidatures apparaîtront ici.
+              </p>
+            </div>
+          )}
+
+          {candidaturesEnCours.length > 0 && (
+            <div className={`${DASH_CARD} p-4 md:p-5`}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold text-foreground">Vos candidatures en cours</h3>
+                  <p className="text-sm text-muted-foreground">Suivez la progression de vos dossiers</p>
+                </div>
+                <span className="flex h-7 min-w-7 shrink-0 items-center justify-center rounded-full bg-primary px-2 text-xs font-semibold text-primary-foreground">
+                  {candidaturesEnCours.length}
+                </span>
+              </div>
+              <div className="-mx-2 space-y-0.5">
+                {candidaturesEnCours.slice(0, 3).map((c) => (
+                  <CandidatureRow
+                    key={`c-${c.source}-${c.id}`}
+                    c={c}
+                    badge={<DashBadge tone={candidatureTone(c)}>{c.annulee ? 'Visite annulée' : statutLabel(c.statut)}</DashBadge>}
+                    onClick={() => navigate('/candidat/candidatures')}
+                  />
+                ))}
+              </div>
+              <Button variant="outline" className="mt-3 h-11 w-full" onClick={() => navigate('/candidat/candidatures')}>
+                Voir toutes mes candidatures
+                <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </DashSection>
 
         {/* 4. Mon dossier */}
         <DashSection title="Mon dossier">
-          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3">
             <LinkRow icon={Clipboard} label="Ma demande de location" sub="Compléter mes informations" onClick={() => navigate('/candidat/demande')} />
             <LinkRow icon={Search} label="Mes critères de recherche" sub={criteresComplete ? 'Modifier mes critères' : 'À compléter'} onClick={() => setCriteresOpen(true)} />
             <LinkRow icon={ShieldCheck} label="Mon garant" sub="Renseigner / modifier mon garant" onClick={() => setGarantOpen(true)} />
           </div>
         </DashSection>
 
-        {/* 5. Agenda et messages */}
-        <DashSection title="Agenda et messages">
+        {/* 5. Messages et crédits */}
+        <DashSection title="Messages et crédits">
+          <MesCreditsCard />
           <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 sm:gap-3">
-            <LinkRow icon={Calendar} label="Agenda" sub="Suivi des candidatures" onClick={() => navigate('/candidat/agenda')} />
             <LinkRow icon={MessageSquare} label="Messages" sub="Mes échanges sur les annonces" onClick={() => navigate('/candidat/messages')} />
+            <LinkRow icon={LifeBuoy} label="Support" sub="Une question ? Écrivez-nous" onClick={() => navigate('/candidat/support')} />
           </div>
         </DashSection>
       </DashPage>

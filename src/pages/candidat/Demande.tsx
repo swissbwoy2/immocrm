@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useCandidatCandidatures } from '@/hooks/useCandidatCandidatures';
 import { notifyPostulationRequest } from '@/lib/postulationRequest';
+import { formatChf } from '@/components/candidat/candidatParts';
 
 const ETAT_CIVIL = ['Célibataire', 'Marié(e)', 'Partenariat enregistré', 'Divorcé(e)', 'Veuf/Veuve', 'Séparé(e)'];
 const PERMIS = ['B', 'C', 'D', 'L', 'G', 'F', 'N', 'S', 'Aucun'];
@@ -65,22 +66,30 @@ const G_FIELDS: { k: string; l: string; req?: boolean; type?: string; opts?: str
   { k: 'date_entree', l: "Date d'entrée souhaitée", req: true, type: 'date' },
 ];
 
-const chf = (v: any) => (v == null || v === '' ? '—' : `CHF ${Number(v).toLocaleString('fr-CH')}.-`);
+const chf = (v: any) => (v == null || v === '' ? '—' : formatChf(v) ?? '—');
+/** Regroupement visuel des champs d'une personne (mêmes champs, même ordre). */
+const P_GROUPS: { titre: string; keys: string[] }[] = [
+  { titre: 'Identité', keys: ['prenom', 'nom', 'etat_civil', 'date_naissance', 'nationalite', 'permis'] },
+  { titre: 'Coordonnées', keys: ['portable', 'tel_bureau', 'email'] },
+  { titre: 'Adresse actuelle', keys: ['adresse', 'npa', 'ville', 'pays'] },
+  { titre: 'Bailleur actuel', keys: ['bailleur_actuel', 'bailleur_ref_nom', 'bailleur_ref_tel', 'bailleur_ref_email'] },
+  { titre: 'Situation professionnelle', keys: ['statut_emploi', 'profession', 'salaire_annuel', 'employeur', 'employe_depuis', 'employeur_ref_nom', 'employeur_ref_tel', 'employeur_ref_email', 'contrat', 'poursuites'] },
+];
 const DEPOSE = ['candidature_deposee', 'documents_demandes', 'retenu_bailleur', 'bail_signe', 'etat_lieux_effectue', 'cles_remises'];
 
 function Field({ f, value, onChange, id }: { f: { k: string; l: string; req?: boolean; type?: string; opts?: string[]; note?: string }; value: string; onChange: (v: string) => void; id: string }) {
   return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{f.l}{f.req && ' *'}</Label>
+    <div className="min-w-0 space-y-1.5">
+      <Label htmlFor={id} className="text-sm">{f.l}{f.req && ' *'}</Label>
       {f.opts ? (
         <Select value={value || undefined} onValueChange={onChange}>
-          <SelectTrigger id={id} className="min-h-[44px]"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+          <SelectTrigger id={id} className="min-h-[44px] text-[15px]"><SelectValue placeholder="Sélectionner" /></SelectTrigger>
           <SelectContent>{f.opts.map((o, i) => <SelectItem key={`${o}-${i}`} value={o}>{o}</SelectItem>)}</SelectContent>
         </Select>
       ) : (
-        <Input id={id} type={f.type || 'text'} min={f.type === 'number' ? 0 : undefined} className="min-h-[44px]" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
+        <Input id={id} type={f.type || 'text'} min={f.type === 'number' ? 0 : undefined} className="min-h-[44px] text-[15px]" value={value ?? ''} onChange={(e) => onChange(e.target.value)} />
       )}
-      {f.note && <p className="text-xs text-muted-foreground">{f.note}</p>}
+      {f.note && <p className="text-sm text-muted-foreground">{f.note}</p>}
     </div>
   );
 }
@@ -151,9 +160,9 @@ export default function CandidatDemande() {
               <p className="text-sm text-muted-foreground">Réservez et effectuez d'abord une visite pour pouvoir déposer une demande de location.</p>
             ) : (
               <>
-                <Label>Choisir le logement visité</Label>
+                <Label className="text-sm">Choisir le logement visité</Label>
                 <Select onValueChange={(v) => setSp({ candidature: v })}>
-                  <SelectTrigger className="min-h-[44px]"><SelectValue placeholder="Choisir" /></SelectTrigger>
+                  <SelectTrigger className="min-h-[44px] text-[15px]"><SelectValue placeholder="Choisir" /></SelectTrigger>
                   <SelectContent>{eligibles.map((c) => <SelectItem key={c.id} value={c.id}>{c.adresse}</SelectItem>)}</SelectContent>
                 </Select>
               </>
@@ -219,9 +228,10 @@ export default function CandidatDemande() {
         />
 
         <div className={`${DASH_CARD} p-4 md:p-5`}>
-          <h2 className="mb-3 text-base font-semibold text-foreground">{a.titre || 'Objet'}</h2>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-3">
-            {header.map(([k, v]) => <div key={k} className={k === 'Adresse' ? 'col-span-2 sm:col-span-3' : ''}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="font-medium text-foreground">{v}</dd></div>)}
+          <p className="text-sm font-medium text-muted-foreground">Logement visité</p>
+          <h2 className="mb-4 break-words text-lg font-semibold text-foreground">{a.titre || 'Objet'}</h2>
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {header.map(([k, v]) => <div key={k} className={`imr-lg-glass min-w-0 rounded-2xl px-3 py-2.5 ${k === 'Adresse' ? 'col-span-2 sm:col-span-3' : ''}`}><dt className="text-sm text-muted-foreground">{k}</dt><dd className="break-words text-[15px] font-semibold text-foreground">{v}</dd></div>)}
           </dl>
         </div>
 
@@ -236,30 +246,37 @@ export default function CandidatDemande() {
 
         {[principal, ...co].map((p, i) => (
           <div key={i} className={`${DASH_CARD} p-4 md:p-5`}>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-foreground">{i === 0 ? 'Locataire principal' : `Autre personne ${i}`}</h2>
-              {i > 0 && <Button variant="ghost" size="icon" className="rounded-full" aria-label="Retirer" onClick={() => setCo((l) => l.filter((_, j) => j !== i - 1))}><Trash2 className="h-4 w-4" /></Button>}
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-foreground">{i === 0 ? 'Locataire principal' : `Autre personne ${i}`}</h2>
+              {i > 0 && <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Retirer" onClick={() => setCo((l) => l.filter((_, j) => j !== i - 1))}><Trash2 className="h-4 w-4" /></Button>}
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {P_FIELDS.map((f) => <Field key={f.k} id={`p${i}-${f.k}`} f={f} value={p[f.k] ?? ''} onChange={(v) => setP(i, f.k, v)} />)}
+            <div className="space-y-6">
+              {P_GROUPS.map((g) => (
+                <fieldset key={g.titre} className="min-w-0 space-y-3">
+                  <legend className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">{g.titre}</legend>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {P_FIELDS.filter((f) => g.keys.includes(f.k)).map((f) => <Field key={f.k} id={`p${i}-${f.k}`} f={f} value={p[f.k] ?? ''} onChange={(v) => setP(i, f.k, v)} />)}
+                  </div>
+                </fieldset>
+              ))}
             </div>
           </div>
         ))}
-        <Button variant="outline" className="min-h-[44px] w-full rounded-full" onClick={() => setCo((l) => [...l, { pays: 'Suisse' }])}><Plus className="mr-2 h-4 w-4" />Ajouter autre personne</Button>
+        <Button variant="outline" className="min-h-[44px] w-full" onClick={() => setCo((l) => [...l, { pays: 'Suisse' }])}><Plus className="mr-2 h-4 w-4" />Ajouter autre personne</Button>
 
         <div className={`${DASH_CARD} p-4 md:p-5`}>
-          <h2 className="mb-4 text-base font-semibold text-foreground">Renseignements généraux</h2>
+          <h2 className="mb-5 text-lg font-semibold text-foreground">Renseignements généraux</h2>
           <div className="grid gap-4 sm:grid-cols-2">
             {G_FIELDS.map((f) => <Field key={f.k} id={`g-${f.k}`} f={f} value={gen[f.k] ?? ''} onChange={(v) => setGen((g) => ({ ...g, [f.k]: v }))} />)}
             <div className="space-y-1.5 sm:col-span-2">
-              <Label htmlFor="g-comm">Commentaires</Label>
-              <Textarea id="g-comm" rows={4} value={commentaires} onChange={(e) => setCommentaires(e.target.value)} />
+              <Label htmlFor="g-comm" className="text-sm">Commentaires</Label>
+              <Textarea id="g-comm" rows={4} className="text-[15px]" value={commentaires} onChange={(e) => setCommentaires(e.target.value)} />
             </div>
           </div>
         </div>
 
-        <div className="sticky bottom-0 -mx-4 border-t border-border/70 bg-background p-4 md:mx-0 md:rounded-2xl md:border">
-          <Button className="min-h-[48px] w-full rounded-full" disabled={!!deja} onClick={() => validate() && setConfirmOpen(true)}>Envoyer le formulaire de candidature</Button>
+        <div className="sticky bottom-0 z-20 -mx-4 border-t border-border/60 bg-background/90 px-4 pt-3 pb-[max(env(safe-area-inset-bottom),0.75rem)] backdrop-blur-xl md:mx-0 md:rounded-[22px] md:border md:p-4">
+          <Button className="min-h-[48px] w-full" disabled={!!deja} onClick={() => validate() && setConfirmOpen(true)}>Envoyer le formulaire de candidature</Button>
         </div>
       </div>
       </DashPage>
@@ -270,7 +287,7 @@ export default function CandidatDemande() {
             <DialogTitle>Soumettre formulaire de candidature ?</DialogTitle>
             <DialogDescription>Le formulaire de candidature sera envoyé à l'annonceur. Veuillez confirmer :</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 rounded-xl bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
+          <div className="space-y-3 rounded-2xl bg-muted/50 p-3 text-sm leading-relaxed text-muted-foreground">
             <p>Cette demande de location est sans engagement de part et d'autre. La régie se réserve le droit de l'accepter ou de la refuser sans avoir à en indiquer les motifs. Si le candidat locataire se retire après l'établissement du contrat de bail convenu, il doit s'acquitter d'une indemnité qui se monte à 10% du loyer mensuel brut mais au minimum de CHF 100.- (TVA non comprise) pour couvrir les frais administratifs dus à son désistement (art. 82 LP).</p>
             <p>Si votre candidature est sélectionnée sur la base du présent formulaire, nous vous demanderons de produire les pièces justificatives suivantes avant d'établir un contrat :</p>
             <ul className="list-none space-y-0.5">
