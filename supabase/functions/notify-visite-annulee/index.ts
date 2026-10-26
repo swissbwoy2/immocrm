@@ -32,6 +32,24 @@ Deno.serve(async (req) => {
     const annonce_id = typeof body?.annonce_id === "string" && UUID.test(body.annonce_id) ? body.annonce_id : null;
     if (!creneau_id && !annonce_id) return json({ error: "creneau_id ou annonce_id requis" }, 400);
 
+    // Admin : toutes les annonces. Agent : seulement les annonces publiées depuis son propre compte annonceur.
+    if (!(roles ?? []).some((r: any) => r.role === "admin")) {
+      let annonceVisee: string | null = annonce_id;
+      if (!annonceVisee && creneau_id) {
+        const { data: cr } = await admin.from("annonce_creneaux").select("annonce_id").eq("id", creneau_id).maybeSingle();
+        annonceVisee = cr?.annonce_id ?? null;
+      }
+      let proprietaire = false;
+      if (annonceVisee) {
+        const { data: ann } = await admin.from("annonces_publiques").select("annonceur_id").eq("id", annonceVisee).maybeSingle();
+        if (ann?.annonceur_id) {
+          const { data: anr } = await admin.from("annonceurs").select("user_id").eq("id", ann.annonceur_id).maybeSingle();
+          proprietaire = anr?.user_id === u.user.id;
+        }
+      }
+      if (!proprietaire) return json({ error: "forbidden" }, 403);
+    }
+
     let q = admin.from("candidatures_location")
       .select("id, user_id, prenom, email, statut, creneau_id, date_visite, note_agent, annonces_publiques(titre, adresse, ville), annonce_creneaux(date_heure)")
       .not("statut", "in", `(${EXCLUDED.join(",")})`)
