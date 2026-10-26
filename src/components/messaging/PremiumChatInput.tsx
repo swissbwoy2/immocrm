@@ -93,7 +93,7 @@ export const PremiumChatInput: React.FC<PremiumChatInputProps> = ({
   return (
     <form
       onSubmit={handleSubmit}
-      className="shrink-0 px-3 pt-2 border-t border-border/70 bg-card"
+      className="imr-kb-composer shrink-0 px-3 pt-2 border-t border-border/70 bg-card"
       style={{ paddingBottom: 'calc(0.5rem + env(safe-area-inset-bottom, 0px))' }}
     >
       {/* Pending attachment preview */}

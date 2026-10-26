@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { lazyWithRetry } from '@/lib/lazyWithRetry';
 import { Toaster as Sonner } from "@/components/ui/sonner";
+import { KeyboardInset } from "@/components/mobile/KeyboardInset";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
@@ -307,6 +308,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Sonner />
+      <KeyboardInset />
       <IOSAppInterstitial />
       <ScrollToTop />
       <BrowserRouter

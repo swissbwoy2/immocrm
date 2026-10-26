@@ -82,7 +82,7 @@ export function SteevePartnerPanel({ role, onBusy }: { role: SteeveSpace; onBusy
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div ref={listRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm" aria-live="polite">
+      <div ref={listRef} data-imr-chat-scroll className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-3 text-sm" aria-live="polite">
         <div className="max-w-[90%] rounded-2xl rounded-bl-md bg-muted px-3 py-2 leading-relaxed">
           {admin ? 'Salut' : 'Bonjour'}{prenom ? ` ${prenom}` : ''}, {INTRO[role]}
         </div>
@@ -166,7 +166,7 @@ export function SteevePartnerChat({ role }: { role: PartnerRole }) {
               transition={{ duration: 0.2 }}
               onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}
               className={isMobile
-                ? 'fixed inset-x-0 bottom-0 z-50 flex h-[85vh] flex-col overflow-hidden rounded-t-3xl border border-border/70 bg-background shadow-2xl'
+                ? 'imr-kb-sheet fixed inset-x-0 bottom-0 z-50 flex h-[85vh] flex-col overflow-hidden rounded-t-3xl border border-border/70 bg-background shadow-2xl'
                 : 'fixed bottom-6 right-[180px] z-50 flex h-[min(560px,calc(100dvh-48px))] w-[380px] flex-col overflow-hidden rounded-2xl border border-border/70 bg-background shadow-2xl min-[1800px]:right-[200px]'}
               style={isMobile ? { paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}
             >

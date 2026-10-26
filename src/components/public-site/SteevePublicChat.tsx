@@ -324,7 +324,7 @@ export function SteevePublicChat({ hidden = false, candidat }: { hidden?: boolea
     <div
       data-floating-widget
       className={cn(
-        'steeve-public-launcher fixed right-2 z-[60] flex flex-col items-end gap-2 bottom-[calc(env(safe-area-inset-bottom,0px)+90px)] max-[379px]:bottom-[calc(env(safe-area-inset-bottom,0px)+110px)] sm:flex-row sm:items-end sm:gap-3 lg:bottom-4 lg:right-4',
+        'steeve-public-launcher imr-kb-float fixed right-2 z-[60] flex flex-col items-end gap-2 bottom-[calc(env(safe-area-inset-bottom,0px)+90px)] max-[379px]:bottom-[calc(env(safe-area-inset-bottom,0px)+110px)] sm:flex-row sm:items-end sm:gap-3 lg:bottom-4 lg:right-4',
         hidden && 'pointer-events-none invisible',
       )}
     >
@@ -332,7 +332,7 @@ export function SteevePublicChat({ hidden = false, candidat }: { hidden?: boolea
         <div
           role="dialog"
           aria-label="Discuter avec Steeve"
-          className="flex h-[min(560px,calc(100dvh-260px))] w-[min(380px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl sm:h-[min(560px,calc(100dvh-120px))] sm:w-[min(380px,calc(100vw-160px))]"
+          className="imr-kb-float-panel flex h-[min(560px,calc(100dvh-260px))] w-[min(380px,calc(100vw-16px))] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-2xl sm:h-[min(560px,calc(100dvh-120px))] sm:w-[min(380px,calc(100vw-160px))]"
         >
           <div className="flex items-center justify-between gap-2 border-b border-border bg-primary px-4 py-3 text-primary-foreground">
             <div className="min-w-0">
@@ -362,7 +362,7 @@ export function SteevePublicChat({ hidden = false, candidat }: { hidden?: boolea
             </div>
           </div>
 
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto px-3 py-4 text-sm" aria-live="polite" aria-relevant="additions">
+          <div ref={listRef} data-imr-chat-scroll className="flex-1 space-y-3 overflow-y-auto px-3 py-4 text-sm" aria-live="polite" aria-relevant="additions">
             {all.map((m, i) => (
               <div key={i} className={cn('flex flex-col gap-2', m.role === 'user' ? 'items-end' : 'items-start')}>
                 <div
@@ -448,6 +448,7 @@ export function SteevePublicChat({ hidden = false, candidat }: { hidden?: boolea
       )}
 
       <SteeveLauncher
+        className="imr-kb-hide"
         open={open}
         busy={sending}
         cue={cue}
