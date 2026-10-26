@@ -12,6 +12,8 @@ export default function CoursierParametres() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  /** Section dont le bouton « Enregistrer » a été pressé (affichage du chargement). */
+  const [sectionEnCours, setSectionEnCours] = useState<'profil' | 'paiement' | null>(null);
   const [form, setForm] = useState({
     prenom: '',
     nom: '',
@@ -90,12 +92,12 @@ export default function CoursierParametres() {
       <div className="mx-auto max-w-2xl space-y-5">
       <DashPageHeader
         title="Paramètres"
-        subtitle="Gérez vos informations personnelles et de paiement"
+        subtitle="Vos coordonnées et votre compte de versement"
       />
 
       <section className={`${DASH_CARD} p-5 sm:p-6`} aria-labelledby="coursier-param-profil">
         <h2 id="coursier-param-profil" className="flex items-center gap-2 text-base font-semibold text-foreground">
-          <User className="h-5 w-5" />
+          <User className="h-5 w-5 text-primary" />
           Informations personnelles
         </h2>
 
@@ -106,7 +108,7 @@ export default function CoursierParametres() {
               id="prenom"
               value={form.prenom}
               onChange={(e) => setForm(prev => ({ ...prev, prenom: e.target.value }))}
-              className="h-11"
+              className="h-11 text-base md:text-sm"
               placeholder="Votre prénom"
               autoComplete="given-name"
             />
@@ -117,7 +119,7 @@ export default function CoursierParametres() {
               id="nom"
               value={form.nom}
               onChange={(e) => setForm(prev => ({ ...prev, nom: e.target.value }))}
-              className="h-11"
+              className="h-11 text-base md:text-sm"
               placeholder="Votre nom"
               autoComplete="family-name"
             />
@@ -130,7 +132,7 @@ export default function CoursierParametres() {
               type="tel"
               value={form.telephone}
               onChange={(e) => setForm(prev => ({ ...prev, telephone: e.target.value }))}
-              className="h-11"
+              className="h-11 text-base md:text-sm"
               placeholder="+41 XX XXX XX XX"
               autoComplete="tel"
             />
@@ -143,17 +145,23 @@ export default function CoursierParametres() {
               type="email"
               value={form.email}
               onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
-              className="h-11"
+              className="h-11 text-base md:text-sm"
               placeholder="votre@email.ch"
               autoComplete="email"
             />
           </div>
         </div>
+        <div className="mt-5 flex justify-end border-t border-border/60 pt-4">
+          <Button onClick={() => { setSectionEnCours('profil'); handleSave(); }} disabled={saving} className="h-12 w-full px-6 sm:h-11 sm:w-auto">
+            {saving && sectionEnCours === 'profil' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Enregistrer mes informations
+          </Button>
+        </div>
       </section>
 
       <section className={`${DASH_CARD} p-5 sm:p-6`} aria-labelledby="coursier-param-paiement">
         <h2 id="coursier-param-paiement" className="flex items-center gap-2 text-base font-semibold text-foreground">
-          <CreditCard className="h-5 w-5" />
+          <CreditCard className="h-5 w-5 text-primary" />
           Paiement
         </h2>
         <div className="mt-5 space-y-1.5">
@@ -162,19 +170,18 @@ export default function CoursierParametres() {
             id="iban"
             value={form.iban}
             onChange={(e) => setForm(prev => ({ ...prev, iban: e.target.value }))}
-            className="h-11 font-mono"
+            className="h-11 font-mono text-base md:text-sm"
             placeholder="CH93 0076 2011 6238 5295 7"
           />
-          <p className="text-xs text-muted-foreground">Votre IBAN sera utilisé pour le versement de vos rémunérations</p>
+          <p className="text-sm text-muted-foreground">Votre IBAN sera utilisé pour le versement de vos rémunérations.</p>
+        </div>
+        <div className="mt-5 flex justify-end border-t border-border/60 pt-4">
+          <Button onClick={() => { setSectionEnCours('paiement'); handleSave(); }} disabled={saving} className="h-12 w-full px-6 sm:h-11 sm:w-auto">
+            {saving && sectionEnCours === 'paiement' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Enregistrer le paiement
+          </Button>
         </div>
       </section>
-
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={saving} className="h-12 w-full rounded-full px-6 sm:h-11 sm:w-auto">
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          Enregistrer
-        </Button>
-      </div>
       </div>
     </DashPage>
   );
