@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2, RotateCcw, Send, Sparkles } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -70,60 +70,74 @@ export function SteeveCopilotCard() {
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-        <div>
-          <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Copilote</CardTitle>
-          <CardDescription>
+    <section aria-labelledby="steeve-copilote-title" className={cn(DASH_CARD, 'flex min-w-0 flex-col p-4 md:p-6')}>
+      <header className="flex items-start gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Sparkles className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h2 id="steeve-copilote-title" className="text-base font-semibold leading-snug text-foreground md:text-[17px]">Copilote</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Demande à Steeve l'état de l'activité. Il lit les chiffres et les dossiers, propose des priorités, et ne lance une tâche (demande de QR, relance, envoi de dossier) que si tu le lui demandes.
-          </CardDescription>
+          </p>
         </div>
         {messages.length > 0 && (
-          <Button variant="ghost" size="icon" onClick={() => setMessages([])} aria-label="Nouvelle conversation" title="Nouvelle conversation">
+          <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" onClick={() => setMessages([])} aria-label="Nouvelle conversation" title="Nouvelle conversation">
             <RotateCcw className="h-4 w-4" />
           </Button>
         )}
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <div ref={listRef} className="max-h-[420px] min-h-[120px] space-y-3 overflow-y-auto rounded-lg border bg-muted/30 p-3 text-sm" aria-live="polite">
-          {messages.length === 0 && !sending && (
+      </header>
+
+      <div
+        ref={listRef}
+        className="mt-4 h-[min(56dvh,480px)] min-h-[220px] space-y-3 overflow-y-auto overscroll-contain rounded-2xl border border-border/60 bg-background/40 p-3 dark:bg-white/[0.03] md:mt-5 md:h-[min(60vh,560px)]"
+        aria-live="polite"
+        aria-label="Conversation avec le copilote"
+      >
+        {messages.length === 0 && !sending && (
+          <div className="flex h-full flex-col justify-end gap-3">
+            <p className="text-sm text-muted-foreground">Suggestions :</p>
             <div className="flex flex-wrap gap-2">
               {SUGGESTIONS.map((s) => (
-                <button key={s} type="button" onClick={() => void send(s)} className="min-h-[36px] rounded-full border border-primary/40 bg-background px-3 py-1 text-xs hover:bg-primary/10">
+                <button key={s} type="button" onClick={() => void send(s)} className="imr-lg-glass min-h-11 rounded-full px-4 py-2 text-left text-sm font-medium text-foreground active:scale-[0.98]">
                   {s}
                 </button>
               ))}
             </div>
-          )}
-          {messages.map((m, i) => (
-            <div key={i} className={cn('flex flex-col', m.role === 'user' ? 'items-end' : 'items-start')}>
-              <div className={cn('max-w-[90%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 leading-relaxed',
-                m.role === 'user' ? 'rounded-br-md bg-primary text-primary-foreground' : 'rounded-bl-md bg-background')}>
-                {m.content}
-              </div>
-              {m.role === 'assistant' && m.tools && m.tools.length > 0 && (
-                <p className="mt-1 text-[11px] text-muted-foreground">Sources : {m.tools.map((t) => TOOL_LABEL[t] || t).join(', ')}</p>
-              )}
+          </div>
+        )}
+        {messages.map((m, i) => (
+          <div key={i} className={cn('flex flex-col', m.role === 'user' ? 'items-end' : 'items-start')}>
+            <div className={cn('max-w-[88%] whitespace-pre-wrap break-words rounded-[20px] px-3.5 py-2.5 text-[15px] leading-relaxed sm:max-w-[80%]',
+              m.role === 'user' ? 'imr-lg-tint rounded-br-md text-primary-foreground' : 'imr-lg-glass rounded-bl-md text-foreground')}>
+              {m.content}
             </div>
-          ))}
-          {sending && (
-            <div className="flex items-center gap-2 text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Steeve consulte les données…</div>
-          )}
-        </div>
-        <form className="flex items-end gap-2" onSubmit={(e) => { e.preventDefault(); void send(draft); }}>
-          <textarea
-            value={draft}
-            rows={1}
-            maxLength={2000}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(draft); } }}
-            placeholder="Ex. : où en est le dossier de Martin ?"
-            aria-label="Question pour le copilote"
-            className="max-h-28 min-h-[40px] flex-1 resize-none rounded-xl border bg-background px-3 py-2 text-base outline-none focus:border-primary sm:text-sm"
-          />
-          <Button type="submit" size="icon" disabled={sending || !draft.trim()} aria-label="Envoyer"><Send className="h-4 w-4" /></Button>
-        </form>
-      </CardContent>
-    </Card>
+            {m.role === 'assistant' && m.tools && m.tools.length > 0 && (
+              <p className="mt-1 px-1 text-[13px] text-muted-foreground">Sources : {m.tools.map((t) => TOOL_LABEL[t] || t).join(', ')}</p>
+            )}
+          </div>
+        ))}
+        {sending && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Steeve consulte les données…</div>
+        )}
+      </div>
+
+      <form
+        className="sticky bottom-0 z-10 -mx-4 -mb-4 mt-3 flex items-end gap-2 rounded-b-[22px] bg-background/80 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl md:static md:mx-0 md:mb-0 md:rounded-none md:bg-transparent md:px-0 md:pb-0 md:backdrop-blur-none"
+        onSubmit={(e) => { e.preventDefault(); void send(draft); }}
+      >
+        <textarea
+          value={draft}
+          rows={1}
+          maxLength={2000}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void send(draft); } }}
+          placeholder="Ex. : où en est Martin ?"
+          aria-label="Question pour le copilote"
+          className="max-h-32 min-h-11 min-w-0 flex-1 resize-none rounded-[22px] border border-border/70 bg-background px-4 py-2.5 text-base outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/30"
+        />
+        <Button type="submit" size="icon" className="h-11 w-11 shrink-0" disabled={sending || !draft.trim()} aria-label="Envoyer"><Send className="h-4 w-4" /></Button>
+      </form>
+    </section>
   );
 }

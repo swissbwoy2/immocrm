@@ -47,6 +47,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
+import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { downloadBlob } from '@/lib/candidatureDocs';
 import { buildAgencySignature, stripAgencySignature } from '@/lib/mailSignature';
 import {
@@ -772,64 +773,98 @@ function MailSettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Réglages des boîtes</DialogTitle>
-          <DialogDescription>
+      <DialogContent mobileFullHeight className="flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 pt-2 md:mx-auto md:max-w-2xl md:pt-0">
+        <DialogHeader className="shrink-0 border-b border-border/60 px-4 pb-4 pr-14 pt-2 text-left md:px-6 md:pt-6">
+          <DialogTitle className="text-lg">Réglages des boîtes</DialogTitle>
+          <DialogDescription className="text-sm">
             Nom d'expéditeur et signature de chaque adresse. Les mots de passe se saisissent une fois dans Steeve → Boîtes e-mail partagées (coffre sécurisé).
           </DialogDescription>
         </DialogHeader>
-        <Button variant="outline" size="sm" className="w-fit" onClick={onPasswords}><KeyRound className="mr-1.5 h-4 w-4" /> Gérer les mots de passe</Button>
-        <div className="space-y-4">
-          {boxes.map((b) => (
-            <div key={b.id} className="space-y-2 rounded-xl border border-border/70 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="font-medium text-foreground">{b.address}</p>
-                <Badge variant={b.has_password ? (b.full_sync_error ? 'destructive' : 'secondary') : 'outline'}>
-                  {!b.has_password ? 'Mot de passe manquant' : b.full_sync_error ? 'Erreur de relève' : b.full_sync_at ? 'Branchée' : 'En attente de relève'}
-                </Badge>
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor={`name-${b.id}`}>Nom d'expéditeur</Label>
-                <Input id={`name-${b.id}`} value={edits[b.id]?.name || ''} onChange={(e) => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], name: e.target.value } }))} />
-              </div>
-              <div className="grid gap-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label htmlFor={`sig-${b.id}`}>Signature</Label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], signature: buildAgencySignature(b.address, s[b.id]?.name || b.display_name) } }))}
-                  >
-                    Signature type de l'agence
+
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 md:px-6">
+          {boxes.length === 0 && (
+            <p className="imr-lg-card rounded-[22px] p-4 text-sm text-muted-foreground">Aucune boîte disponible.</p>
+          )}
+          {boxes.map((b) => {
+            const status: { label: string; tone: 'warning' | 'danger' | 'success' | 'neutral' } = !b.has_password
+              ? { label: 'Mot de passe manquant', tone: 'warning' }
+              : b.full_sync_error
+                ? { label: 'Erreur de relève', tone: 'danger' }
+                : b.full_sync_at
+                  ? { label: 'Branchée', tone: 'success' }
+                  : { label: 'En attente de relève', tone: 'neutral' };
+            return (
+              <section key={b.id} aria-labelledby={`box-${b.id}`} className="imr-lg-card min-w-0 rounded-[22px] p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 id={`box-${b.id}`} className="break-all text-[15px] font-semibold text-foreground">{b.address}</h3>
+                    {b.full_sync_at && (
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        Dernière relève : {new Intl.DateTimeFormat('fr-CH', { timeZone: 'Europe/Zurich', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(b.full_sync_at))}
+                      </p>
+                    )}
+                  </div>
+                  <DashBadge tone={status.tone}>{status.label}</DashBadge>
+                </div>
+                <div className="mt-4 grid gap-4">
+                  <div className="grid gap-1.5">
+                    <Label htmlFor={`name-${b.id}`}>Nom d'expéditeur</Label>
+                    <Input id={`name-${b.id}`} className="h-11 rounded-xl" value={edits[b.id]?.name || ''} onChange={(e) => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], name: e.target.value } }))} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Label htmlFor={`sig-${b.id}`}>Signature</Label>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="min-h-10"
+                        onClick={() => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], signature: buildAgencySignature(b.address, s[b.id]?.name || b.display_name) } }))}
+                      >
+                        Signature type de l'agence
+                      </Button>
+                    </div>
+                    {edits[b.id]?.signature ? (
+                      <div
+                        className="max-h-72 overflow-auto rounded-xl border border-border/60 bg-white p-3 [&_img]:max-w-full"
+                        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(edits[b.id].signature, { FORBID_TAGS: ['script', 'style', 'iframe', 'form'] }) }}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Aucune signature.</p>
+                    )}
+                    <details className="text-sm">
+                      <summary className="cursor-pointer py-1 text-muted-foreground">Modifier le code HTML</summary>
+                      <Textarea id={`sig-${b.id}`} rows={6} className="mt-2 rounded-xl font-mono text-xs" value={edits[b.id]?.signature || ''} onChange={(e) => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], signature: e.target.value } }))} />
+                    </details>
+                  </div>
+                </div>
+                {tests[b.id] && <p className="mt-3 break-words rounded-xl bg-muted/50 px-3 py-2 text-sm text-muted-foreground">{tests[b.id]}</p>}
+                {b.full_sync_error && <p className="mt-3 break-words text-sm text-destructive">{b.full_sync_error}</p>}
+                <div className="mt-4 flex flex-col-reverse gap-2 border-t border-border/60 pt-4 sm:flex-row sm:justify-end">
+                  <Button variant="outline" className="min-h-11" onClick={() => test(b)} disabled={!b.has_password || busy === `test-${b.id}`}>
+                    {busy === `test-${b.id}` && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Tester la connexion
+                  </Button>
+                  <Button className="min-h-11" onClick={() => save(b)} disabled={busy === `save-${b.id}`}>
+                    {busy === `save-${b.id}` && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Enregistrer
                   </Button>
                 </div>
-                {edits[b.id]?.signature ? (
-                  <div
-                    className="max-h-72 overflow-auto rounded-lg border border-border/70 bg-white p-3 [&_img]:max-w-full"
-                    dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(edits[b.id].signature, { FORBID_TAGS: ['script', 'style', 'iframe', 'form'] }) }}
-                  />
-                ) : (
-                  <p className="text-xs text-muted-foreground">Aucune signature.</p>
-                )}
-                <details className="text-xs">
-                  <summary className="cursor-pointer text-muted-foreground">Modifier le code HTML</summary>
-                  <Textarea id={`sig-${b.id}`} rows={6} className="mt-2 font-mono text-xs" value={edits[b.id]?.signature || ''} onChange={(e) => setEdits((s) => ({ ...s, [b.id]: { ...s[b.id], signature: e.target.value } }))} />
-                </details>
-              </div>
-              {tests[b.id] && <p className="text-xs text-muted-foreground">{tests[b.id]}</p>}
-              {b.full_sync_error && <p className="text-xs text-destructive">{b.full_sync_error}</p>}
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => save(b)} disabled={busy === `save-${b.id}`}>
-                  {busy === `save-${b.id}` && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Enregistrer
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => test(b)} disabled={!b.has_password || busy === `test-${b.id}`}>
-                  {busy === `test-${b.id}` && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />} Tester la connexion
-                </Button>
-              </div>
-            </div>
-          ))}
+              </section>
+            );
+          })}
+        </div>
+
+        <div className="flex shrink-0 flex-row gap-2 border-t border-border/60 bg-background/90 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:justify-between md:px-6 md:pb-4">
+          <Button variant="outline" className="min-h-11 shrink-0" onClick={() => onOpenChange(false)}>Fermer</Button>
+          <Button
+            variant="outline"
+            className="min-h-11 min-w-0 flex-1 sm:flex-none"
+            onClick={() => {
+              try { localStorage.setItem('admin-steeve-section', 'boites'); } catch { /* stockage indisponible */ }
+              onPasswords();
+            }}
+          >
+            <KeyRound className="mr-1.5 h-4 w-4" /> Gérer les mots de passe
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

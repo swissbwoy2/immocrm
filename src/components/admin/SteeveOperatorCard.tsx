@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, CheckCircle2, ChevronDown, ChevronUp, Loader2, OctagonX, PlayCircle, ShieldCheck } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Ban, Bot, CheckCircle2, ChevronDown, ChevronUp, Loader2, OctagonX, PlayCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { DASH_CARD, DashBadge, DashFilterPills } from '@/components/client/dashboard/DashPrimitives';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -26,14 +25,15 @@ const KIND: Record<string, string> = {
   triage_postulations: 'File des postulations', demande_postulation: 'Postulation demandée', lecon: 'Réglage',
   lecture_mail: 'Réponse lue (régie / annonceur)',
 };
-const STATUT: Record<string, { label: string; tone: string }> = {
-  a_faire: { label: 'À faire', tone: 'bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-100' },
-  a_blanc: { label: 'À blanc (non envoyé)', tone: 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-100' },
-  fait: { label: 'Fait', tone: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-100' },
-  bloque: { label: 'Bloqué', tone: 'bg-orange-100 text-orange-900 dark:bg-orange-950 dark:text-orange-100' },
-  a_valider: { label: 'À valider', tone: 'bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-100' },
-  annule: { label: 'Annulé', tone: 'bg-muted text-muted-foreground' },
-  echec: { label: 'Échec', tone: 'bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-100' },
+type BadgeTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'muted';
+const STATUT: Record<string, { label: string; tone: BadgeTone }> = {
+  a_faire: { label: 'À faire', tone: 'neutral' },
+  a_blanc: { label: 'À blanc (non envoyé)', tone: 'warning' },
+  fait: { label: 'Fait', tone: 'success' },
+  bloque: { label: 'Bloqué', tone: 'danger' },
+  a_valider: { label: 'À valider', tone: 'primary' },
+  annule: { label: 'Annulé', tone: 'muted' },
+  echec: { label: 'Échec', tone: 'danger' },
 };
 const FILTERS: { value: string; label: string }[] = [
   { value: '', label: 'Tout' }, { value: 'fait', label: 'Faits' }, { value: 'a_blanc', label: 'À blanc' },
@@ -78,30 +78,41 @@ export function SteeveOperatorCard() {
     void load();
   };
 
+  const MODE_LABEL = data ? (data.mode === 'off' ? 'Arrêté' : data.mode === 'a_blanc' ? 'À blanc' : 'Autonome') : '';
+
   if (!data) {
-    return <Card><CardHeader><CardTitle>Steeve opérateur</CardTitle><CardDescription>Chargement…</CardDescription></CardHeader></Card>;
+    return (
+      <section aria-labelledby="steeve-operateur-title" className={cn(DASH_CARD, 'p-4 md:p-6')}>
+        <h2 id="steeve-operateur-title" className="text-base font-semibold text-foreground md:text-[17px]">Steeve opérateur</h2>
+        <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Chargement…</p>
+      </section>
+    );
   }
 
   const anyBox = data.boites.some((b) => b.branchee);
   const today = data.aujourdhui ?? {};
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex flex-wrap items-center gap-2">
-          Steeve opérateur
-          <Badge variant={data.mode === 'autonome' ? 'default' : 'secondary'}>
-            {data.mode === 'off' ? 'Arrêté' : data.mode === 'a_blanc' ? 'À blanc' : 'Autonome'}
-          </Badge>
-        </CardTitle>
-        <CardDescription>
-          Steeve reprend les tâches des routines : lecture des réponses des régies (visites@, relocation@), demande du QR code Flatfox après la visite, relances oubliées, contrôle puis envoi des
-          dossiers préparés dans relocation@. Bail, signature, dossier retenu, paiement et questions des régies restent à l'équipe.
-          Chaque action est notée ci-dessous.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Mode de Steeve opérateur">
+    <>
+      <section aria-labelledby="steeve-operateur-title" className={cn(DASH_CARD, 'min-w-0 p-4 md:p-6')}>
+        <header className="flex items-start gap-3">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Bot className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1 pt-0.5">
+            <h2 id="steeve-operateur-title" className="flex flex-wrap items-center gap-2 text-base font-semibold leading-snug text-foreground md:text-[17px]">
+              Steeve opérateur
+              <DashBadge tone={data.mode === 'autonome' ? 'success' : data.mode === 'a_blanc' ? 'warning' : 'muted'}>{MODE_LABEL}</DashBadge>
+            </h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+              Steeve reprend les tâches des routines : lecture des réponses des régies (visites@, relocation@), demande du QR code Flatfox après la visite, relances oubliées, contrôle puis envoi des
+              dossiers préparés dans relocation@. Bail, signature, dossier retenu, paiement et questions des régies restent à l'équipe.
+              Chaque action est notée ci-dessous.
+            </p>
+          </div>
+        </header>
+
+        <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3" role="group" aria-label="Mode de Steeve opérateur">
           <Button variant={data.mode === 'off' ? 'destructive' : 'outline'} disabled={busy} onClick={() => void setMode('off')} className="min-h-[44px]">
             <OctagonX className="mr-2 h-4 w-4" /> Arrêter
           </Button>
@@ -111,82 +122,91 @@ export function SteeveOperatorCard() {
           <Button variant={data.mode === 'autonome' ? 'default' : 'outline'} disabled={busy} onClick={() => void setMode('autonome')} className="min-h-[44px]">
             <PlayCircle className="mr-2 h-4 w-4" /> Autonome
           </Button>
-          {busy && <Loader2 className="h-4 w-4 animate-spin self-center" aria-label="Enregistrement" />}
         </div>
-        <p className="text-sm text-muted-foreground">
-          {data.mode === 'off' && 'Arrêté : Steeve ne fait plus rien (seul le chat reste actif).'}
-          {data.mode === 'a_blanc' && (data.autonome_le
-            ? `À blanc : il contrôle et note ce qu'il aurait envoyé. Passage en autonome le ${fmt(data.autonome_le)}, sauf arrêt d'ici là.`
-            : "À blanc : les 48 h de contrôle commencent dès qu'une boîte d'envoi est branchée (ci-dessous).")}
-          {data.mode === 'autonome' && 'Autonome : il envoie entre 7 h et 20 h ce qui passe tous les contrôles, au plus 15 dossiers et 20 relances par jour.'}
+        <p className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
+          {busy && <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin" aria-label="Enregistrement" />}
+          <span>
+            {data.mode === 'off' && 'Arrêté : Steeve ne fait plus rien (seul le chat reste actif).'}
+            {data.mode === 'a_blanc' && (data.autonome_le
+              ? `À blanc : il contrôle et note ce qu'il aurait envoyé. Passage en autonome le ${fmt(data.autonome_le)}, sauf arrêt d'ici là.`
+              : "À blanc : les 48 h de contrôle commencent dès qu'une boîte d'envoi est branchée (ci-dessous).")}
+            {data.mode === 'autonome' && 'Autonome : il envoie entre 7 h et 20 h ce qui passe tous les contrôles, au plus 15 dossiers et 20 relances par jour.'}
+          </span>
         </p>
 
-        <div className="grid gap-2 sm:grid-cols-2">
+        <h3 className="mb-2 mt-6 text-sm font-semibold text-foreground">Boîtes d'envoi</h3>
+        <ul className="divide-y divide-border/60 rounded-2xl border border-border/60 bg-background/50 dark:bg-white/[0.03]">
           {data.boites.map((b) => (
-            <div key={b.adresse} className="flex items-center gap-2 rounded-md border p-3 text-sm">
-              {b.branchee ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Ban className="h-4 w-4 text-muted-foreground" />}
-              <div>
-                <p className="font-medium">{b.adresse}</p>
-                <p className="text-xs text-muted-foreground">
+            <li key={b.adresse} className="flex items-start gap-3 p-3">
+              {b.branchee ? <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" /> : <Ban className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="break-all font-medium text-foreground">{b.adresse}</p>
+                  <DashBadge tone={b.branchee ? 'success' : 'muted'}>{b.branchee ? 'Branchée' : 'Non branchée'}</DashBadge>
+                </div>
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   {b.branchee ? (b.adresse.startsWith('relocation') ? 'Envoi des dossiers' : 'Envoi des demandes de QR et des relances') : 'Mot de passe à enregistrer dans « Boîtes e-mail partagées »'}
                 </p>
               </div>
-            </div>
+            </li>
           ))}
-          {!anyBox && <p className="text-xs text-muted-foreground sm:col-span-2">Sans boîte branchée, Steeve ne peut rien envoyer ; il remet seulement la file des postulations en route.</p>}
-        </div>
+        </ul>
+        {!anyBox && <p className="mt-2 text-sm text-muted-foreground">Sans boîte branchée, Steeve ne peut rien envoyer ; il remet seulement la file des postulations en route.</p>}
 
-        <div className="flex flex-wrap gap-3 text-sm" aria-label="Dernières 24 heures">
+        <h3 className="mb-2 mt-6 text-sm font-semibold text-foreground">Dernières 24 heures</h3>
+        <div className="flex flex-wrap gap-2" aria-label="Dernières 24 heures">
           {Object.entries(STATUT).filter(([k]) => today[k]).map(([k, v]) => (
-            <span key={k} className={cn('rounded-full px-2.5 py-1 text-xs font-medium', v.tone)}>{v.label} : {today[k]}</span>
+            <DashBadge key={k} tone={v.tone}>{v.label} : {today[k]}</DashBadge>
           ))}
-          {Object.keys(today).length === 0 && <span className="text-muted-foreground">Rien aujourd'hui.</span>}
+          {Object.keys(today).length === 0 && <span className="text-sm text-muted-foreground">Rien aujourd'hui.</span>}
         </div>
+      </section>
 
-        <div>
-          <div className="mb-2 flex flex-wrap gap-1.5" role="tablist" aria-label="Filtrer le journal">
-            {FILTERS.map((f) => (
-              <button key={f.value} type="button" role="tab" aria-selected={filter === f.value} onClick={() => setFilter(f.value)}
-                className={cn('min-h-[36px] rounded-full border px-3 text-xs', filter === f.value ? 'border-primary bg-primary text-primary-foreground' : 'hover:bg-muted')}>
-                {f.label}
-              </button>
-            ))}
-          </div>
+      <section aria-labelledby="steeve-operateur-journal" className={cn(DASH_CARD, 'min-w-0 p-4 md:p-6')}>
+        <h2 id="steeve-operateur-journal" className="text-base font-semibold text-foreground md:text-[17px]">Journal des actions</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Chaque action de l'opérateur, avec sa preuve. Les actions en attente peuvent être annulées.</p>
+        <div className="mt-4">
+          <DashFilterPills
+            options={FILTERS.map((f) => ({ key: f.value, label: f.label }))}
+            value={filter}
+            onChange={setFilter}
+            label="Filtrer le journal"
+          />
           {data.actions.length === 0 ? (
-            <p className="rounded-md border p-4 text-sm text-muted-foreground">Aucune action dans le journal.</p>
+            <p className="rounded-2xl border border-border/60 bg-background/50 p-4 text-sm text-muted-foreground dark:bg-white/[0.03]">Aucune action dans le journal.</p>
           ) : (
-            <ul className="divide-y rounded-md border">
+            <ul className="divide-y divide-border/60 rounded-2xl border border-border/60 bg-background/50 dark:bg-white/[0.03]">
               {data.actions.map((a) => {
-                const s = STATUT[a.statut] ?? { label: a.statut, tone: 'bg-muted' };
+                const s = STATUT[a.statut] ?? { label: a.statut, tone: 'muted' as BadgeTone };
                 const expanded = open === a.id;
                 return (
                   <li key={a.id} className="space-y-1.5 p-3 text-sm">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={cn('rounded-full px-2 py-0.5 text-xs font-medium', s.tone)}>{s.label}</span>
-                      <span className="font-medium">{KIND[a.kind] ?? a.kind}</span>
-                      <span className="text-xs text-muted-foreground">{fmt(a.created_at)}{a.source !== 'auto' ? ` · demandé (${a.source})` : ''}</span>
+                      <DashBadge tone={s.tone}>{s.label}</DashBadge>
+                      <span className="font-medium text-foreground">{KIND[a.kind] ?? a.kind}</span>
                     </div>
-                    {(a.client_nom || a.bien) && <p className="text-xs text-muted-foreground">{[a.client_nom, a.bien].filter(Boolean).join(' — ')}</p>}
-                    {a.destinataire && <p className="text-xs">De {a.mailbox ?? '—'} à {a.destinataire}{a.objet ? ` · « ${a.objet} »` : ''}</p>}
-                    {a.motif && <p className="text-xs text-orange-800 dark:text-orange-200">{a.motif}</p>}
-                    {a.note && <p className="text-xs text-muted-foreground">{a.note}</p>}
-                    {a.preuve && <p className="break-all text-[11px] text-muted-foreground">Preuve : {a.preuve}</p>}
-                    <div className="flex flex-wrap gap-2">
+                    <p className="text-muted-foreground">{fmt(a.created_at)}{a.source !== 'auto' ? ` · demandé (${a.source})` : ''}</p>
+                    {(a.client_nom || a.bien) && <p className="text-muted-foreground">{[a.client_nom, a.bien].filter(Boolean).join(' — ')}</p>}
+                    {a.destinataire && <p className="break-words text-foreground">De {a.mailbox ?? '—'} à {a.destinataire}{a.objet ? ` · « ${a.objet} »` : ''}</p>}
+                    {a.motif && <p className="text-orange-800 dark:text-orange-200">{a.motif}</p>}
+                    {a.note && <p className="text-muted-foreground">{a.note}</p>}
+                    {a.preuve && <p className="break-all text-[13px] text-muted-foreground">Preuve : {a.preuve}</p>}
+                    <div className="flex flex-wrap gap-1 pt-0.5">
                       {(a.corps || (a.pieces?.length ?? 0) > 0) && (
-                        <Button size="sm" variant="ghost" onClick={() => setOpen(expanded ? null : a.id)} aria-expanded={expanded}>
+                        <Button variant="ghost" className="min-h-11" onClick={() => setOpen(expanded ? null : a.id)} aria-expanded={expanded}>
                           {expanded ? <ChevronUp className="mr-1 h-4 w-4" /> : <ChevronDown className="mr-1 h-4 w-4" />} Détail
                         </Button>
                       )}
                       {['a_faire', 'a_valider', 'bloque', 'a_blanc'].includes(a.statut) && (
-                        <Button size="sm" variant="ghost" onClick={() => void cancel(a.id)}>Annuler</Button>
+                        <Button variant="ghost" className="min-h-11" onClick={() => void cancel(a.id)}>Annuler</Button>
                       )}
                       {a.kind === 'envoi_dossier' && a.statut === 'bloque' && (
-                        <Button size="sm" variant="ghost" asChild><Link to="/admin/postulations">Postulations</Link></Button>
+                        <Button variant="ghost" className="min-h-11" asChild><Link to="/admin/postulations">Postulations</Link></Button>
                       )}
                     </div>
                     {expanded && (
-                      <div className="space-y-2 rounded-md bg-muted/40 p-2 text-xs">
-                        {a.corps && <p className="whitespace-pre-wrap">{a.corps}</p>}
+                      <div className="space-y-2 rounded-xl bg-muted/40 p-3 text-sm">
+                        {a.corps && <p className="whitespace-pre-wrap break-words">{a.corps}</p>}
                         {(a.pieces?.length ?? 0) > 0 && (
                           <ul className="list-disc pl-4">{a.pieces!.map((p) => <li key={p.nom}>{p.nom} ({Math.round(p.taille / 1024)} Ko)</li>)}</ul>
                         )}
@@ -198,7 +218,7 @@ export function SteeveOperatorCard() {
             </ul>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </section>
+    </>
   );
 }
