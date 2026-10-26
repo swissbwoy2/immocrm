@@ -9,6 +9,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON de l'API Flatfox et de la base, validées champ par champ */
 import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { buildOffreMessage } from '../offre-message.ts';
+import { immobilierCommune, parseHomegate, parseImmobilierFiche, parseImmobilierList, urlsRecherche } from './portails.ts';
 
 export const OFFERS_AGENT_ID = 'ca53c5a5-6a41-4216-a93b-4d3238ad13a6'; // Administrateur : agent des offres automatiques
 const FLATFOX = 'https://flatfox.ch';
@@ -220,7 +221,7 @@ export const rentOf = (l: any): number | null => {
   return Number.isFinite(d) && d > 0 ? d : null;
 };
 export const roomsOf = (l: any): number | null => { const n = parseFloat(String(l.number_of_rooms ?? '')); return Number.isFinite(n) ? n : null; };
-export const linkOf = (l: any) => l._base ? String(l._base.lien_annonce) : `${FLATFOX}${String(l.url || `/fr/${l.pk}/`).replace(/^\/[a-z]{2}\//, '/fr/')}`;
+export const linkOf = (l: any) => l._lien ? String(l._lien) : l._base ? String(l._base.lien_annonce) : `${FLATFOX}${String(l.url || `/fr/${l.pk}/`).replace(/^\/[a-z]{2}\//, '/fr/')}`;
 export const addressOf = (l: any) => l._base ? String(l._base.adresse) : [l.street, [l.zipcode, l.city].filter(Boolean).join(' ')].filter((x) => String(x ?? '').trim()).join(', ') || String(l.public_address ?? '');
 
 export interface Crit { communes: string[]; plafond: number; piecesMin: number | null; typeBien: string | null }
@@ -284,7 +285,8 @@ export async function evaluateListings(callModel: CallModel, client: Record<stri
     etage: l.floor ?? null, disponible: l.moving_date_type === 'imm' ? 'de suite' : l.moving_date ?? null, annee: l.year_built ?? null, renovee: l.year_renovated ?? null,
     equipements: (l.attributes ?? []).map((a: any) => a?.name).filter(Boolean), publiee: l.published ?? l.created ?? null,
     titre: [l.short_title, l.description_title].filter(Boolean).join(' — '), description: String(l.description ?? '').slice(0, 1600),
-    ...(l._base ? { source: l._source, lien: l._base.lien_annonce } : {}),
+    ...(l._source ? { source: l._source, lien: linkOf(l) } : {}),
+    ...(l._regie ? { annonceur: l._regie } : {}),
   }));
   const resp = await callModel({
     model: EVAL_MODEL,
@@ -333,6 +335,57 @@ export function visitLabel(d: Date): string {
 }
 
 const dateCH = (iso: string) => { const [y, mo, d] = iso.slice(0, 10).split('-'); return `${d}.${mo}.${y}`; };
+
+const PORTAL_UA = { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36', Accept: 'text/html', 'Accept-Language': 'fr-CH,fr;q=0.9' };
+/** Fiches immobilier.ch lues au plus par recherche (chaque fiche = une page ; le portail limite le débit). */
+const MAX_IMMO_FICHES = 10;
+
+/**
+ * immobilier.ch et Homegate lus directement par leurs codes de lieux (districts, cantons, communes : portails.ts), avec
+ * le plafond et les pièces dans l'adresse : une page de liste par zone, triée par date sur Homegate. Portail indisponible
+ * ou bloqué : ignoré (la recherche continue avec les autres sources).
+ */
+async function portalListings(fetchFn: typeof fetch, crit: Crit, category: string, now: Date, deja: (lien: string, adresse: string) => boolean, reasons: Record<string, number>): Promise<{ list: any[]; lues: number }> {
+  const urls = urlsRecherche({ communes: crit.communes, plafond: crit.plafond, pieces: crit.piecesMin, maison: category === 'HOUSE' });
+  const out: any[] = [];
+  let lues = 0;
+  const get = async (url: string) => {
+    try {
+      const r = await fetchFn(url, { headers: PORTAL_UA, signal: AbortSignal.timeout(10_000) });
+      return r.ok ? await r.text() : null;
+    } catch { return null; }
+  };
+  const tooOld = (iso: unknown) => { const t = new Date(String(iso ?? '')).getTime(); return Number.isFinite(t) && now.getTime() - t > 30 * 86400_000; };
+  const consider = (l: any) => {
+    lues++;
+    const r = deja(linkOf(l), addressOf(l)) ? 'déjà proposée' : tooOld(l.published) ? 'annonce de plus de 30 jours' : hardReason(l, crit);
+    if (r) { reasons[r] = (reasons[r] ?? 0) + 1; return; }
+    out.push(l);
+  };
+  // Homegate : la page de liste contient l'annonce complète.
+  for (const u of urls.filter((x) => x.portail === 'homegate').slice(0, 4)) {
+    const html = await get(u.url);
+    if (!html) { reasons['Homegate indisponible'] = (reasons['Homegate indisponible'] ?? 0) + 1; continue; }
+    for (const l of parseHomegate(html)) consider(l);
+  }
+  // immobilier.ch : liens de la liste (commune lue dans le lien), puis fiche seulement pour les annonces de la zone.
+  let fiches = 0;
+  for (const u of urls.filter((x) => x.portail === 'immobilier.ch').slice(0, 4)) {
+    const html = await get(u.url);
+    if (!html) { reasons['immobilier.ch indisponible'] = (reasons['immobilier.ch indisponible'] ?? 0) + 1; continue; }
+    for (const lien of parseImmobilierList(html)) {
+      const commune = immobilierCommune(lien);
+      if (!crit.communes.some((x) => commune === x || commune.startsWith(`${x} `))) continue; // hors zone (district plus large)
+      if (deja(lien, '')) { reasons['déjà proposée'] = (reasons['déjà proposée'] ?? 0) + 1; continue; }
+      if (fiches >= MAX_IMMO_FICHES) break;
+      fiches++;
+      const f = await get(lien);
+      const l = f ? parseImmobilierFiche(f, lien) : null;
+      if (l) consider(l);
+    }
+  }
+  return { list: out, lues };
+}
 
 /**
  * Cherche et envoie jusqu'à `max` offres conformes. `dryRun` : rien n'est écrit chez le client (mode à blanc),
@@ -410,13 +463,27 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
   const deja = (lien: string, adresse: string) => prevLinks.has(String(lien).match(/(\d{6,})/)?.[1] ?? '') || (/\d/.test(adresse) && prevAddr.has(norm(adresse)));
   const fromBase = await baseListings(db, fetchFn, clientId, crit, category, now, deja, reasons);
   res.lues += fromBase.length;
-  // Même bien vu sur Flatfox et en base : gardé une seule fois (Flatfox, lu en direct).
-  const flatAddr = new Set(keep.map((l) => norm(addressOf(l))));
-  keep.push(...fromBase.filter((l) => !flatAddr.has(norm(addressOf(l)))));
+  // immobilier.ch et Homegate lus en direct par leurs codes de zone.
+  const portals = await portalListings(fetchFn, crit, category, now, deja, reasons);
+  res.lues += portals.lues;
+  // Même bien vu sur plusieurs sources : gardé une seule fois (Flatfox, puis portail lu en direct, puis base).
+  const seenAddr = new Set(keep.map((l) => norm(addressOf(l))));
+  const seenId = new Set<string>();
+  for (const l of [...portals.list, ...fromBase]) {
+    const a = norm(addressOf(l));
+    const id = linkOf(l).match(/(\d{6,})/)?.[1] ?? '';
+    if ((/\d/.test(a) && seenAddr.has(a)) || (id && seenId.has(id))) continue;
+    if (/\d/.test(a)) seenAddr.add(a);
+    if (id) seenId.add(id);
+    keep.push(l);
+  }
+  // Annonces des portails : identifiant d'évaluation négatif (les annonces Flatfox gardent leur numéro).
+  let nextPk = -1000;
+  for (const l of keep) if (l._source && !l._base && (l.pk === undefined || l.pk === null)) l.pk = nextPk--;
   keep.sort((a, b) => String(b.published ?? b.created ?? '').localeCompare(String(a.published ?? a.created ?? '')));
   const short = keep.slice(0, MAX_EVAL);
   res.ecartees = Object.entries(reasons).map(([raison, n]) => ({ raison, n }));
-  if (!short.length) return { ...res, ok: true, motif: 'Aucune annonce conforme pour le moment (Flatfox et annonces en base).' };
+  if (!short.length) return { ...res, ok: true, motif: 'Aucune annonce conforme pour le moment (Flatfox, immobilier.ch, Homegate et annonces en base).' };
   if (!callModel) return fail('Lecture des annonces indisponible (clé IA absente).');
   if (max <= 0) return { ...res, ok: true, en_reserve: short.length, motif: `Plafond du jour atteint (${MAX_PER_DAY} offres) : la suite demain.` };
 
@@ -465,7 +532,7 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
       surface: Number(l.surface_living ?? l.livingspace) || null,
       etage: l.floor !== null && l.floor !== undefined && l.floor !== '' ? String(l.floor) : null,
       // Annonce de la base : disponibilité reprise telle qu'enregistrée (déjà au format suisse).
-      disponibilite: b ? (b.disponibilite ?? null) : l.moving_date_type === 'imm' ? 'De suite' : l.moving_date ? dateCH(String(l.moving_date)) : null,
+      disponibilite: b ? (b.disponibilite ?? null) : l.moving_date_type === 'imm' ? 'De suite' : l.moving_date && /^\d{4}-\d{2}-\d{2}/.test(String(l.moving_date)) ? dateCH(String(l.moving_date)) : null,
       annee_construction: Number(l.year_built) || null,
       description: String(l.description ?? '').trim() || null,
       type_bien: b ? (b.type_bien ?? 'Appartement') : category === 'HOUSE' ? 'Maison' : 'Appartement',
@@ -485,7 +552,7 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
     if (error || !row?.id) { res.ecartees.push({ raison: `insertion refusée (${String(error?.message ?? '').slice(0, 60)})`, n: 1 }); continue; }
     sent.offre_id = row.id;
     if (visite) {
-      await db.from('visites').insert({ offre_id: row.id, client_id: clientId, agent_id: OFFERS_AGENT_ID, date_visite: visite.toISOString(), adresse: offer.adresse, statut: 'planifiee', source: b ? 'annonce' : 'flatfox', medias_coursier: [] });
+      await db.from('visites').insert({ offre_id: row.id, client_id: clientId, agent_id: OFFERS_AGENT_ID, date_visite: visite.toISOString(), adresse: offer.adresse, statut: 'planifiee', source: b ? 'annonce' : l._source ?? 'flatfox', medias_coursier: [] });
     }
     if (convId) {
       const content = buildOffreMessage({ ...offer, datesVisite: [visiteTxt ?? 'à fixer — si vous êtes intéressé, votre agent l’organise'] }, prof ?? null);
