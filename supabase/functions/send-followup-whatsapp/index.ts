@@ -1,6 +1,7 @@
 // Send-followup WhatsApp campaign (Location)
 // Manual orchestration function. Calls send-whatsapp-notification for each lead.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -59,6 +60,9 @@ function bodyPreviewText(firstNameParam: string): string {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  // Réservé aux appels internes (cron, base, équipe) : aucun appel anonyme ni client.
+  const refus = await denyIfNotInternal(req, corsHeaders, "send-followup-whatsapp");
+  if (refus) return refus;
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
