@@ -15600,6 +15600,56 @@ export type Database = {
         }
         Relationships: []
       }
+      steeve_carnet_annonceurs: {
+        Row: {
+          cle: string
+          created_at: string
+          email: string | null
+          id: string
+          maj_par: string | null
+          nom: string | null
+          offre_id: string | null
+          source: string
+          telephone: string | null
+          updated_at: string
+          verifie: boolean
+        }
+        Insert: {
+          cle: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          maj_par?: string | null
+          nom?: string | null
+          offre_id?: string | null
+          source: string
+          telephone?: string | null
+          updated_at?: string
+          verifie?: boolean
+        }
+        Update: {
+          cle?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          maj_par?: string | null
+          nom?: string | null
+          offre_id?: string | null
+          source?: string
+          telephone?: string | null
+          updated_at?: string
+          verifie?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steeve_carnet_annonceurs_offre_id_fkey"
+            columns: ["offre_id"]
+            isOneToOne: false
+            referencedRelation: "offres"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       steeve_partner_usage: {
         Row: {
           cache_read_tokens: number
@@ -17603,6 +17653,7 @@ export type Database = {
       }
       admin_set_steeve_autonomie: { Args: { p_mode: string }; Returns: Json }
       admin_set_steeve_settings: { Args: { p_settings: Json }; Returns: Json }
+      admin_steeve_a_appeler: { Args: { p_limite?: number }; Returns: Json }
       admin_steeve_clients: {
         Args: { p_query?: string }
         Returns: {
@@ -17616,6 +17667,24 @@ export type Database = {
           statut: string
         }[]
       }
+      admin_steeve_contact_annonceur: {
+        Args: {
+          p_email: string
+          p_nom: string
+          p_offre_id: string
+          p_telephone: string
+        }
+        Returns: Json
+      }
+      admin_steeve_corriger_offre: {
+        Args: { p_adresse: string; p_offre_id: string; p_prix: number }
+        Returns: Json
+      }
+      admin_steeve_criteres: {
+        Args: { p_changes: Json; p_client_id: string }
+        Returns: Json
+      }
+      admin_steeve_facturation: { Args: { p_client_id: string }; Returns: Json }
       admin_steeve_fixer_visite: {
         Args: { p_debut: string; p_fin?: string; p_offre_id: string }
         Returns: Json
@@ -17640,13 +17709,36 @@ export type Database = {
           status: string
         }[]
       }
+      admin_steeve_mails_a_rattacher: {
+        Args: { p_limite?: number }
+        Returns: Json
+      }
       admin_steeve_operateur: {
         Args: { p_limit?: number; p_statut?: string }
         Returns: Json
       }
       admin_steeve_overview: { Args: never; Returns: Json }
+      admin_steeve_paiement_recu: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
+      admin_steeve_postulation_pas_envoyee: {
+        Args: { p_offre_id: string }
+        Returns: Json
+      }
+      admin_steeve_postuler: { Args: { p_offre_id: string }; Returns: Json }
+      admin_steeve_preuve_envoi: { Args: { p_offre_id: string }; Returns: Json }
+      admin_steeve_proposition: { Args: { p_id: string }; Returns: Json }
+      admin_steeve_rattacher_mail: {
+        Args: { p_action_id: string; p_ignorer?: boolean; p_offre_id: string }
+        Returns: Json
+      }
       admin_steeve_recherche_offres: {
         Args: { p_client_id: string }
+        Returns: Json
+      }
+      admin_steeve_reponses_visite: {
+        Args: { p_limite?: number }
         Returns: Json
       }
       admin_steeve_tache_controle: {
@@ -17656,6 +17748,18 @@ export type Database = {
           p_note?: string
           p_responsable?: string
         }
+        Returns: Json
+      }
+      admin_steeve_trouver_offre: {
+        Args: { p_client?: string; p_limite?: number; p_recherche: string }
+        Returns: Json
+      }
+      admin_steeve_valider_reponse: {
+        Args: { p_action_id: string; p_corps?: string }
+        Returns: Json
+      }
+      admin_steeve_visite_statut: {
+        Args: { p_date?: string; p_offre_id: string; p_statut: string }
         Returns: Json
       }
       annonceur_has_published_annonce: {
@@ -18771,7 +18875,9 @@ export type Database = {
         Returns: Json
       }
       steeve_admin_personnes: { Args: { p_nom: string }; Returns: Json }
+      steeve_annonce_creneaux: { Args: { p_annonce_id: string }; Returns: Json }
       steeve_annonceur_apercu: { Args: never; Returns: Json }
+      steeve_annonceur_cle: { Args: { p_lien: string }; Returns: string }
       steeve_apply_acceptation: {
         Args: { p_bail: boolean; p_client_id: string; p_offre_id: string }
         Returns: Json
@@ -18800,10 +18906,15 @@ export type Database = {
         Returns: Json
       }
       steeve_apporteur_apercu: { Args: never; Returns: Json }
+      steeve_balayage_visites: { Args: { p_limit?: number }; Returns: Json }
       steeve_claim_run: { Args: { p_run_id: string }; Returns: Json }
       steeve_client_actif: { Args: { p_client_id: string }; Returns: boolean }
+      steeve_client_annuler_criteres: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
       steeve_client_confirmer_visite: {
-        Args: { p_client_id: string; p_offre_id: string }
+        Args: { p_client_id: string; p_date?: string; p_offre_id: string }
         Returns: Json
       }
       steeve_client_criteres: {
@@ -18819,12 +18930,30 @@ export type Database = {
         }
         Returns: Json
       }
+      steeve_client_demande_rappel: {
+        Args: {
+          p_avec: string
+          p_client_id: string
+          p_disponibilites: string
+          p_mode: string
+          p_objet: string
+        }
+        Returns: Json
+      }
       steeve_client_demande_visite: {
         Args: { p_client_id: string; p_note?: string; p_offre_id: string }
         Returns: Json
       }
+      steeve_client_disponibilites: {
+        Args: { p_client_id: string; p_offre_id: string; p_texte: string }
+        Returns: Json
+      }
       steeve_client_emails: {
         Args: { p_client_id: string; p_days?: number; p_limit?: number }
+        Returns: Json
+      }
+      steeve_client_facturation: {
+        Args: { p_client_id: string }
         Returns: Json
       }
       steeve_client_inscrire_visite: {
@@ -18840,9 +18969,27 @@ export type Database = {
         Returns: Json
       }
       steeve_client_servi: { Args: { p_client_id: string }; Returns: boolean }
+      steeve_client_visite_effectuee: {
+        Args: { p_client_id: string; p_date?: string; p_offre_id: string }
+        Returns: Json
+      }
       steeve_compte_rendu_client: {
         Args: { p_client_id: string; p_now?: string }
         Returns: string
+      }
+      steeve_contact_annonceur_enregistrer: {
+        Args: {
+          p_email: string
+          p_nom: string
+          p_offre_id: string
+          p_source: string
+          p_telephone: string
+        }
+        Returns: Json
+      }
+      steeve_contact_portail_envoye: {
+        Args: { p_offre_id: string; p_portail: string; p_preuve: string }
+        Returns: Json
       }
       steeve_demande_recherche_offres: {
         Args: { p_client_id: string; p_note?: string; p_source: string }
@@ -18875,12 +19022,29 @@ export type Database = {
         Args: { p_canal: string; p_client_id: string; p_offre_id: string }
         Returns: Json
       }
+      steeve_journal_client: {
+        Args: {
+          p_cle: string
+          p_client_id: string
+          p_controles?: Json
+          p_note: string
+          p_offre_id: string
+        }
+        Returns: undefined
+      }
       steeve_lancer_reponse: {
         Args: { p_conversation_id: string; p_message_id: string }
         Returns: string
       }
       steeve_mail_candidates: { Args: { p_limit?: number }; Returns: Json }
+      steeve_mail_cible: { Args: { p_offre_id: string }; Returns: Json }
       steeve_mail_context: { Args: never; Returns: Json }
+      steeve_mail_deja_repondu: {
+        Args: { p_mail_id: string }
+        Returns: boolean
+      }
+      steeve_mail_get: { Args: { p_id: string }; Returns: Json }
+      steeve_mail_prospects: { Args: { p_limit?: number }; Returns: Json }
       steeve_norm: { Args: { t: string }; Returns: string }
       steeve_operator_mode: {
         Args: { p_mailbox_ready?: boolean }
@@ -18921,9 +19085,17 @@ export type Database = {
         }
         Returns: string
       }
+      steeve_postulation_urgente: {
+        Args: { p_client_id: string; p_offre_id: string; p_par: string }
+        Returns: Json
+      }
       steeve_presentation_client: {
         Args: { p_client_id: string }
         Returns: string
+      }
+      steeve_preuve_envoi: {
+        Args: { p_client_id: string; p_offre_id: string }
+        Returns: Json
       }
       steeve_proprio_apercu: { Args: never; Returns: Json }
       steeve_public_admit: {
@@ -18951,6 +19123,10 @@ export type Database = {
       steeve_registre_offres: { Args: { p_offre_ids: string[] }; Returns: Json }
       steeve_relance_candidates: {
         Args: { p_limit?: number; p_offre_id?: string }
+        Returns: Json
+      }
+      steeve_relance_sans_contact: {
+        Args: { p_task_id: string }
         Returns: Json
       }
       steeve_request_postulation: {
