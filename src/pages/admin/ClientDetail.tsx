@@ -150,6 +150,7 @@ import { PurchaseClientDetailPremium } from '@/components/admin/purchase/Purchas
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
+import { PdfPreview } from '@/components/files/PdfPreview';
 
 // Configuration des statuts de visite à venir (badges colorés)
 const VISITE_A_VENIR_STATUT_CONFIG: Record<string, { label: string; className: string }> = {
@@ -1116,7 +1117,7 @@ export default function ClientDetail() {
           <p className="text-muted-foreground max-w-md">Ce client n'existe pas ou a été supprimé</p>
           <Button 
             onClick={() => navigate('/admin/clients')} 
-            className="mt-4 group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+            className="mt-4 group"
           >
             <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Retour aux clients
@@ -1830,7 +1831,7 @@ export default function ClientDetail() {
               <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
                 <DialogTrigger asChild>
                   <Button 
-                    className="w-full sm:w-auto group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)] transition-all duration-300" 
+                    className="w-full sm:w-auto group" 
                     onClick={handleEditClick}
                   >
                     <Edit className="w-4 h-4 sm:mr-2 group-hover:scale-110 transition-transform" />
@@ -3059,7 +3060,7 @@ export default function ClientDetail() {
               <div className="flex justify-end mb-2">
                 <Button 
                   onClick={() => navigate(`/admin/envoyer-offre?clientId=${client.id}`)}
-                  className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
+                  className="group"
                 >
                   <Send className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                   Envoyer une offre
@@ -3523,7 +3524,7 @@ export default function ClientDetail() {
                   )}
                   <Button 
                     onClick={() => setUploadDialogOpen(true)}
-                    className="group bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:shadow-[0_0_20px_rgba(var(--primary),0.3)]"
+                    className="group"
                   >
                     <Upload className="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" />
                     Ajouter un document
@@ -3744,11 +3745,11 @@ export default function ClientDetail() {
           </DialogHeader>
           <div className="h-[80vh]">
             {previewDocument?.type?.includes('pdf') ? (
-              <object
-                data={previewUrl}
-                type="application/pdf"
+              <PdfPreview
+                src={previewUrl}
                 className="w-full h-full rounded-xl"
-              >
+                fallback={(
+
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <p className="mb-4">Impossible d'afficher le PDF dans le navigateur.</p>
                   <Button onClick={() => handleDownloadDocument(previewDocument)} className="group">
@@ -3756,7 +3757,8 @@ export default function ClientDetail() {
                     Télécharger le PDF
                   </Button>
                 </div>
-              </object>
+                )}
+              />
             ) : previewDocument?.type?.includes('image') ? (
               <div className="h-full overflow-auto flex justify-center items-start">
                 <img 

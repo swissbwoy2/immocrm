@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { SidebarProvider, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { Menu } from 'lucide-react';
@@ -16,7 +16,7 @@ import { OpenInBrowserBanner } from '@/components/client/OpenInBrowserBanner';
 import { ClientParcoursRedirect } from '@/components/client/ClientParcoursRedirect';
 import { MobileAppShell } from '@/components/mobile/MobileAppShell';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Capacitor } from '@capacitor/core'; import { Filesystem, Directory } from '@capacitor/filesystem'; import { Share } from '@capacitor/share';
+import { Capacitor } from '@capacitor/core';
 import { useAuth } from '@/contexts/AuthContext';
 import { MobileImmersiveProvider } from '@/contexts/MobileImmersiveContext';
 
@@ -32,7 +32,8 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   usePushNotifications();
   
   // Track user presence (online status)
-  usePresence(); useEffect(() => { if (!Capacitor.isNativePlatform()) return; const RX = /\.(pdf|docx?|xlsx?|pptx?|csv|txt|rtf|zip)(\?|#|$)/i; const onClick = (e: any) => { const t = e.target; const a = t && t.closest ? t.closest('a') : null; if (!a) return; const href = a.getAttribute('href') || ''; const dl = a.hasAttribute('download'); if (!dl && !(href.startsWith('blob:') || href.startsWith('data:') || RX.test(href))) return; e.preventDefault(); e.stopPropagation(); const url = a.href; let name = a.getAttribute('download') || ''; if (!name) { try { name = decodeURIComponent((new URL(url)).pathname.split('/').pop() || ''); } catch (_e) {} } if (!name) name = 'document-' + Date.now() + '.pdf'; (async () => { try { const resp = await fetch(url); const blob = await resp.blob(); const b64: string = await new Promise((res, rej) => { const r = new FileReader(); r.onloadend = () => res(String(r.result).split(',')[1] || ''); r.onerror = rej; r.readAsDataURL(blob); }); const w = await Filesystem.writeFile({ path: name, data: b64, directory: Directory.Cache }); await Share.share({ url: w.uri, title: name }); } catch (err) { console.error('[nativeFileHandler]', err); try { await Share.share({ url: url, title: name }); } catch (_e) {} } })(); }; document.addEventListener('click', onClick, true); return () => document.removeEventListener('click', onClick, true); }, []);
+  usePresence();
+  // Fichiers et liens dans l'app native : voir src/lib/nativeFiles.ts (installé dans main.tsx).
 
   // Swipe gestures for mobile sidebar
   useSwipeGesture({
@@ -82,7 +83,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
         <DemoModeBanner />
         <OpenInBrowserBanner />
         {/* Mobile Header - toujours visible */}
-        <header className="sticky top-0 z-20 flex items-center h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden shrink-0">
+        <header className="sticky top-0 z-20 flex items-center min-h-14 px-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden shrink-0" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
           <SidebarTrigger 
             className="-ml-1 transition-transform duration-200 active:scale-95"
             aria-label="Ouvrir le menu de navigation"

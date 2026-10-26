@@ -25,38 +25,9 @@ export function PremiumAgentCard({
 }: PremiumAgentCardProps) {
   return (
     <div className={cn(
-      'relative overflow-hidden rounded-2xl',
-      'bg-gradient-to-br from-card/90 via-card/80 to-card/70',
-      'backdrop-blur-xl border border-border/50',
-      'p-6 shadow-lg',
-      'group hover:shadow-xl transition-all duration-500',
+      'imr-lg-card relative overflow-hidden rounded-[22px] p-6 group',
       className
     )}>
-      {/* Animated gradient border */}
-      <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-        <div className="absolute inset-[-1px] rounded-2xl bg-gradient-to-r from-primary/50 via-accent/50 to-primary/50 animate-gradient-x" />
-        <div className="absolute inset-[1px] rounded-2xl bg-card" />
-      </div>
-      
-      {/* Floating particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(5)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1.5 h-1.5 rounded-full bg-primary/20 animate-float"
-            style={{
-              left: `${15 + i * 18}%`,
-              top: `${20 + (i % 3) * 25}%`,
-              animationDelay: `${i * 0.6}s`,
-              animationDuration: `${3.5 + i * 0.5}s`
-            }}
-          />
-        ))}
-      </div>
-      
-      {/* Shine effect */}
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-      
       <div className="relative z-10">
         <div className="flex items-start gap-5">
           {/* Avatar with animated ring */}
@@ -105,9 +76,9 @@ export function PremiumAgentCard({
             <div className="space-y-2">
               <a 
                 href={`mailto:${agent.email}`}
-                className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group/link"
+                className="imr-lg-glass flex items-center gap-2 rounded-full p-2 pr-4 active:scale-[0.98] group/link"
               >
-                <div className="p-1.5 bg-primary/10 rounded-md group-hover/link:scale-110 transition-transform">
+                <div className="p-1.5 bg-primary/10 rounded-full">
                   <Mail className="w-4 h-4 text-primary" />
                 </div>
                 <span className="text-sm text-primary hover:underline truncate">{agent.email}</span>
@@ -116,9 +87,9 @@ export function PremiumAgentCard({
               {agent.telephone && (
                 <a 
                   href={`tel:${agent.telephone}`}
-                  className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group/link"
+                  className="imr-lg-glass flex items-center gap-2 rounded-full p-2 pr-4 active:scale-[0.98] group/link"
                 >
-                  <div className="p-1.5 bg-primary/10 rounded-md group-hover/link:scale-110 transition-transform">
+                  <div className="p-1.5 bg-primary/10 rounded-full">
                     <Phone className="w-4 h-4 text-primary" />
                   </div>
                   <span className="text-sm text-primary hover:underline">{agent.telephone}</span>
@@ -133,7 +104,6 @@ export function PremiumAgentCard({
                   onClick={onMessage}
                   className="group/btn relative overflow-hidden"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-white/20 to-primary/0 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-700" />
                   <MessageSquare className="w-4 h-4 mr-2 group-hover/btn:scale-110 transition-transform" />
                   Messagerie
                 </Button>

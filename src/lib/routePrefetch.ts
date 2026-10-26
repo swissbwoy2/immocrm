@@ -26,7 +26,7 @@ const routes: Record<string, () => Promise<unknown>> = {
   '/agent/parametres/templates': () => import('../pages/agent/MessageTemplates'),
   '/admin/envoyer-offre': () => import('../pages/admin/EnvoyerOffre'),
   '/admin/historique-emails': () => import('../pages/admin/HistoriqueEmails'),
-  '/admin/boite-reception': () => import('../pages/admin/BoiteReception'),
+  '/admin/boite-reception': () => import('../pages/admin/BoiteMail'),
   '/admin/calendrier': () => import('../pages/admin/Calendrier'),
   '/admin/portail-bannieres': () => import('../pages/admin/PortailBannieres'),
   '/admin/visites': () => import('../pages/admin/Visites'),

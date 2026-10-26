@@ -112,7 +112,7 @@ export default function AnnonceurDashboard() {
       <div className="space-y-6">
         <DashboardBanner />
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="imr-lg-hero flex flex-col gap-4 rounded-[28px] p-6 md:flex-row md:items-center md:justify-between md:p-8">
           <div>
             <h1 className="text-2xl font-bold">
               Bienvenue, {annonceur?.prenom || annonceur?.nom || 'Annonceur'}

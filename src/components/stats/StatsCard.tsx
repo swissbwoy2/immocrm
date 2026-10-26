@@ -1,5 +1,4 @@
 import { LucideIcon } from 'lucide-react';
-import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 import { cn } from '@/lib/utils';
 
 interface StatsCardProps {
@@ -62,7 +61,7 @@ export function StatsCard({
   return (
     <div
       className={cn(
-        DASH_CARD,
+        'imr-lg-card rounded-[22px]',
         'flex h-full min-h-[120px] min-w-0 flex-col justify-between p-3 sm:p-4',
         onClick && 'cursor-pointer transition-transform duration-150 active:scale-[0.98]',
         className

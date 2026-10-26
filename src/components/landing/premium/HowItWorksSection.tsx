@@ -53,7 +53,7 @@ export function HowItWorksSection() {
         </div>
 
         <div className="text-center mt-8">
-          <Button asChild size="lg" className="group shadow-md shadow-primary/20 bg-gradient-to-r from-primary to-primary/90">
+          <Button asChild size="lg" className="group">
             <Link to="/nouveau-mandat">
               <Rocket className="h-5 w-5 mr-2" />
               Activer ma recherche maintenant

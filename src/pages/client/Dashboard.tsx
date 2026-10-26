@@ -56,6 +56,7 @@ import DashboardAchat from './DashboardAchat';
 import DashboardAchatEnAttente from './DashboardAchatEnAttente';
 import { resolveClientParcours } from '@/lib/journey';
 import { DashboardAdBanner } from '@/components/client/dashboard/DashboardAdBanner';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 export default function ClientDashboardDispatcher() {
   const { user } = useAuth();
@@ -483,7 +484,7 @@ function ClientDashboardLocation() {
               Impossible de charger votre profil client. Cliquez sur le bouton ci-dessous pour réessayer.
             </p>
             <div className="space-y-2">
-              <Button onClick={loadData} className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300">
+              <Button onClick={loadData} className="w-full">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Rafraîchir
               </Button>
@@ -574,6 +575,8 @@ function ClientDashboardLocation() {
               onOffersClick={() => navigate('/client/offres-recues')}
             />
           </SectionErrorBoundary>
+          {/* Ma journée : visites du jour */}
+          <MaJourneeBanner role="client" visites={visites} />
 
           {/* 2. À faire : tout ce qui bloque ou demande une action */}
           <div className="space-y-3">
@@ -790,11 +793,11 @@ function ClientDashboardLocation() {
                     description="La progression de votre mandat sera disponible dès que votre profil sera activé par votre agent."
                   >
                     <div className="grid grid-cols-2 gap-4 mt-4">
-                      <div className="p-3 rounded-xl bg-muted/30">
+                      <div className="imr-lg-glass rounded-2xl p-3">
                         <p className="text-sm text-muted-foreground">Date d'inscription</p>
                         <p className="font-medium">{new Date(client.date_ajout || client.created_at).toLocaleDateString('fr-CH')}</p>
                       </div>
-                      <div className="p-3 rounded-xl bg-muted/30">
+                      <div className="imr-lg-glass rounded-2xl p-3">
                         <p className="text-sm text-muted-foreground">Statut</p>
                         <Badge variant="outline" className="text-amber-600 border-amber-300">En attente</Badge>
                       </div>

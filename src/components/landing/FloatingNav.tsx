@@ -44,7 +44,7 @@ export function FloatingNav() {
               <Button
                 asChild
                 size="sm"
-                className="hidden sm:inline-flex shadow-md shadow-primary/20 bg-gradient-to-r from-primary to-primary/90"
+                className="hidden sm:inline-flex"
               >
                 <Link to="/nouveau-mandat">
                   <Rocket className="h-4 w-4 sm:mr-2" />

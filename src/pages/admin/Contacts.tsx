@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { fetchAllContacts, contactMatchesSearch, CONTACTS_PAGE_AFFICHAGE } from "@/lib/contactsFetch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,9 @@ export default function AdminContacts() {
   const [agentFilter, setAgentFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("nom_asc");
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(CONTACTS_PAGE_AFFICHAGE);
+  // Nouveau filtre ou tri : on repart des premières fiches.
+  useEffect(() => setVisibleCount(CONTACTS_PAGE_AFFICHAGE), [search, typeFilter, agentFilter, sortBy, showFavoritesOnly]);
 
   // Fetch agents
   useEffect(() => {
@@ -97,15 +101,12 @@ export default function AdminContacts() {
   // Fetch all contacts
   const fetchContacts = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .order("nom", { ascending: true });
+    const { data, error } = await fetchAllContacts();
 
     if (error) {
       toast.error("Erreur lors du chargement des contacts");
     } else {
-      setContacts((data as Contact[]) || []);
+      setContacts(data);
     }
     setLoading(false);
   };
@@ -144,15 +145,7 @@ export default function AdminContacts() {
     }
 
     if (search) {
-      const searchLower = search.toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.nom.toLowerCase().includes(searchLower) ||
-          c.prenom?.toLowerCase().includes(searchLower) ||
-          c.email?.toLowerCase().includes(searchLower) ||
-          c.telephone?.includes(search) ||
-          c.entreprise?.toLowerCase().includes(searchLower)
-      );
+      result = result.filter((c) => contactMatchesSearch(c, search));
     }
 
     if (typeFilter !== "all") {
@@ -439,15 +432,16 @@ export default function AdminContacts() {
             }
           />
         ) : (
+          <>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {filteredContacts.map((contact, index) => (
+            {filteredContacts.slice(0, visibleCount).map((contact, index) => (
               <div key={contact.id} className="relative">
                 <PremiumContactCard
                   contact={contact}
                   onEdit={handleEdit}
                   onDelete={setDeleteContact}
                   onToggleFavorite={handleToggleFavorite}
-                  delay={index * 30}
+                  delay={Math.min(index, 20) * 30}
                 />
                 {/* Agent badge overlay */}
                 <div className="absolute top-2 right-12 px-2 py-0.5 text-[10px] font-medium rounded-full bg-muted/80 text-muted-foreground backdrop-blur-sm">
@@ -456,6 +450,17 @@ export default function AdminContacts() {
               </div>
             ))}
           </div>
+          {filteredContacts.length > visibleCount && (
+            <div className="flex flex-col items-center gap-2 pt-2">
+              <p className="text-sm text-muted-foreground">
+                {visibleCount.toLocaleString("fr-CH")} sur {filteredContacts.length.toLocaleString("fr-CH")} contacts affichés
+              </p>
+              <Button variant="outline" onClick={() => setVisibleCount((n) => n + CONTACTS_PAGE_AFFICHAGE * 2)}>
+                Afficher plus
+              </Button>
+            </div>
+          )}
+          </>
         )}
       </div>
 

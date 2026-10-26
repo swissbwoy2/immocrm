@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { DashboardBanner } from '@/components/common/DashboardBanner';
+import { MaJourneeBanner } from '@/components/dashboard/MaJourneeBanner';
 
 interface ApporteurStats {
   total_referrals: number;
@@ -116,14 +117,7 @@ export default function ApporteurDashboard() {
         <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-3xl" />
       </div>
       {/* Header avec dégradé animé */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-accent/10 p-6 md:p-8 animate-fade-in">
-        {/* Particules flottantes */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-4 right-10 w-20 h-20 bg-primary/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '0s' }} />
-          <div className="absolute bottom-4 left-20 w-16 h-16 bg-accent/10 rounded-full blur-2xl animate-float-particle" style={{ animationDelay: '1s' }} />
-          <div className="absolute top-1/2 right-1/4 w-12 h-12 bg-primary/5 rounded-full blur-xl animate-float-particle" style={{ animationDelay: '2s' }} />
-        </div>
-        
+      <div className="imr-lg-hero rounded-[28px] p-6 md:p-8 animate-fade-in">
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="w-6 h-6 text-primary animate-pulse-soft" />
@@ -137,6 +131,9 @@ export default function ApporteurDashboard() {
           </p>
         </div>
       </div>
+
+      {/* Ma journée */}
+      <MaJourneeBanner role="apporteur" />
 
       {/* Code Parrainage avec glassmorphism */}
       <Card className="relative overflow-hidden border-primary/20 animate-fade-in group" style={{ animationDelay: '100ms' }}>
@@ -287,7 +284,7 @@ export default function ApporteurDashboard() {
             <CardTitle className="group-hover:translate-x-1 transition-transform duration-300">Actions rapides</CardTitle>
           </CardHeader>
           <CardContent className="relative space-y-2">
-            <Button className="w-full justify-start bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-primary/20" asChild>
+            <Button className="w-full justify-start" asChild>
               <a href="/apporteur/soumettre-client">
                 <Users className="mr-2 h-4 w-4" />
                 Soumettre un nouveau client

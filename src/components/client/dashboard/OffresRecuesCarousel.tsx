@@ -66,9 +66,9 @@ function OffreCard({ offre, onClick }: { offre: OffreRow; onClick: () => void })
     <button
       type="button"
       onClick={onClick}
-      className="group block w-full rounded-[14px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+      className="imr-lg-card group block w-full rounded-[22px] p-2 text-left transition-transform duration-150 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
     >
-      <div className="relative aspect-[4/3] overflow-hidden rounded-[14px] bg-muted">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-[16px] bg-muted">
         {img ? (
           <img
             src={img}
@@ -93,7 +93,7 @@ function OffreCard({ offre, onClick }: { offre: OffreRow; onClick: () => void })
           </span>
         )}
       </div>
-      <div className="mt-2.5 space-y-0.5">
+      <div className="mt-2.5 space-y-0.5 px-1.5 pb-1.5">
         <p className="truncate text-[15px] font-semibold text-foreground">{titre}</p>
         {offre.adresse && (
           <p className="flex items-center gap-1 truncate text-sm text-muted-foreground">
@@ -135,7 +135,7 @@ export function OffresRecuesCarousel({ offres }: { offres: OffreRow[] }) {
   if (list.length === 0) return null;
 
   const arrow =
-    'flex h-9 w-9 items-center justify-center rounded-full bg-background text-foreground ring-1 ring-inset ring-foreground/20 transition-colors duration-150 hover:ring-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground';
+    'imr-lg-glass flex h-9 w-9 items-center justify-center rounded-full text-foreground active:scale-[0.94] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground';
 
   return (
     <div className="min-w-0" aria-labelledby="client-offres-recues-title">
@@ -158,7 +158,7 @@ export function OffresRecuesCarousel({ offres }: { offres: OffreRow[] }) {
 
       <div
         ref={scrollerRef}
-        className="-mx-4 flex scroll-pl-4 snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:scroll-pl-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="-mx-4 flex scroll-pl-4 snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4 pt-1 md:mx-0 md:scroll-pl-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {list.map((o) => (
           <div key={o.id} className="w-[78vw] max-w-[270px] flex-none snap-start md:w-[260px]">
@@ -170,7 +170,7 @@ export function OffresRecuesCarousel({ offres }: { offres: OffreRow[] }) {
       <button
         type="button"
         onClick={() => navigate('/client/offres-recues')}
-        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-primary px-6 text-[15px] font-medium text-primary-foreground transition-colors hover:bg-primary/90 active:scale-[0.99] sm:w-auto"
+        className="imr-lg-tint mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-full px-6 text-[15px] font-medium active:scale-[0.97] sm:w-auto"
       >
         Voir toutes mes offres
         <ArrowRight className="h-5 w-5" aria-hidden="true" />

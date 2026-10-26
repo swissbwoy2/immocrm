@@ -6,8 +6,8 @@ import { ChevronRight } from 'lucide-react';
  * Partagées entre le parcours location (modèle de base) et le parcours achat,
  * pour une expérience identique.
  */
-export const DASH_CARD =
-  'rounded-2xl border border-border/70 bg-card shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_4px_8px_rgba(0,0,0,0.06)]';
+/** Carte en verre liquide (style Apple) : utilisée par toutes les sections des tableaux de bord. */
+export const DASH_CARD = 'imr-lg-card rounded-[22px]';
 
 export function DashSection({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -40,7 +40,7 @@ export function StatTile({ icon: Icon, label, value, count, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`${DASH_CARD} relative flex min-h-[104px] flex-col items-start justify-between p-3 text-left transition-transform duration-150 active:scale-[0.98] sm:p-4`}
+      className="imr-lg-card relative flex min-h-[104px] flex-col items-start justify-between rounded-[22px] p-3 text-left transition-transform duration-150 active:scale-[0.98] sm:p-4"
     >
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary">
         <Icon className="h-[18px] w-[18px]" />
@@ -142,7 +142,7 @@ export function DashEmptyState({ icon: Icon, title, description, action }: {
   icon: React.ElementType; title: string; description?: React.ReactNode; action?: React.ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-card px-6 py-12 text-center">
+    <div className="imr-lg-card rounded-[22px] px-6 py-12 text-center">
       <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
         <Icon className="h-7 w-7 text-primary" aria-hidden="true" />
       </span>

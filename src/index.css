@@ -2005,3 +2005,152 @@ html.imr-native-shell .steeve-public-launcher {
   background: linear-gradient(180deg, rgba(255,255,255,.2) 0%, rgba(255,255,255,.1) 100%);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 2px 8px -2px rgba(0,0,0,.6);
 }
+
+/* ───────────── Liquid Glass : menu latéral, en-tête de bienvenue, KPI ───────────── */
+/* Menu latéral (ordinateur : panneau flottant ; mobile : tiroir) */
+.group[data-variant=floating] > div > [data-sidebar=sidebar],
+[data-sidebar=sidebar][data-mobile=true] {
+  background: linear-gradient(180deg, rgba(255,255,255,.80) 0%, rgba(255,255,255,.64) 100%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow:
+    0 0 0 .5px rgba(0,0,0,.07),
+    inset 0 1px 0 rgba(255,255,255,1),
+    0 12px 40px -12px rgba(0,0,0,.22);
+}
+.group[data-variant=floating] > div > [data-sidebar=sidebar] { border-radius: 24px; overflow: hidden; border-color: rgba(255,255,255,.85); }
+[data-sidebar=sidebar][data-mobile=true] { border-radius: 0 26px 26px 0; border-left: 0; }
+.dark .group[data-variant=floating] > div > [data-sidebar=sidebar],
+.dark [data-sidebar=sidebar][data-mobile=true] {
+  background: linear-gradient(180deg, rgba(40,40,44,.78) 0%, rgba(24,24,28,.68) 100%);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.10), 0 12px 40px -12px rgba(0,0,0,.7);
+}
+
+/* Carte KPI en verre */
+.imr-lg-card {
+  position: relative;
+  background:
+    radial-gradient(120% 70% at 0% 0%, hsl(var(--primary) / .07), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.86) 0%, rgba(255,255,255,.66) 100%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255,255,255,.85);
+  box-shadow:
+    0 0 0 .5px rgba(0,0,0,.07),
+    inset 0 1px 0 #fff,
+    inset 0 -1px 1px rgba(0,0,0,.03),
+    0 10px 26px -14px rgba(0,0,0,.22);
+}
+.dark .imr-lg-card {
+  background:
+    radial-gradient(120% 70% at 0% 0%, hsl(var(--primary) / .14), transparent 60%),
+    linear-gradient(180deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.05) 100%);
+  border-color: rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 10px 26px -14px rgba(0,0,0,.7);
+}
+
+/* En-tête de bienvenue : verre posé sur des reflets de couleur */
+.imr-lg-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(70% 120% at 0% 0%, hsl(var(--primary) / .30), transparent 65%),
+    radial-gradient(55% 110% at 100% 0%, rgba(246,190,92,.32), transparent 65%),
+    radial-gradient(70% 110% at 60% 130%, hsl(var(--primary) / .24), transparent 65%),
+    #ffffff;
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow:
+    0 0 0 .5px rgba(0,0,0,.07),
+    inset 0 1px 0 #fff,
+    0 14px 36px -18px rgba(0,0,0,.25);
+}
+.imr-lg-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 22%);
+}
+.dark .imr-lg-hero {
+  background:
+    linear-gradient(180deg, rgba(30,30,34,.55) 0%, rgba(20,20,24,.45) 100%),
+    radial-gradient(55% 90% at 8% 0%, hsl(var(--primary) / .45), transparent 62%),
+    radial-gradient(45% 80% at 96% 10%, rgba(246,190,92,.22), transparent 62%),
+    radial-gradient(60% 90% at 65% 125%, hsl(var(--primary) / .3), transparent 62%),
+    hsl(var(--background));
+  border-color: rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 14px 36px -18px rgba(0,0,0,.7);
+}
+.dark .imr-lg-hero::before { background: radial-gradient(120% 55% at 50% -15%, rgba(255,255,255,.10), rgba(255,255,255,0) 60%); }
+
+@media (prefers-reduced-transparency: reduce) {
+  [data-variant=floating] [data-sidebar=sidebar], [data-sidebar=sidebar][data-mobile=true], .imr-lg-card {
+    background: hsl(var(--card)); -webkit-backdrop-filter: none; backdrop-filter: none;
+  }
+}
+[data-sidebar=sidebar] .imr-lg-lens {
+  background: linear-gradient(180deg, rgba(255,255,255,.98) 0%, rgba(255,255,255,.78) 100%);
+}
+.dark [data-sidebar=sidebar] .imr-lg-lens {
+  background: linear-gradient(180deg, hsl(var(--primary) / .38) 0%, hsl(var(--primary) / .22) 100%);
+}
+
+/* ───────────── Liquid Glass : pages de connexion ───────────── */
+.imr-lg-auth-card {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, rgba(255,255,255,.74) 0%, rgba(255,255,255,.58) 100%);
+  -webkit-backdrop-filter: blur(34px) saturate(190%);
+  backdrop-filter: blur(34px) saturate(190%);
+  border: 1px solid rgba(255,255,255,.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.95),
+    inset 0 -1px 0 rgba(255,255,255,.25),
+    0 0 0 .5px rgba(0,0,0,.08),
+    0 30px 80px -24px rgba(0,0,0,.6);
+}
+.imr-lg-auth-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(160deg, rgba(255,255,255,.65) 0%, rgba(255,255,255,0) 35%);
+}
+.dark .imr-lg-auth-card {
+  background: linear-gradient(180deg, rgba(36,36,40,.72) 0%, rgba(22,22,26,.62) 100%);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 30px 80px -24px rgba(0,0,0,.8);
+}
+.dark .imr-lg-auth-card::before { background: linear-gradient(160deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 35%); }
+
+/* Champ de saisie en verre */
+.imr-lg-field {
+  background: rgba(255,255,255,.58);
+  -webkit-backdrop-filter: blur(10px) saturate(160%);
+  backdrop-filter: blur(10px) saturate(160%);
+  border: 1px solid rgba(255,255,255,.8);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.06), 0 0 0 .5px rgba(0,0,0,.07);
+  transition: background-color .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.imr-lg-field:focus {
+  background: rgba(255,255,255,.85);
+  border-color: hsl(var(--primary) / .55);
+  box-shadow: inset 0 1px 2px rgba(0,0,0,.05), 0 0 0 4px hsl(var(--primary) / .16);
+}
+.imr-lg-field[aria-invalid=true] { border-color: hsl(var(--destructive) / .6); }
+.dark .imr-lg-field { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.12); }
+.dark .imr-lg-field:focus { background: rgba(255,255,255,.12); }
+@media (prefers-reduced-transparency: reduce) {
+  .imr-lg-auth-card { background: hsl(var(--background)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+html[data-imr-auth] {
+  --primary: 160 59% 30%;
+  --primary-foreground: 0 0% 100%;
+  --ring: 160 59% 30%;
+}

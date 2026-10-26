@@ -190,12 +190,12 @@ export default function Login() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.45 }}
-          className="pt-3 border-t border-border/50"
+          className="pt-3 border-t border-black/[0.07] dark:border-white/10"
         >
           <button
             type="button"
             onClick={() => navigate('/nouveau-mandat')}
-            className="w-full flex items-center justify-center gap-2 h-11 px-5 rounded-xl border border-border/60 text-foreground/70 text-sm font-medium hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all duration-200 cursor-pointer"
+            className="imr-lg-glass w-full flex items-center justify-center gap-2 h-12 px-5 rounded-full text-foreground text-[15px] font-medium active:scale-[0.97] cursor-pointer"
           >
             Activer vos recherches
           </button>
@@ -204,7 +204,7 @@ export default function Login() {
 
       {/* Dialog : réinitialisation mot de passe */}
       <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
-        <DialogContent className="bg-background border-border text-foreground">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-serif">Réinitialiser le mot de passe</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -231,7 +231,7 @@ export default function Login() {
 
       {/* Dialog : renvoyer invitation */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="bg-background border-border text-foreground">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle className="font-serif">Renvoyer l'invitation</DialogTitle>
             <DialogDescription className="text-muted-foreground">
