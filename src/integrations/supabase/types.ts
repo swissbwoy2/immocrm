@@ -18802,8 +18802,21 @@ export type Database = {
       steeve_apporteur_apercu: { Args: never; Returns: Json }
       steeve_claim_run: { Args: { p_run_id: string }; Returns: Json }
       steeve_client_actif: { Args: { p_client_id: string }; Returns: boolean }
+      steeve_client_confirmer_visite: {
+        Args: { p_client_id: string; p_offre_id: string }
+        Returns: Json
+      }
       steeve_client_criteres: {
         Args: { p_changes: Json; p_client_id: string }
+        Returns: Json
+      }
+      steeve_client_deleguer_visite: {
+        Args: {
+          p_client_id: string
+          p_date?: string
+          p_note?: string
+          p_offre_id: string
+        }
         Returns: Json
       }
       steeve_client_demande_visite: {
@@ -18812,6 +18825,10 @@ export type Database = {
       }
       steeve_client_emails: {
         Args: { p_client_id: string; p_days?: number; p_limit?: number }
+        Returns: Json
+      }
+      steeve_client_inscrire_visite: {
+        Args: { p_client_id: string; p_creneau?: string; p_offre_id: string }
         Returns: Json
       }
       steeve_client_offres_match: {
@@ -18858,6 +18875,10 @@ export type Database = {
         Args: { p_canal: string; p_client_id: string; p_offre_id: string }
         Returns: Json
       }
+      steeve_lancer_reponse: {
+        Args: { p_conversation_id: string; p_message_id: string }
+        Returns: string
+      }
       steeve_mail_candidates: { Args: { p_limit?: number }; Returns: Json }
       steeve_mail_context: { Args: never; Returns: Json }
       steeve_norm: { Args: { t: string }; Returns: string }
@@ -18887,6 +18908,10 @@ export type Database = {
       }
       steeve_pending_proposals_count: { Args: never; Returns: number }
       steeve_person_name: { Args: { p_user_id: string }; Returns: string }
+      steeve_peut_reprendre: {
+        Args: { p_conversation_id: string }
+        Returns: boolean
+      }
       steeve_post_admin: {
         Args: {
           p_cle: string
@@ -18910,6 +18935,7 @@ export type Database = {
         Args: { p_limit?: number; p_offre_id?: string }
         Returns: Json
       }
+      steeve_rattraper_messages: { Args: never; Returns: number }
       steeve_record_dossier_envoye: {
         Args: {
           p_client_id: string
@@ -19010,6 +19036,13 @@ export type Database = {
       }
       track_email_open: { Args: { _log_id: string }; Returns: undefined }
       try_parse_uuid: { Args: { p: string }; Returns: string }
+      unread_message_counts: {
+        Args: { p_exclude_sender?: string; p_only_sender?: string }
+        Returns: {
+          conversation_id: string
+          unread: number
+        }[]
+      }
       update_user_presence: { Args: never; Returns: undefined }
       visite_est_reelle: { Args: { p_visite_id: string }; Returns: boolean }
       visite_permet_postuler: {
