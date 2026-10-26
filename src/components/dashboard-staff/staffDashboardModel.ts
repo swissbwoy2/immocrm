@@ -109,3 +109,30 @@ export function trierActions(items: ActionItem[]): ActionItem[] {
 export function totalEnAttente(items: ActionItem[]): number {
   return items.reduce((n, i) => n + (i.count && i.count > 0 ? i.count : 0), 0);
 }
+
+/**
+ * Regroupe les visites du jour d'un même bien au même créneau (une offre = une visite,
+ * avec tous ses clients). Clé : offre_id (sinon adresse normalisée) + heure.
+ * Conserve l'ordre chronologique.
+ */
+export function grouperVisitesParBien<T extends { date_visite?: string | null; offre_id?: string | null; adresse?: string | null; offres?: { adresse?: string | null } | null }>(
+  duJour: T[],
+): T[][] {
+  const groupes = new Map<string, T[]>();
+  for (const v of duJour) {
+    const d = toDate(v.date_visite);
+    const creneau = d ? `${d.getHours()}:${d.getMinutes()}` : '';
+    const bien = v.offre_id || (v.adresse || v.offres?.adresse || '').trim().toLowerCase().replace(/\s+/g, ' ') || `visite-${(v as any).id}`;
+    const k = `${bien}|${creneau}`;
+    groupes.set(k, [...(groupes.get(k) ?? []), v]);
+  }
+  return Array.from(groupes.values());
+}
+
+/** « Marie Dupont » / « Marie Dupont, Paul Martin » / « 4 clients : Marie Dupont, Paul Martin… ». */
+export function libelleClients(noms: (string | null | undefined)[]): string | null {
+  const uniques = Array.from(new Set(noms.map((n) => (n || '').trim()).filter(Boolean)));
+  if (uniques.length === 0) return null;
+  if (uniques.length <= 2) return uniques.join(', ');
+  return `${uniques.length} clients : ${uniques.slice(0, 2).join(', ')}…`;
+}
