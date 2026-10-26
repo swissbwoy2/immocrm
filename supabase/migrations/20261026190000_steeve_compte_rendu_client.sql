@@ -74,11 +74,27 @@ DECLARE
   v_next text[] := '{}';
   v_jour text[] := ARRAY['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
   v_achat boolean;
+  v_prix numeric;
+  v_fp numeric;
 BEGIN
   SELECT cl.*, p.prenom INTO c FROM public.clients cl LEFT JOIN public.profiles p ON p.id = cl.user_id WHERE cl.id = p_client_id;
   IF NOT FOUND THEN RETURN NULL; END IF;
   v_prenom := coalesce(nullif(trim(c.prenom), ''), '');
   v_achat := coalesce(c.journey_type, c.type_recherche, '') IN ('purchase_search', 'achat', 'Acheter');
+  IF v_achat THEN
+    -- Acheteur : prix visé et fonds propres du profil de financement (source de vérité du parcours achat),
+    -- repli sur la fiche client.
+    SELECT nullif(f.prix_cible, 0),
+           nullif(coalesce(f.fonds_propres_cash, 0) + coalesce(f.fonds_propres_epargne, 0) + coalesce(f.fonds_propres_3a, 0)
+                  + coalesce(f.fonds_propres_libre_passage, 0) + coalesce(f.placements, 0) + coalesce(f.donation_avance_hoirie, 0)
+                  + coalesce(f.fonds_propres_lpp, 0) + coalesce(f.montant_epl_disponible, 0), 0)
+      INTO v_prix, v_fp
+      FROM public.purchase_financing_profiles f JOIN public.purchase_projects pp ON pp.id = f.project_id
+     WHERE pp.client_id = p_client_id
+     ORDER BY f.updated_at DESC NULLS LAST LIMIT 1;
+    v_prix := coalesce(v_prix, CASE WHEN c.budget_max >= 50000 THEN c.budget_max END);
+    v_fp := coalesce(v_fp, CASE WHEN c.apport_personnel::text ~ '^[0-9.]+$' THEN nullif(c.apport_personnel::numeric, 0) END);
+  END IF;
 
   t := 'Voici le point complet sur ton ' || CASE WHEN v_achat THEN 'projet d''achat' ELSE 'dossier' END || ' au ' || to_char(p_now AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY') || ', ' || v_prenom || E'.\n\n';
 
@@ -86,12 +102,9 @@ BEGIN
   t := t || E'Ta recherche\n';
   v_line := '- ' || CASE WHEN v_achat THEN 'Achat : ' ELSE '' END || coalesce(upper(left(nullif(trim(c.type_bien), ''), 1)) || substr(trim(c.type_bien), 2), 'Logement')
          || CASE WHEN c.pieces IS NOT NULL THEN ', dès ' || public.steeve_fmt_pieces(c.pieces) || CASE WHEN c.pieces > 1 THEN ' pièces' ELSE ' pièce' END ELSE '' END
-         || CASE WHEN c.budget_max IS NULL THEN ''
-                 WHEN v_achat AND c.budget_max >= 50000 THEN ', budget jusqu''à ' || public.steeve_fmt_chf(c.budget_max)
-                 WHEN v_achat THEN ''
+         || CASE WHEN v_achat THEN coalesce(', prix visé ' || public.steeve_fmt_chf(v_prix), '') || coalesce(', fonds propres ' || public.steeve_fmt_chf(v_fp), '')
+                 WHEN c.budget_max IS NULL THEN ''
                  ELSE ', jusqu''à ' || public.steeve_fmt_chf(c.budget_max) || ' par mois' END
-         || CASE WHEN v_achat AND nullif(c.apport_personnel::text, '') IS NOT NULL AND c.apport_personnel::text ~ '^[0-9.]+$'
-                 THEN ', fonds propres ' || public.steeve_fmt_chf(c.apport_personnel::numeric) ELSE '' END
          || CASE WHEN nullif(trim(c.region_recherche), '') IS NOT NULL THEN ', régions : ' || left(trim(c.region_recherche), 200) ELSE '' END || '.';
   t := t || v_line || E'\n';
   IF c.mandat_date_signature IS NOT NULL THEN
