@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { lireEtat, retourAutorise } from "../_shared/oauth-state.ts";
 
 Deno.serve(async (req) => {
   const url = new URL(req.url);
@@ -35,16 +36,14 @@ Deno.serve(async (req) => {
     }
   };
 
-  // Parse state
-  if (state) {
-    try {
-      const stateData = JSON.parse(atob(state));
-      appUrl = stateData.appUrl || appUrl;
-      appPath = stateData.appPath || appPath;
-      userId = stateData.userId;
-    } catch {
-      console.error('Invalid state parameter');
-    }
+  // State signé par google-calendar-auth (15 min) : sinon, aucun compte n'est rattaché.
+  const stateData = await lireEtat(state);
+  if (stateData) {
+    if (retourAutorise(stateData.appUrl)) appUrl = stateData.appUrl;
+    if (typeof stateData.appPath === 'string') appPath = stateData.appPath;
+    userId = typeof stateData.userId === 'string' ? stateData.userId : null;
+  } else if (state) {
+    console.error('Invalid state parameter');
   }
 
   // Handle OAuth error
