@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { groupOffresByEnvoi } from "@/utils/visitesCalculator";
 import { Users, Loader2 } from "lucide-react";
+import { AdresseMap } from '@/components/maps/AdresseMap';
 
 interface Visite {
   id: string;
@@ -1056,6 +1057,7 @@ export default function AdminOffresEnvoyees() {
                   selectedOffre.etage ? { label: 'Étage', value: selectedOffre.etage } : null,
                 ]}
               />
+              <AdresseMap address={selectedOffre?.adresse} />
 
               <DetailSection title="Progression">
                 <OfferTimeline currentStatut={selectedOffre.statut} />

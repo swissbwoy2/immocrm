@@ -30,6 +30,7 @@ import {
   MessageSquare,
   Layers
 } from 'lucide-react';
+import { AdresseMap } from '@/components/maps/AdresseMap';
 
 interface AgentOffreDetailsDialogProps {
   open: boolean;
@@ -107,6 +108,7 @@ export function AgentOffreDetailsDialog({
               { label: 'Disponibilité', value: offre.disponibilite, icon: Calendar },
             ]}
           />
+          <AdresseMap address={offre.adresse} />
 
           {(offre.type_bien || offre.annee_construction || offre.orientation || offre.type_chauffage || offre.classe_energetique) && (
             <DetailSection title="Caractéristiques" icon={Home}>
