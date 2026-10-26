@@ -6,11 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  AlertTriangle, CalendarCheck, CalendarDays, CalendarRange, ChevronDown, Inbox, Loader2, RefreshCw, Search, ThumbsDown, ThumbsUp, X,
+  AlertTriangle, CalendarCheck, CalendarDays, CalendarRange, ChevronDown, Inbox, Loader2, MapPin, RefreshCw, Search, ThumbsDown, ThumbsUp, X,
 } from 'lucide-react';
 import { DASH_CARD, DashEmptyState, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { TablePagination, type PageSize } from '@/components/offres-auto/TablePagination';
 import { fetchAllPaginated } from '@/lib/fetchAllWithRange';
+import { addressIlikePatterns, addressWords, matchesAddress } from '@/lib/addressFilter';
 import { cn } from '@/lib/utils';
 import { OffreGroupeCard } from './OffreGroupeCard';
 import {
@@ -33,9 +34,9 @@ type Ouvrir = (groupe: Row[], offre: Row) => void;
 /* ------------------------------------------------------------------ */
 function useAdminOffresAuto(p: {
   enabled: boolean; statut: string; debouncedQ: string; dateFrom: string; dateTo: string;
-  manual: boolean; page: number; pageSize: PageSize; ouvrir: Ouvrir;
+  manual: boolean; page: number; pageSize: PageSize; ouvrir: Ouvrir; adresse: string;
 }) {
-  const { enabled, statut, debouncedQ, dateFrom, dateTo, manual, page, pageSize, ouvrir } = p;
+  const { enabled, statut, debouncedQ, dateFrom, dateTo, manual, page, pageSize, ouvrir, adresse } = p;
   const [loading, setLoading] = useState(false);
   const [groupes, setGroupes] = useState<Groupe[]>([]);
   const [totalAll, setTotalAll] = useState(0);
@@ -101,11 +102,33 @@ function useAdminOffresAuto(p: {
     return x;
   }
 
+  /**
+   * Recherche par adresse : toutes les offres automatiques de cette adresse, toutes dates confondues,
+   * regroupées par annonce ici (même règle que l'agent), puis filtres statut / client / « à gérer » et pagination.
+   */
+  async function loadParAdresse(mots: string[], clientIds: string[] | null) {
+    let q: any = supabase.from('offres').select(SELECT).eq('envoi_auto', true);
+    for (const motif of addressIlikePatterns(mots)) q = q.ilike('adresse', motif);
+    const { data, error } = await q.order('created_at', { ascending: false }).limit(1000);
+    if (error) { console.error('[OffresAuto] recherche par adresse', error); setGroupes([]); setTotalAll(0); setTotalManual(0); return; }
+    const offres = ((data ?? []) as Row[]).filter((o) => matchesAddress(o.adresse, mots));
+    const tous = grouper(await enrich(offres)).filter((g) =>
+      (statut === 'all' || g.offres.some((o) => o.statut === statut))
+      && (!clientIds || g.offres.some((o) => !!o.client_id && clientIds.includes(o.client_id))));
+    const aGerer = tous.filter((g) => g.besoinAction);
+    setTotalAll(tous.length);
+    setTotalManual(aGerer.length);
+    const from = (page - 1) * pageSize;
+    setGroupes((manual ? aGerer : tous).slice(from, from + pageSize));
+  }
+
   async function load() {
     if (!enabled) return;
     setLoading(true);
     try {
       const clientIds = await resolveClientIds(debouncedQ);
+      const mots = addressWords(adresse);
+      if (mots.length) { await loadParAdresse(mots, clientIds); return; }
       const from = (page - 1) * pageSize;
       const to = dateTo ? (() => { const d = new Date(dateTo); d.setHours(23, 59, 59, 999); return d.toISOString(); })() : null;
       const args = {
@@ -159,7 +182,7 @@ function useAdminOffresAuto(p: {
     setStats({ today, last7, interesses, refuses, visites, aCompleter });
   }
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [enabled, page, pageSize, statut, debouncedQ, dateFrom, dateTo, manual]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [enabled, page, pageSize, statut, debouncedQ, dateFrom, dateTo, manual, adresse]);
   useEffect(() => { loadStats(); /* eslint-disable-next-line */ }, [enabled, dateFrom, dateTo]);
 
   return { loading, groupes, totalAll, totalManual, stats, load, refresh: () => { load(); loadStats(); } };
@@ -314,6 +337,9 @@ export function OffresAutoPage({ scope }: Props) {
   const [statut, setStatut] = useState<string>('all');
   const [clientQ, setClientQ] = useState('');
   const [debouncedQ, setDebouncedQ] = useState('');
+  // Filtre par adresse (sans accents, mots dans n'importe quel ordre ; admin : toutes dates confondues).
+  const [adresseQ, setAdresseQ] = useState('');
+  const [debouncedAdresse, setDebouncedAdresse] = useState('');
   const [dateFrom, setDateFrom] = useState<string>(() => {
     if (!isAdmin) return '';
     const d = new Date();
@@ -332,16 +358,19 @@ export function OffresAutoPage({ scope }: Props) {
   const ouvrir: Ouvrir = (groupe, offre) => { setEditingGroupe(groupe); setEditing(offre); };
 
   useEffect(() => { const t = setTimeout(() => setDebouncedQ(clientQ.trim()), 300); return () => clearTimeout(t); }, [clientQ]);
+  useEffect(() => { const t = setTimeout(() => setDebouncedAdresse(adresseQ.trim()), 300); return () => clearTimeout(t); }, [adresseQ]);
 
   const admin = useAdminOffresAuto({
-    enabled: isAdmin, statut, debouncedQ, dateFrom, dateTo, manual: tab === 'a_gerer', page, pageSize, ouvrir,
+    enabled: isAdmin, statut, debouncedQ, dateFrom, dateTo, manual: tab === 'a_gerer', page, pageSize, ouvrir, adresse: debouncedAdresse,
   });
   const agent = useAgentOffresAuto({ enabled: !isAdmin, dateFrom, dateTo, ouvrir });
 
   // Agent : filtres statut et client appliqués aux offres chargées, puis regroupement par annonce.
   const agentGroupes = useMemo(() => {
     if (isAdmin) return [] as Groupe[];
+    const mots = addressWords(debouncedAdresse);
     const filtered = agent.rows.filter((r) => {
+      if (!matchesAddress(r.adresse, mots)) return false;
       if (statut !== 'all' && (r.statut ?? '') !== statut) return false;
       if (clientQ) {
         const q = clientQ.toLowerCase();
@@ -351,7 +380,7 @@ export function OffresAutoPage({ scope }: Props) {
       return true;
     });
     return grouper(filtered);
-  }, [isAdmin, agent.rows, statut, clientQ]);
+  }, [isAdmin, agent.rows, statut, clientQ, debouncedAdresse]);
 
   const loading = isAdmin ? admin.loading : agent.loading;
   const stats = isAdmin ? admin.stats : agent.stats;
@@ -386,7 +415,7 @@ export function OffresAutoPage({ scope }: Props) {
     return arr;
   }, [annotees, parEtape, tab, sortKey, isAdmin]);
 
-  useEffect(() => { setPage(1); }, [statut, debouncedQ, dateFrom, dateTo, pageSize, tab, source, sortKey]);
+  useEffect(() => { setPage(1); }, [statut, debouncedQ, debouncedAdresse, dateFrom, dateTo, pageSize, tab, source, sortKey]);
 
   const counts: Record<TabKey, number | undefined> = useMemo(() => {
     const local = {
@@ -416,7 +445,7 @@ export function OffresAutoPage({ scope }: Props) {
 
   const aGerer = counts.a_gerer ?? 0;
   const enRetard = annotees.filter((x) => x.prio.next.enRetard && x.prio.next.etape !== 'cloturees').length;
-  const filtresActifs = !!clientQ || statut !== 'all' || source !== 'all' || !!dateTo || (!isAdmin && !!dateFrom);
+  const filtresActifs = !!clientQ || !!adresseQ || statut !== 'all' || source !== 'all' || !!dateTo || (!isAdmin && !!dateFrom);
 
   const refresh = () => { if (isAdmin) admin.refresh(); else agent.load(); };
   const onSaved = () => { if (isAdmin) admin.load(); else agent.load(); };
@@ -463,6 +492,22 @@ export function OffresAutoPage({ scope }: Props) {
             />
             {clientQ && (
               <button type="button" onClick={() => setClientQ('')} aria-label="Effacer la recherche"
+                className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="relative min-w-0 md:w-[260px]">
+            <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={adresseQ}
+              onChange={(e) => setAdresseQ(e.target.value)}
+              placeholder={isAdmin ? 'Adresse (toutes dates)…' : 'Adresse du bien…'}
+              aria-label="Filtrer par adresse"
+              className="h-11 rounded-full pl-10 pr-10"
+            />
+            {adresseQ && (
+              <button type="button" onClick={() => setAdresseQ('')} aria-label="Effacer l'adresse"
                 className="absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
                 <X className="h-4 w-4" />
               </button>
