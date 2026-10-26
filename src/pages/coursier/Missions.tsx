@@ -14,14 +14,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { LinkPreviewCard } from '@/components/LinkPreviewCard';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { formatZurichDateTime } from '@/lib/dateZurich';
 import { AddressLink } from '@/components/AddressLink';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashBadge, DashEmptyState, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { CoursierMissionCard } from '@/components/coursier/CoursierMissionCard';
 import { A_RENDRE_JOURS, etapeCoursier, finVisite, lienItineraire, type EtapeCoursier } from '@/components/coursier/coursierModel';
 import { cn } from '@/lib/utils';
+import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitPersonRow, VisitSection, formatCHF, offrePhotoUrl } from '@/components/visites/VisitDetailParts';
 
 const ETAPES: { key: EtapeCoursier; label: string }[] = [
   { key: 'disponibles', label: 'Disponibles' },
@@ -291,363 +291,207 @@ export default function CoursierMissions() {
 
       {/* Detail Dialog */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="flex max-h-[90dvh] max-w-lg flex-col gap-0 overflow-hidden p-0">
-          <DialogHeader className="border-b border-border/60 p-5 pb-4">
-            {sm && (
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <DialogTitle className="line-clamp-2 text-lg font-semibold">
-                    <AddressLink
-                      address={sm.adresse}
-                      showIcon={false}
-                      className="text-lg font-semibold"
-                    />
-                  </DialogTitle>
-                  <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">
-                    {format(new Date(sm.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}{' '}
-                    {sm.date_visite_fin
-                      ? `de ${format(new Date(sm.date_visite), "HH:mm")} à ${format(new Date(sm.date_visite_fin), "HH:mm")}`
-                      : `à ${format(new Date(sm.date_visite), "HH:mm")}`
-                    }
-                  </p>
-                </div>
-                <DashBadge tone="muted">
-                  <Users className="mr-1 h-3 w-3" />
-                  {sm._count || 1} client{(sm._count || 1) > 1 ? 's' : ''}
-                </DashBadge>
-              </div>
-            )}
-          </DialogHeader>
+        <DialogContent className={VISIT_DIALOG_CLASS} onOpenAutoFocus={(e) => e.preventDefault()}>
+          {sm ? (
+            <>
+              <VisitHero
+                TitleAs={DialogTitle}
+                date={sm.date_visite}
+                endDate={sm.date_visite_fin}
+                kicker="Mission de visite"
+                badges={
+                  <DashBadge tone="muted">
+                    <Users className="mr-1 h-3 w-3" />
+                    {sm._count || 1} client{(sm._count || 1) > 1 ? 's' : ''}
+                  </DashBadge>
+                }
+                address={sm.adresse}
+                photoUrl={offrePhotoUrl(sm.offres)}
+                title={sm.offres?.titre}
+              />
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {sm && (
-              <div className="space-y-5 p-5">
+              <VisitBody>
                 {/* Accès rapide : itinéraire + appel du contact sur place */}
                 <div className={cn('grid gap-2', contactTel ? 'grid-cols-2' : 'grid-cols-1')}>
-                  <Button asChild variant="outline" className="h-11 rounded-full">
+                  <Button asChild variant="outline" className="h-12">
                     <a href={lienItineraire(sm.adresse)} target="_blank" rel="noopener noreferrer">
-                      <Navigation className="mr-2 h-4 w-4" /> Itinéraire
+                      <Navigation className="h-4 w-4" /> Itinéraire
                     </a>
                   </Button>
                   {contactTel && (
-                    <Button asChild variant="outline" className="h-11 rounded-full">
-                      <a href={`tel:${contactTel}`}><Phone className="mr-2 h-4 w-4" /> Appeler le contact</a>
+                    <Button asChild variant="outline" className="h-12">
+                      <a href={`tel:${contactTel}`}><Phone className="h-4 w-4" /> Appeler le contact</a>
                     </Button>
                   )}
                 </div>
 
-                {/* Créneau de visite */}
-                <div className="rounded-xl border border-border/70 p-4">
-                  <h4 className={SECTION_TITLE}>
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    Créneau de visite
-                  </h4>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium first-letter:uppercase">
-                        {format(new Date(sm.date_visite), "EEEE dd MMMM yyyy", { locale: fr })}
-                      </p>
-                      <p className="text-xl font-semibold tabular-nums text-foreground">
-                        {format(new Date(sm.date_visite), "HH:mm")}
-                        {sm.date_visite_fin && ` → ${format(new Date(sm.date_visite_fin), "HH:mm")}`}
-                      </p>
-                    </div>
-                    {sm.date_visite_fin && (
-                      <div className="text-right">
-                        <span className="text-xs text-muted-foreground">Durée</span>
-                        <p className="text-sm font-semibold">
-                          {Math.round((new Date(sm.date_visite_fin).getTime() - new Date(sm.date_visite).getTime()) / 60000)} min
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                {/* Infos clés */}
+                <VisitInfoTiles
+                  items={[
+                    { icon: Clock, label: 'Durée', value: sm.date_visite_fin ? `${Math.round((new Date(sm.date_visite_fin).getTime() - new Date(sm.date_visite).getTime()) / 60000)} min` : undefined },
+                    { icon: Building, label: 'Type', value: sm.offres?.type_bien },
+                    { label: 'Pièces', value: sm.offres?.pieces },
+                    { label: 'Surface', value: sm.offres?.surface ? `${sm.offres.surface} m²` : undefined },
+                    { label: 'Étage', value: sm.offres?.etage },
+                    { label: 'Loyer', value: sm.offres?.prix ? formatCHF(sm.offres.prix, ' / mois') : undefined },
+                    { icon: Calendar, label: 'Disponibilité', value: sm.offres?.disponibilite },
+                    { icon: KeyRound, label: 'Code immeuble', value: sm.offres?.code_immeuble ? <span className="font-mono">{sm.offres.code_immeuble}</span> : undefined },
+                  ]}
+                />
 
-                {/* Prix */}
-                {sm.offres?.prix && (
-                  <div className="rounded-xl bg-muted/40 p-4 text-center">
-                    <div className="text-2xl font-semibold text-foreground">
-                      CHF {Number(sm.offres.prix).toLocaleString('fr-CH')}
-                    </div>
-                    <div className="text-sm text-muted-foreground">par mois</div>
-                  </div>
-                )}
-
-                {/* Caractéristiques */}
-                {sm.offres && (
-                  <div>
-                    <h4 className={SECTION_TITLE}>
-                      <Home className="h-4 w-4 text-muted-foreground" />
-                      Caractéristiques
-                    </h4>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="rounded-xl bg-muted/50 p-3 text-center">
-                        <div className="text-lg font-semibold">{sm.offres.pieces || '-'}</div>
-                        <div className="text-xs text-muted-foreground">pièces</div>
-                      </div>
-                      <div className="rounded-xl bg-muted/50 p-3 text-center">
-                        <div className="text-lg font-semibold">{sm.offres.surface || '-'}</div>
-                        <div className="text-xs text-muted-foreground">m²</div>
-                      </div>
-                      <div className="rounded-xl bg-muted/50 p-3 text-center">
-                        <div className="text-lg font-semibold">{sm.offres.etage || '-'}</div>
-                        <div className="text-xs text-muted-foreground">étage</div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 space-y-1">
-                      {sm.offres.type_bien && (
-                        <div className="flex items-start gap-3 py-2">
-                          <Building className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-muted-foreground">Type de bien</span>
-                            <p className="text-sm font-medium">{sm.offres.type_bien}</p>
-                          </div>
-                        </div>
-                      )}
-                      {sm.offres.disponibilite && (
-                        <div className="flex items-start gap-3 py-2">
-                          <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-muted-foreground">Disponibilité</span>
-                            <p className="text-sm font-medium">{sm.offres.disponibilite}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Description */}
-                {sm.offres?.description && (
-                  <div className="border-t border-border/60 pt-5">
-                    <h4 className={SECTION_TITLE}>Description</h4>
-                    <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                      {sm.offres.description}
-                    </p>
-                  </div>
-                )}
-
-                {/* Agent responsable */}
-                {sm.agents?.profiles && (
-                  <div className="border-t border-border/60 pt-5">
-                    <h4 className={SECTION_TITLE}>
-                      <UserCog className="h-4 w-4 text-muted-foreground" />
-                      Agent responsable
-                    </h4>
-                    <div className={BLOC}>
-                      <p className="text-sm font-medium">
-                        {sm.agents.profiles.prenom} {sm.agents.profiles.nom}
-                      </p>
-                      {sm.agents.profiles.telephone && (
-                        <a href={`tel:${sm.agents.profiles.telephone}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
-                          <Phone className="h-3.5 w-3.5" />
-                          {sm.agents.profiles.telephone}
-                        </a>
-                      )}
-                      {sm.agents.profiles.email && (
-                        <a href={`mailto:${sm.agents.profiles.email}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
-                          <Mail className="h-3.5 w-3.5" />
-                          {sm.agents.profiles.email}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Contact de la visite (concierge ou locataire) */}
-                <div className="border-t border-border/60 pt-5">
-                  <h4 className={SECTION_TITLE}>
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    Contact de la visite
-                  </h4>
-                  {sm.offres?.concierge_nom ? (
-                    <div className={BLOC}>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        Concierge
-                      </div>
-                      <p className="text-sm font-medium">{sm.offres.concierge_nom}</p>
-                      {sm.offres.concierge_tel && (
-                        <a href={`tel:${sm.offres.concierge_tel}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
-                          <Phone className="h-3.5 w-3.5" />
-                          {sm.offres.concierge_tel}
-                        </a>
-                      )}
-                    </div>
-                  ) : sm.offres?.locataire_nom ? (
-                    <div className={BLOC}>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <User className="h-3 w-3" />
-                        Locataire actuel
-                      </div>
-                      <p className="text-sm font-medium">{sm.offres.locataire_nom}</p>
-                      {sm.offres.locataire_tel && (
-                        <a href={`tel:${sm.offres.locataire_tel}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
-                          <Phone className="h-3.5 w-3.5" />
-                          {sm.offres.locataire_tel}
-                        </a>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-sm italic text-muted-foreground">Aucun contact spécifique renseigné</p>
-                  )}
-                </div>
-
-                {/* Client */}
-                {sm.clients?.profiles && (
-                  <div className="border-t border-border/60 pt-5">
-                    <h4 className={SECTION_TITLE}>
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      Client
-                    </h4>
-                    <div className={BLOC}>
-                      <p className="text-sm font-medium">
-                        {sm.clients.profiles.prenom} {sm.clients.profiles.nom}
-                      </p>
-                      {sm.clients.profiles.telephone && (
-                        <a href={`tel:${sm.clients.profiles.telephone}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
-                          <Phone className="h-3.5 w-3.5" />
-                          {sm.clients.profiles.telephone}
-                        </a>
-                      )}
-                      {sm.clients.profiles.email && (
-                        <a href={`mailto:${sm.clients.profiles.email}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
-                          <Mail className="h-3.5 w-3.5" />
-                          {sm.clients.profiles.email}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Informations pratiques */}
-                {(sm.offres?.code_immeuble || sm.offres?.concierge_nom || sm.offres?.locataire_nom) && (
-                  <div className="border-t border-border/60 pt-5">
-                    <h4 className={SECTION_TITLE}>
-                      <Layers className="h-4 w-4 text-muted-foreground" />
-                      Informations pratiques
-                    </h4>
-                    <div className="space-y-2">
-                      {sm.offres?.code_immeuble && (
-                        <div className="flex items-start gap-3 py-2">
-                          <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs text-muted-foreground">Code immeuble</span>
-                            <p className="font-mono text-sm font-medium">{sm.offres.code_immeuble}</p>
-                          </div>
-                        </div>
-                      )}
-
+                {/* Contact sur place (concierge / locataire) */}
+                <VisitSection icon={Phone} title="Contact de la visite">
+                  {sm.offres?.concierge_nom || sm.offres?.locataire_nom ? (
+                    <>
                       {sm.offres?.concierge_nom && (
-                        <div className={BLOC}>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <User className="h-3 w-3" />
-                            Concierge
-                          </div>
-                          <p className="text-sm font-medium">{sm.offres.concierge_nom}</p>
-                          {sm.offres.concierge_tel && (
-                            <a href={`tel:${sm.offres.concierge_tel}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
-                              <Phone className="h-3.5 w-3.5" />
-                              {sm.offres.concierge_tel}
-                            </a>
-                          )}
-                        </div>
+                        <VisitPersonRow
+                          role="Concierge"
+                          name={sm.offres.concierge_nom}
+                          sub={sm.offres.concierge_tel || undefined}
+                          action={sm.offres.concierge_tel ? (
+                            <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label={`Appeler ${sm.offres.concierge_nom}`}>
+                              <a href={`tel:${sm.offres.concierge_tel}`}><Phone className="h-4 w-4" /></a>
+                            </Button>
+                          ) : undefined}
+                        />
                       )}
-
                       {sm.offres?.locataire_nom && (
-                        <div className={BLOC}>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <User className="h-3 w-3" />
-                            Locataire actuel
-                          </div>
-                          <p className="text-sm font-medium">{sm.offres.locataire_nom}</p>
-                          {sm.offres.locataire_tel && (
-                            <a href={`tel:${sm.offres.locataire_tel}`} className="flex min-h-[32px] items-center gap-1.5 text-sm text-primary hover:underline">
-                              <Phone className="h-3.5 w-3.5" />
-                              {sm.offres.locataire_tel}
-                            </a>
-                          )}
-                        </div>
+                        <VisitPersonRow
+                          role="Locataire actuel"
+                          name={sm.offres.locataire_nom}
+                          sub={sm.offres.locataire_tel || undefined}
+                          action={sm.offres.locataire_tel ? (
+                            <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label={`Appeler ${sm.offres.locataire_nom}`}>
+                              <a href={`tel:${sm.offres.locataire_tel}`}><Phone className="h-4 w-4" /></a>
+                            </Button>
+                          ) : undefined}
+                        />
                       )}
-                    </div>
-                  </div>
-                )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Aucun contact spécifique renseigné</p>
+                  )}
+                </VisitSection>
 
-                {/* Commentaires agent */}
-                {sm.offres?.commentaires && (
-                  <div className="border-t border-border/60 pt-5">
-                    <h4 className={SECTION_TITLE}>
-                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                      Commentaires de l'agent
-                    </h4>
-                    <p className="whitespace-pre-wrap rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">
-                      {sm.offres.commentaires}
-                    </p>
-                  </div>
+                {/* Participants : client + agent responsable */}
+                {(sm.clients?.profiles || sm.agents?.profiles) && (
+                  <VisitSection icon={Users} title="Participants">
+                    {sm.clients?.profiles && (
+                      <VisitPersonRow
+                        role="Client"
+                        name={`${sm.clients.profiles.prenom || ''} ${sm.clients.profiles.nom || ''}`.trim() || 'Client'}
+                        sub={[sm.clients.profiles.telephone, sm.clients.profiles.email].filter(Boolean).join(' · ') || undefined}
+                        action={
+                          <div className="flex gap-1.5">
+                            {sm.clients.profiles.telephone && (
+                              <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label="Appeler le client">
+                                <a href={`tel:${sm.clients.profiles.telephone}`}><Phone className="h-4 w-4" /></a>
+                              </Button>
+                            )}
+                            {sm.clients.profiles.email && (
+                              <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label="Écrire au client">
+                                <a href={`mailto:${sm.clients.profiles.email}`}><Mail className="h-4 w-4" /></a>
+                              </Button>
+                            )}
+                          </div>
+                        }
+                      />
+                    )}
+                    {sm.agents?.profiles && (
+                      <VisitPersonRow
+                        role="Agent responsable"
+                        name={`${sm.agents.profiles.prenom || ''} ${sm.agents.profiles.nom || ''}`.trim() || 'Agent'}
+                        sub={[sm.agents.profiles.telephone, sm.agents.profiles.email].filter(Boolean).join(' · ') || undefined}
+                        action={
+                          <div className="flex gap-1.5">
+                            {sm.agents.profiles.telephone && (
+                              <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label="Appeler l'agent">
+                                <a href={`tel:${sm.agents.profiles.telephone}`}><Phone className="h-4 w-4" /></a>
+                              </Button>
+                            )}
+                            {sm.agents.profiles.email && (
+                              <Button asChild variant="outline" size="icon" className="h-11 w-11" aria-label="Écrire à l'agent">
+                                <a href={`mailto:${sm.agents.profiles.email}`}><Mail className="h-4 w-4" /></a>
+                              </Button>
+                            )}
+                          </div>
+                        }
+                      />
+                    )}
+                  </VisitSection>
                 )}
 
                 {/* Notes de visite */}
                 {sm.notes && (
-                  <div className="rounded-xl bg-amber-500/10 p-3">
-                    <p className="flex items-start gap-2 text-sm text-foreground">
-                      <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                      <span>{sm.notes}</span>
-                    </p>
-                  </div>
+                  <VisitSection icon={MessageSquare} title="Notes de visite">
+                    <VisitNote tone="warning">{sm.notes}</VisitNote>
+                  </VisitSection>
+                )}
+
+                {/* Description + commentaires agent */}
+                {(sm.offres?.description || sm.offres?.commentaires) && (
+                  <VisitSection icon={Home} title="Le bien">
+                    {sm.offres?.description && <VisitNote>{sm.offres.description}</VisitNote>}
+                    {sm.offres?.commentaires && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Commentaires de l'agent</p>
+                        <VisitNote>{sm.offres.commentaires}</VisitNote>
+                      </div>
+                    )}
+                  </VisitSection>
                 )}
 
                 {/* Lien vers l'annonce */}
                 {sm.offres?.lien_annonce && sm.offres.lien_annonce.trim() && (
-                  <div className="border-t border-border/60 pt-5">
-                    <h4 className={SECTION_TITLE}>Annonce originale</h4>
-                    <LinkPreviewCard url={sm.offres.lien_annonce} showInline />
-                  </div>
+                  <VisitSection icon={Layers} title="Annonce originale">
+                    <div className="min-w-0 overflow-hidden">
+                      <LinkPreviewCard url={sm.offres.lien_annonce} showInline />
+                    </div>
+                  </VisitSection>
                 )}
 
                 {/* Feedback coursier if completed */}
                 {sm.feedback_coursier && (
-                  <div className="rounded-xl bg-emerald-500/10 p-3">
-                    <h4 className="mb-1 text-sm font-medium text-foreground">Mon compte-rendu</h4>
-                    <p className="text-sm text-muted-foreground">{sm.feedback_coursier}</p>
-                  </div>
+                  <VisitSection icon={CheckCircle} title="Mon compte-rendu">
+                    <VisitNote>{sm.feedback_coursier}</VisitNote>
+                  </VisitSection>
                 )}
-              </div>
-            )}
-          </div>
+              </VisitBody>
 
-          {/* Actions — en bas de la fiche, zone du pouce */}
-          {sm && (sm.statut_coursier === 'en_attente' || (estAMoi && ['accepte', 'termine'].includes(sm.statut_coursier))) && (
-            <div className="space-y-2 border-t border-border/60 bg-background p-4">
-              {sm.statut_coursier === 'en_attente' && (
-                <Button onClick={() => { handleAccept(sm._group || [sm]); setDetailOpen(false); }} className="h-12 w-full rounded-full">
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Accepter la mission
-                </Button>
-              )}
-              {sm.statut_coursier === 'accepte' && estAMoi && (
-                <Button
-                  onClick={() => { setDetailOpen(false); setCompleteOpen(true); }}
-                  className="h-12 w-full rounded-full"
+              {/* Actions — en bas de la fiche, zone du pouce */}
+              {(sm.statut_coursier === 'en_attente' || (estAMoi && ['accepte', 'termine'].includes(sm.statut_coursier))) && (
+                <VisitActionBar
+                  primary={
+                    sm.statut_coursier === 'en_attente' ? (
+                      <Button onClick={() => { handleAccept(sm._group || [sm]); setDetailOpen(false); }}>
+                        <CheckCircle className="h-4 w-4" />
+                        Accepter la mission
+                      </Button>
+                    ) : sm.statut_coursier === 'accepte' && estAMoi ? (
+                      <Button onClick={() => { setDetailOpen(false); setCompleteOpen(true); }}>
+                        <CheckCircle className="h-4 w-4" />
+                        Terminer la visite
+                      </Button>
+                    ) : undefined
+                  }
                 >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Terminer la visite
-                </Button>
+                  {estAMoi && sm.statut_coursier === 'accepte' && (
+                    <VisitLiveButton visiteId={sm.id} size="default" variant="outline" className="h-11" />
+                  )}
+                  {estAMoi && ['accepte', 'termine'].includes(sm.statut_coursier) && (
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate(`/coursier/visites/${sm.id}/compte-rendu`)}
+                    >
+                      <FileText className="h-4 w-4" />
+                      Compte-rendu & envoi au client
+                    </Button>
+                  )}
+                </VisitActionBar>
               )}
-              {estAMoi && sm.statut_coursier === 'accepte' && (
-                <VisitLiveButton visiteId={sm.id} size="default" variant="outline" className="h-11 w-full rounded-full" />
-              )}
-              {estAMoi && ['accepte', 'termine'].includes(sm.statut_coursier) && (
-                <Button
-                  variant="outline"
-                  className="h-11 w-full rounded-full"
-                  onClick={() => navigate(`/coursier/visites/${sm.id}/compte-rendu`)}
-                >
-                  <FileText className="mr-2 h-4 w-4" />
-                  Compte-rendu détaillé & envoi au client
-                </Button>
-              )}
-            </div>
+            </>
+          ) : (
+            <DialogTitle className="sr-only">Mission</DialogTitle>
           )}
         </DialogContent>
       </Dialog>
@@ -657,7 +501,7 @@ export default function CoursierMissions() {
         <DialogContent className="flex max-h-[90dvh] max-w-lg flex-col gap-0 overflow-hidden p-0">
           <DialogHeader className="border-b border-border/60 p-5 pb-4">
             <DialogTitle>Terminer la visite</DialogTitle>
-            {sm && <p className="text-sm text-muted-foreground">{sm.adresse}</p>}
+            {sm && <p className="text-sm text-muted-foreground">{sm.adresse}{sm.date_visite ? ` · ${formatZurichDateTime(sm.date_visite, { short: true })}` : ''}</p>}
           </DialogHeader>
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5">
             <div className="space-y-2">
@@ -677,7 +521,7 @@ export default function CoursierMissions() {
               <Label>Photos / vidéos (optionnel)</Label>
               <div className="flex flex-wrap gap-2">
                 {feedbackMedias.map((media, i) => (
-                  <div key={i} className="relative h-20 w-20 overflow-hidden rounded-xl border border-border/70">
+                  <div key={i} className="relative h-20 w-20 overflow-hidden rounded-2xl bg-muted">
                     {media.type?.startsWith('image') ? (
                       <img src={media.url} alt="" className="h-full w-full object-cover" />
                     ) : (
@@ -689,19 +533,19 @@ export default function CoursierMissions() {
                       type="button"
                       aria-label="Retirer ce fichier"
                       onClick={() => setFeedbackMedias(prev => prev.filter((_, idx) => idx !== i))}
-                      className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
+                      className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-background/90 text-foreground shadow-sm"
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 ))}
-                <label className="flex h-20 w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border text-xs text-muted-foreground transition-colors hover:border-foreground/40">
+                <label className="flex h-20 min-w-20 cursor-pointer flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border px-2 text-sm text-muted-foreground transition-colors hover:border-foreground/40">
                   {uploadingMedia ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <Upload className="h-5 w-5" />
                   )}
-                  Ajouter
+                  Photo / vidéo
                   <input
                     type="file"
                     className="hidden"

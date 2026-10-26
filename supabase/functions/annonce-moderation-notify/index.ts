@@ -1,6 +1,6 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("annonce-moderation-notify");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailDetails, emailNotice, emailParagraph } from '../_shared/email-shell.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { requireAuth } from "../_shared/require-admin.ts";
 
@@ -126,10 +126,12 @@ serve(async (req: Request): Promise<Response> => {
           await sendEmail(
             p.email,
             `Nouvelle annonce à modérer : ${titre}`,
-            `<h2>Nouvelle annonce soumise</h2>
-             <p><strong>${esc(titre)}</strong> — ${esc(annonce.ville)}</p>
-             <p>Annonceur : ${esc(annonceur?.prenom)} ${esc(annonceur?.nom)} (${esc(annonceur?.email)})</p>
-             <p><a href="${SITE_URL}/admin/annonces-publiques">Ouvrir la file de modération</a></p>`,
+            emailParagraph("Nouvelle annonce soumise.") +
+              emailDetails([
+                { label: "Annonce", html: `${esc(titre)}${annonce.ville ? ` — ${esc(annonce.ville)}` : ""}` },
+                { label: "Annonceur", html: `${esc(`${annonceur?.prenom ?? ""} ${annonceur?.nom ?? ""}`.trim() || "—")}${annonceur?.email ? `<br>${esc(annonceur.email)}` : ""}` },
+              ]) +
+              emailButton("Ouvrir la file de modération", `${SITE_URL}/admin/annonces-publiques`),
           );
         }
       }
@@ -179,14 +181,12 @@ serve(async (req: Request): Promise<Response> => {
         annonceur.email,
         title,
         approved
-          ? `<h2>Votre annonce est en ligne</h2>
-             <p><strong>${esc(titre)}</strong> est désormais publiée sur le portail Logisorama.</p>
-             <p><a href="${SITE_URL}/annonces/${esc(annonce.slug || annonce.id)}">Voir l'annonce</a></p>`
-          : `<h2>Votre annonce a été refusée</h2>
-             <p><strong>${esc(titre)}</strong></p>
-             <p><strong>Motif :</strong> ${esc(motif_refus || annonce.motif_refus || "non précisé")}</p>
-             <p>Vous pouvez la corriger puis la soumettre à nouveau depuis votre espace annonceur.</p>
-             <p><a href="${SITE_URL}/espace-annonceur/mes-annonces">Mes annonces</a></p>`,
+          ? emailParagraph(`<strong>${esc(titre)}</strong> est désormais publiée sur le portail Logisorama.`) +
+            emailButton("Voir l'annonce", `${SITE_URL}/annonces/${esc(annonce.slug || annonce.id)}`)
+          : emailParagraph(`<strong>${esc(titre)}</strong>`) +
+            emailNotice(esc(motif_refus || annonce.motif_refus || "non précisé"), "warning", "Motif") +
+            emailParagraph("Vous pouvez la corriger puis la soumettre à nouveau depuis votre espace annonceur.") +
+            emailButton("Mes annonces", `${SITE_URL}/espace-annonceur/mes-annonces`),
       );
     }
 

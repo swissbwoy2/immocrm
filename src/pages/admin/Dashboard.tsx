@@ -31,6 +31,7 @@ import { AgencyProjectionSection } from '@/components/admin/AgencyProjectionSect
 import { ChargesAgenceDialog } from '@/components/admin/dashboard/ChargesAgenceDialog';
 import { RemboursementsDialog, type RemboursementRow, type PendingRefund } from '@/components/admin/dashboard/RemboursementsDialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DETAIL_DIALOG, DetailHeader, DetailBody, KeyFacts, DetailSection, DetailNotice, DetailActions, dateCH } from '@/components/details/DetailPrimitives';
 import {
   ACTIVATION_PAYEE, PERIODS, isTestAccount, chargeCategoryLabel, computeFinance, formatCHF, inPeriod, monthRange, periodRange,
   type ChargeRow, type DetailKey, type FinanceInput, type PeriodKey,
@@ -833,44 +834,52 @@ export default function AdminDashboard() {
       </StaffShell>
 
       <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
-        <DialogContent className="max-h-[85vh] max-w-lg overflow-y-auto">
+        <DialogContent className={DETAIL_DIALOG}>
           {detail && (() => {
             const rows = fin.details[detail.key];
             const total = rows.reduce((s, r) => s + r.montant, 0);
             return (
               <>
-                <DialogHeader>
-                  <DialogTitle>{detail.title}</DialogTitle>
-                  <DialogDescription>
-                    {p.label} · {rows.length} ligne{rows.length > 1 ? 's' : ''} · {formatCHF(total)}
-                  </DialogDescription>
-                </DialogHeader>
-                {rows.length === 0 ? (
-                  <p className="py-6 text-center text-sm text-muted-foreground">Rien sur cette période.</p>
-                ) : (
-                  <div className="divide-y divide-border/60">
-                    {rows.map((r, i) => (
-                      <div key={i} className="flex items-center gap-3 py-2.5">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-foreground">{r.label}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {r.date ? new Date(r.date).toLocaleDateString('fr-CH') : '—'}{r.note ? ` · ${r.note}` : ''}
-                          </p>
-                        </div>
-                        <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatCHF(r.montant)}</span>
+                <DetailHeader
+                  titleAs={DialogTitle}
+                  descriptionAs={DialogDescription}
+                  title={detail.title}
+                  subtitle={`${p.label} · ${rows.length} ligne${rows.length > 1 ? 's' : ''}`}
+                />
+                <DetailBody>
+                  <KeyFacts items={[{ label: 'Total', value: formatCHF(total), emphasis: true, wide: true }]} />
+                  <DetailSection>
+                    {rows.length === 0 ? (
+                      <p className="py-4 text-center text-sm text-muted-foreground">Rien sur cette période.</p>
+                    ) : (
+                      <div className="divide-y divide-border/50">
+                        {rows.map((r, i) => (
+                          <div key={i} className="flex min-h-[52px] items-center gap-3 py-2.5">
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-[15px] font-medium text-foreground">{r.label}</p>
+                              <p className="truncate text-[13px] text-muted-foreground">
+                                {r.date ? dateCH(r.date) : '—'}{r.note ? ` · ${r.note}` : ''}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-[15px] font-semibold tabular-nums text-foreground">{formatCHF(r.montant)}</span>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                )}
-                {detail.key === 'commissionsAgents' && fin.commissionsSurFiches > 0 && (
-                  <p className="text-xs text-muted-foreground">Moins {formatCHF(fin.commissionsSurFiches)} déjà payés sur les fiches de salaire de la période.</p>
-                )}
-                <p className="text-xs text-muted-foreground">Les comptes de test (adresse @immo-rama.ch ou nom « Test ») ne sont jamais comptés.</p>
-                {detail.path && (
-                  <Button variant="outline" className="h-11 w-full rounded-full" onClick={() => { const to = detail.path as string; setDetail(null); navigate(to); }}>
-                    Ouvrir la page
-                  </Button>
-                )}
+                    )}
+                  </DetailSection>
+                  {detail.key === 'commissionsAgents' && fin.commissionsSurFiches > 0 && (
+                    <DetailNotice>Moins {formatCHF(fin.commissionsSurFiches)} déjà payés sur les fiches de salaire de la période.</DetailNotice>
+                  )}
+                  <p className="text-[13px] text-muted-foreground">Les comptes de test (adresse @immo-rama.ch ou nom « Test ») ne sont jamais comptés.</p>
+                </DetailBody>
+                <DetailActions>
+                  <Button variant="outline" onClick={() => setDetail(null)}>Fermer</Button>
+                  {detail.path && (
+                    <Button onClick={() => { const to = detail.path as string; setDetail(null); navigate(to); }}>
+                      Ouvrir la page
+                    </Button>
+                  )}
+                </DetailActions>
               </>
             );
           })()}

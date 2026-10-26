@@ -1,6 +1,7 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("confirm-phone-appointment");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailDetails, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatDateFR, formatTimeFR, greetingFR } from '../_shared/date-fr.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const corsHeaders = {
@@ -89,22 +90,15 @@ Deno.serve(async (req) => {
     if (updErr) throw updErr;
 
     // Format date for emails (Europe/Zurich)
-    const startDate = new Date(appt.slot_start);
-    const dateStr = startDate.toLocaleDateString('fr-CH', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-      timeZone: 'Europe/Zurich',
-    });
-    const timeStr = startDate.toLocaleTimeString('fr-CH', {
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Europe/Zurich',
-    });
+    const dateStr = formatDateFR(appt.slot_start, { weekday: true });
+    const timeStr = formatTimeFR(appt.slot_start);
+    const durationMin = appt.slot_end
+      ? Math.round((new Date(appt.slot_end).getTime() - new Date(appt.slot_start).getTime()) / 60000)
+      : 0;
+    const durationLabel = durationMin > 0 && durationMin < 600 ? `${durationMin} minutes` : '30 minutes';
 
     const ADMIN_EMAIL = 'info@immo-rama.ch';
-    const OFFICE_ADDRESS = "Chemin de l'Esparsette 5, 1023 Crissier";
+    const OFFICE_ADDRESS = "Chemin de l'Esparcette 5, 1023 Crissier";
     const OFFICE_MAPS_URL =
       'https://www.google.com/maps/search/?api=1&query=' +
       encodeURIComponent(OFFICE_ADDRESS);
@@ -146,22 +140,22 @@ Deno.serve(async (req) => {
 
       // Also send a friendly HTML confirmation
       try {
-        const htmlBody = renderCorporateEmail({ title: 'Rendez-vous au bureau confirmé', category: "VOTRE RENDEZ-VOUS", bodyHtml: `<p style="margin:0 0 18px;">Bonjour ${appt.prospect_name},</p><div style="background: #f3f4ed; border-radius: 12px; padding: 24px; margin-bottom: 20px;">
-              <p style="margin: 0 0 16px 0; font-size: 16px;">Votre rendez-vous au bureau est <strong>fixé</strong> :</p>
-              <table style="width: 100%; border-collapse: collapse;">
-                <tr><td style="padding: 8px 0; color: #666; width: 100px;">Date</td><td style="padding: 8px 0; font-weight: 600;">${dateStr}</td></tr>
-                <tr><td style="padding: 8px 0; color: #666;">Heure</td><td style="padding: 8px 0; font-weight: 600;">${timeStr}</td></tr>
-                <tr><td style="padding: 8px 0; color: #666;">Durée</td><td style="padding: 8px 0; font-weight: 600;">30 minutes</td></tr>
-                <tr><td style="padding: 8px 0; color: #666; vertical-align: top;">Adresse</td><td style="padding: 8px 0; font-weight: 600;">${OFFICE_ADDRESS}</td></tr>
-              </table>
-              <div style="text-align: center; margin-top: 20px;">
-                <a href="${OFFICE_MAPS_URL}" style="display: inline-block; padding: 12px 24px; background: #205a43; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">Voir l'itinéraire</a>
-              </div>
-            </div>
-            <p style="color: #666; font-size: 14px; text-align: center;">
-              Merci d'arriver <strong>5 minutes en avance</strong>. Une invitation calendrier (.ics) est jointe à cet email.
-            </p>
-            ` });
+        const htmlBody = renderCorporateEmail({
+          title: 'Rendez-vous au bureau confirmé',
+          preview: `Votre rendez-vous est fixé le ${dateStr} à ${timeStr}.`,
+          category: "VOTRE RENDEZ-VOUS",
+          bodyHtml:
+            emailParagraph(escapeEmailHtml(greetingFR((appt.prospect_name || '').trim()))) +
+            emailParagraph('Votre rendez-vous au bureau est <strong>fixé</strong> :') +
+            emailDetails([
+              ['Date', dateStr],
+              ['Heure', timeStr],
+              ['Durée', durationLabel],
+              ['Adresse', OFFICE_ADDRESS],
+            ]) +
+            emailButton("Voir l'itinéraire", OFFICE_MAPS_URL) +
+            emailParagraph("Merci d'arriver <strong>5 minutes en avance</strong>. Une invitation calendrier (.ics) est jointe à cet email.", true),
+        });
 
         await sendTrackedEmail('https://api.resend.com/emails', {
           method: 'POST',

@@ -1,4 +1,5 @@
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailDetails, emailNotice, emailParagraph, escapeEmailHtml } from '../_shared/email-shell.ts';
+import { formatCHF } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "../_shared/tracked-resend.ts";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
@@ -909,48 +910,44 @@ const handler = async (req: Request): Promise<Response> => {
     const isPurchase = data.type_recherche === 'Acheter';
     const acompte = isPurchase ? 2500 : 300;
 
-    // Format budget without Unicode issues
-    const budgetFormatted = data.budget_max.toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+    // E-mail (HTML, UTF-8) : accents conservés, montants au format suisse
+    const e = escapeEmailHtml;
+    const fullName = `${data.prenom ?? ''} ${data.nom ?? ''}`.trim();
+    const budgetLabel = formatCHF(data.budget_max) || '—';
+    const acompteLabel = formatCHF(acompte);
 
     const emailResponse = await resend.emails.send({
       from: `IMMO-RAMA <${fromEmail}>`,
       to: [data.email],
       subject: `Votre mandat de recherche signe - IMMO-RAMA`,
-html: renderCorporateEmail({ title: 'Votre mandat de recherche signé', category: 'VOTRE MANDAT', bodyHtml: `
-              <h2 style="font-size:22px;line-height:28px;color:#193d2c;margin:0 0 18px;">Bonjour ${sanitizeText(data.prenom)},</h2>
-
-              <p style="margin:0 0 18px;">Nous vous confirmons la reception de votre mandat de recherche pour ${isPurchase ? "l'achat d'un bien immobilier" : "la location d'un logement"}.</p>
-
-              <p style="margin:0 0 18px;">Vous trouverez en piece jointe votre mandat signe au format PDF.</p>
-
-              <div style="background:#f3f4ed;border:1px solid #e7ebe5;border-radius:5px;padding:22px;margin:20px 0;">
-                <strong>Recapitulatif de votre recherche:</strong>
-                <ul style="margin: 10px 0;">
-                  <li style="margin-bottom:8px;">Type: ${sanitizeText(data.type_recherche)}</li>
-                  <li style="margin-bottom:8px;">Bien recherche: ${sanitizeText(data.type_bien)} - ${sanitizeText(data.pieces_recherche)} pieces</li>
-                  <li style="margin-bottom:8px;">Region: ${sanitizeText(data.region_recherche)}</li>
-                  <li style="margin-bottom:8px;">Budget: ${budgetFormatted} CHF</li>
-                </ul>
-              </div>
-
-              ${(data.payment_method ?? 'qr_invoice') === 'twint' ? `
-              <div class="bank-info" style="background:#fef3c7;border-left:4px solid #f59e0b;padding:16px;margin:20px 0;border-radius:8px;">
-                <strong style="color:#92400e;">Paiement TWINT instantane</strong>
-                <p style="margin:10px 0 5px 0;">Acompte de <strong>${acompte} CHF</strong> a payer par TWINT au :</p>
-                <p style="font-size:20px;font-weight:bold;font-family:monospace;background:white;padding:10px;border-radius:4px;text-align:center;margin:10px 0;">079 483 91 99</p>
-                <p style="margin:5px 0;color:#92400e;"><strong>Mention obligatoire</strong> dans le message TWINT :</p>
-                <p style="background:white;padding:8px;border-radius:4px;text-align:center;font-weight:600;">${sanitizeText(data.prenom)} ${sanitizeText(data.nom)} - Acompte mandat</p>
-              </div>
-              ` : `
-              <div class="bank-info" style="background:#f3f4ed;border-left:4px solid #205a43;padding:16px;margin:20px 0;border-radius:8px;">
-                <strong style="color:#205a43;">Facture QR par email</strong>
-                <p style="margin:10px 0;">Vous recevrez votre facture QR (acompte de <strong>${acompte} CHF</strong>) par email sous quelques minutes. Vous pourrez la regler depuis votre application bancaire (e-banking, mobile banking).</p>
-              </div>
-              `}
-
-              <p style="margin:0 0 18px;">Votre dossier sera active des reception du paiement.</p>
-
-              <p style="margin:0 0 18px;">Cordialement,<br><strong>L'equipe IMMO-RAMA</strong></p>` }),
+html: renderCorporateEmail({
+        title: 'Votre mandat de recherche signé',
+        preview: 'Votre mandat signé est joint à cet e-mail (PDF).',
+        category: 'VOTRE MANDAT',
+        bodyHtml:
+          emailParagraph(data.prenom?.trim() ? `Bonjour ${e(data.prenom.trim())},` : 'Bonjour,') +
+          emailParagraph(`Nous vous confirmons la réception de votre mandat de recherche pour ${isPurchase ? "l'achat d'un bien immobilier" : "la location d'un logement"}.`) +
+          emailParagraph('Vous trouverez en pièce jointe votre mandat signé au format PDF.') +
+          emailDetails([
+            ['Type', data.type_recherche || '—'],
+            ['Bien recherché', [data.type_bien, data.pieces_recherche ? `${data.pieces_recherche} pièces` : ''].filter(Boolean).join(' - ') || '—'],
+            ['Région', data.region_recherche || '—'],
+            ['Budget', budgetLabel],
+          ], 'Récapitulatif de votre recherche') +
+          ((data.payment_method ?? 'qr_invoice') === 'twint'
+            ? emailNotice(
+              `Acompte de <strong>${e(acompteLabel)}</strong> à payer par TWINT au : <strong style="font-size:18px;">079 483 91 99</strong><br><strong>Mention obligatoire</strong> dans le message TWINT : <strong>${e(fullName)} - Acompte mandat</strong>`,
+              'warning',
+              'Paiement TWINT instantané',
+            )
+            : emailNotice(
+              `Vous recevrez votre facture QR (acompte de <strong>${e(acompteLabel)}</strong>) par email sous quelques minutes. Vous pourrez la régler depuis votre application bancaire (e-banking, mobile banking).`,
+              'info',
+              'Facture QR par email',
+            )) +
+          emailParagraph('Votre dossier sera activé dès réception du paiement.') +
+          emailParagraph("Cordialement,<br><strong>L'équipe IMMO-RAMA</strong>"),
+      }),
       attachments: [
         {
           filename: `Mandat_IMMO-RAMA_${sanitizeText(data.nom)}_${sanitizeText(data.prenom)}.pdf`,

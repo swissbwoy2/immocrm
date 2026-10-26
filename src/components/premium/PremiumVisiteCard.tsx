@@ -23,7 +23,7 @@ interface PremiumVisiteCardProps {
 
 export function PremiumVisiteCard({ visite, index = 0, onClick, className }: PremiumVisiteCardProps) {
   const now = new Date();
-  const visiteDate = toSwissTime(visite.date_visite);
+  const visiteDate = new Date(visite.date_visite);
   const daysUntil = differenceInDays(visiteDate, now);
   const hoursUntil = differenceInHours(visiteDate, now);
   

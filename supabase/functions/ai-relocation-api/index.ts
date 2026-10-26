@@ -1,4 +1,4 @@
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailBadge, emailListingCard, emailNotice, emailParagraph, escapeEmailHtml, formatCHF } from '../_shared/email-shell.ts';
 import { createClient, SupabaseClient as SupabaseClientGeneric } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 
 // Use a permissive client type so PostgREST query result inference doesn't collapse to SelectQueryError
@@ -1358,26 +1358,32 @@ async function handleOfferSend(
   // 5. Build HTML email
   const messageText = customMessage || (offer as any).message_body || '';
 
-  const propertiesHtml = properties.map((p: any) => `
-    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin-bottom:12px;">
-      <h3 style="margin:0 0 8px;color:#1f2937;">${p.title || 'Bien immobilier'}</h3>
-      ${p.address ? `<p style="margin:4px 0;color:#6b7280;">📍 ${p.address}</p>` : ''}
-      <div style="display:flex;gap:16px;margin-top:8px;">
-        ${p.rent_amount ? `<span style="font-weight:600;color:#059669;">CHF ${Number(p.rent_amount).toLocaleString()}</span>` : ''}
-        ${p.living_area ? `<span style="color:#6b7280;">${p.living_area} m²</span>` : ''}
-        ${p.number_of_rooms ? `<span style="color:#6b7280;">${p.number_of_rooms} pièces</span>` : ''}
-      </div>
-      ${p.source_name ? `<p style="margin:8px 0 0;color:#9ca3af;font-size:12px;">Source: ${p.source_name}</p>` : ''}
-    </div>
-  `).join('');
+  const propertiesHtml = properties.map((p: any) =>
+    emailListingCard({
+      title: p.title || 'Bien immobilier',
+      meta: [
+        p.address || '',
+        p.number_of_rooms ? `${p.number_of_rooms} pièces` : '',
+        p.living_area ? `${p.living_area} m²` : '',
+      ].filter(Boolean).join(' · '),
+      price: p.rent_amount ? formatCHF(p.rent_amount) : undefined,
+      badgeHtml: p.source_name ? emailBadge(`Source : ${p.source_name}`, 'neutral') : undefined,
+    })
+  ).join('');
 
-  const emailBody = renderCorporateEmail({ title: 'Nouvelles offres immobilières pour vous', category: "VOTRE RECHERCHE", bodyHtml: `<h2 style="color:#1f2937;">Bonjour ${clientName},</h2>
-      <p style="color:#4b5563;">Nous avons trouvé des biens correspondant à vos critères de recherche :</p>
-      ${messageText ? `<p style="color:#4b5563;background:#f3f4f6;padding:12px;border-radius:6px;">${messageText}</p>` : ''}
-      ${propertiesHtml}
-      <p style="color:#4b5563;margin-top:24px;">N'hésitez pas à nous contacter pour organiser des visites.</p>
-      <p style="color:#6b7280;">Cordialement,<br/>L'équipe Logisorama</p>
-    ` });
+  const name = String(clientName ?? '').trim();
+  const emailBody = renderCorporateEmail({
+    title: 'Nouvelles offres immobilières pour vous',
+    preview: `${properties.length} bien(s) correspondant à vos critères de recherche.`,
+    category: "VOTRE RECHERCHE",
+    bodyHtml:
+      emailParagraph(name ? `Bonjour ${escapeEmailHtml(name)},` : 'Bonjour,') +
+      emailParagraph('Nous avons trouvé des biens correspondant à vos critères de recherche :') +
+      (messageText ? emailNotice(/<\/?[a-z][^>]*>/i.test(messageText) ? messageText : escapeEmailHtml(messageText).replace(/\r?\n/g, '<br>'), 'neutral') : '') +
+      propertiesHtml +
+      emailParagraph("N'hésitez pas à nous contacter pour organiser des visites.") +
+      emailParagraph("Cordialement,<br/>L'équipe Logisorama"),
+  });
 
   // 6. Call send-smtp-email with caller's JWT
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

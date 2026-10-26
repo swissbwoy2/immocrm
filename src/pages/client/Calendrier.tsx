@@ -124,6 +124,7 @@ export default function ClientCalendrier() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('fr-CH', { 
+      timeZone: 'Europe/Zurich',
       weekday: 'long', 
       year: 'numeric', 
       month: 'long', 

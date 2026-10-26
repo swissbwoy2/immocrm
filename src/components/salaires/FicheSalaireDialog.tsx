@@ -402,7 +402,7 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
                           <div>
                             <span className="font-medium">{m.adresse}</span>
                             <span className="text-muted-foreground ml-2 text-xs">
-                              {new Date(m.date_visite).toLocaleDateString('fr-CH')}
+                              {new Date(m.date_visite).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}
                             </span>
                           </div>
                         </div>

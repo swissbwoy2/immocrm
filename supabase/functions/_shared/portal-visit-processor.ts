@@ -35,9 +35,13 @@ export async function processPortalVisitRequests(
     const html = listing
       ? renderCorporateEmail({
         title: "Votre demande de visite",
-        category: "VISITE · " + listing.ville,
+        category: listing.ville ? "VISITE · " + listing.ville : "VOTRE VISITE",
         preview: subject,
-        bodyHtml: `<p>Bonjour,</p><p>Merci pour votre intérêt pour <strong>${
+        bodyHtml: `<p>${
+          inquiry?.firstName?.trim()
+            ? "Bonjour " + escapeEmailHtml(inquiry.firstName.trim()) + ","
+            : "Bonjour,"
+        }</p><p>Merci pour votre intérêt pour <strong>${
           escapeEmailHtml(listing.titre)
         }</strong>.</p><p>Vous trouverez les photos, les conditions et les informations du bien dans l’annonce ci-dessous. Pour organiser une visite, consultez les créneaux et les modalités indiqués sur la page :</p>${
           emailButton(

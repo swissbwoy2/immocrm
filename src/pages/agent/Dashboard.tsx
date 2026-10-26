@@ -577,7 +577,7 @@ export default function AgentDashboard() {
                           </p>
                           <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                             <Calendar className="h-3.5 w-3.5" />
-                            {dateVisite.toLocaleDateString('fr-CH')} à {dateVisite.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' })}
+                            {dateVisite.toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })} à {dateVisite.toLocaleTimeString('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', minute: '2-digit' })}
                           </p>
                           <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-primary">
                             <UserIcon className="h-3.5 w-3.5" /> Délégué par {clientName}

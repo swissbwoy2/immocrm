@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { formatZurichDay, formatZurichTime, formatZurichTimeRange } from '@/lib/dateZurich';
 import { 
   Calendar, Clock, MapPin, Home, Maximize, User, Phone, KeyRound, 
   Check, X, FileCheck, ThumbsUp, ThumbsDown, Minus, Lightbulb, Hourglass, MessageSquareText
@@ -155,11 +156,11 @@ export function ClientDayEvents({
                         </span>
                         <div>
                           <p className="font-semibold text-sm text-foreground">
-                            {format(eventDate, "EEEE d MMMM yyyy", { locale: fr })}
+                            {formatZurichDay(data.date_visite)}
                           </p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             <Clock className="w-3 h-3" />
-                            {format(eventDate, 'HH:mm')}
+                            {formatZurichTimeRange(data.date_visite, data.date_visite_fin)}
                           </p>
                         </div>
                       </div>
@@ -323,10 +324,10 @@ export function ClientDayEvents({
                     </Badge>
                   </div>
                   <h4 className="text-base font-semibold mt-2">{data.title}</h4>
-                  {!data.all_day && (
+                  {!data.all_day && formatZurichTime(data.event_date) && (
                     <p className="text-sm flex items-center gap-1 mt-1 text-muted-foreground">
                       <Clock className="h-3 w-3" />
-                      {format(eventDate, 'HH:mm')}
+                      {formatZurichTime(data.event_date)}
                     </p>
                   )}
                   {data.description && (

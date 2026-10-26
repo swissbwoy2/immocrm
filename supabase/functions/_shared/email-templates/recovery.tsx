@@ -1,9 +1,8 @@
-import { EmailLayout, emailStyles } from '../email-layout.tsx'
+import { EmailButton, EmailHeading, EmailLayout, EmailText, emailStyles } from '../email-layout.tsx'
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
 
-import { Button, Heading, Text } from 'npm:@react-email/components@0.0.22'
 
 interface RecoveryEmailProps {
   siteName: string
@@ -14,23 +13,20 @@ export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
 }: RecoveryEmailProps) => (
-  <EmailLayout lang="en" category="ACCOUNT & SECURITY" preview={`Reset your password for ${siteName}`}>
-<Heading className="email-heading" style={h1}>Reset your password</Heading>
-        <Text style={text}>
-          We received a request to reset your password for {siteName}. Click
-          the button below to choose a new password.
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Reset Password
-        </Button>
-        <Text style={footer}>
-          If you didn't request a password reset, you can safely ignore this
-          email. Your password will not be changed.
-        </Text>
+  <EmailLayout lang="fr" category="COMPTE ET SÉCURITÉ" preview={`Réinitialisez votre mot de passe ${siteName}`}>
+<EmailHeading>Réinitialisez votre mot de passe</EmailHeading>
+        <EmailText>
+          Nous avons reçu une demande de réinitialisation de votre mot de passe
+          {siteName}. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.
+        </EmailText>
+        <EmailButton href={confirmationUrl}>Choisir un nouveau mot de passe</EmailButton>
+        <EmailText muted>
+          Si vous n’avez rien demandé, ignorez cet e-mail : votre mot de passe
+          reste inchangé.
+        </EmailText>
 
 </EmailLayout>
 )
 
 export default RecoveryEmail
 
-const { button, footer, h1, text } = emailStyles

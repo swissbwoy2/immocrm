@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { formatInTimeZone } from 'date-fns-tz';
 import { fr } from 'date-fns/locale';
 import { 
   User, Calendar, MessageSquare, Eye, Home, 
@@ -111,7 +112,7 @@ export function PremiumInteretAcheteurCard({
           <div className="flex items-center gap-2 text-sm text-primary mb-3">
             <Calendar className="w-4 h-4" />
             <span className="font-medium">
-              Visite: {format(new Date(interet.date_visite), 'd MMM yyyy à HH:mm', { locale: fr })}
+              Visite: {formatInTimeZone(new Date(interet.date_visite), 'Europe/Zurich', 'd MMM yyyy à HH:mm', { locale: fr })}
             </span>
           </div>
         )}

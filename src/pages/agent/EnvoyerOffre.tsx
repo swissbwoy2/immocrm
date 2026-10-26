@@ -17,6 +17,7 @@ import { useDraftManager, initialFormData } from "@/hooks/useDraftManager";
 import { DraftManagerDialog } from "@/components/DraftManagerDialog";
 import { ClientMultiSelect } from "@/components/ClientMultiSelect";
 import { buildOffreMessage, formatDateVisite } from "@/lib/offreMessage";
+import { formatZurichDateTime, zurichDateTimeToIso, zurichInputToIso } from "@/lib/dateZurich";
 import { GoogleAddressAutocomplete, AddressComponents } from "@/components/GoogleAddressAutocomplete";
 import { PremiumPageShellV2 } from '@/components/dashboard/v2';
 import { isMandatCancelled, isMandatCancelledError, MANDAT_CANCELLED_OFFER_MESSAGE } from '@/lib/mandatCancellation';
@@ -347,16 +348,16 @@ const EnvoyerOffre = () => {
           const dateStr = formData.datesVisite[i];
           if (!dateStr) continue;
           
-          // Convert local datetime to ISO string with timezone
-          const localDate = new Date(dateStr);
-          const isoWithTimezone = localDate.toISOString();
+          // Champ datetime-local saisi en heure suisse → instant ISO (UTC)
+          const isoWithTimezone = zurichInputToIso(dateStr);
+          if (!isoWithTimezone) continue;
           
           // Calculate end date if end time is provided
           let endDate: string | null = null;
           const endTime = formData.datesVisiteFin[i];
           if (endTime) {
             const dateOnly = dateStr.split('T')[0]; // Extract date part
-            endDate = new Date(`${dateOnly}T${endTime}`).toISOString();
+            endDate = zurichDateTimeToIso(dateOnly, endTime);
           }
           
           await supabase
@@ -738,14 +739,7 @@ const EnvoyerOffre = () => {
                     <p className="font-semibold text-sm">Dates de visite proposées :</p>
                     <ul className="list-disc list-inside text-sm mt-1">
                       {formData.datesVisite.filter(d => d).map((date, i) => (
-                        <li key={i}>{new Date(date).toLocaleString('fr-FR', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric', 
-                          hour: '2-digit', 
-                          minute: '2-digit' 
-                        })}</li>
+                        <li key={i}>{formatZurichDateTime(date)}</li>
                       ))}
                     </ul>
                   </div>

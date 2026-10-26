@@ -1,9 +1,12 @@
-import { ExternalLink, Info, MapPin, StickyNote } from 'lucide-react';
+import { ExternalLink, Info, MapPin, StickyNote, Home, Maximize, Layers, CalendarCheck, CalendarDays } from 'lucide-react';
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogTitle,
 } from '@/components/ui/dialog';
+import { DashBadge } from '@/components/client/dashboard/DashPrimitives';
+import {
+  DETAIL_DIALOG, DetailHeader, DetailBody, KeyFacts, DetailSection, DetailText, DetailActions, DetailNotice, DetailLinkCard, chfDetail,
+} from '@/components/details/DetailPrimitives';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
 import { AddressLink } from '@/components/AddressLink';
 import { noteSuiviClient } from '@/lib/offreNote';
 import { ACHAT_A_REPONDRE, ACHAT_STATUT_COURT, formatPrixAchat } from '@/lib/achatOffreActions';
@@ -73,7 +76,7 @@ export function AchatOffreDetailsDialog({
       return fa ? ta - tb : tb - ta;
     });
 
-  const prix = formatPrixAchat(offre.prix);
+  const prix = formatPrixAchat(offre.prix) ? chfDetail(offre.prix) : null;
   const pieces = offre.pieces ?? offre.nombre_pieces;
   const details = [
     pieces ? `${pieces} pièces` : null,
@@ -105,52 +108,48 @@ export function AchatOffreDetailsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl sm:rounded-2xl">
-        <DialogHeader className="sr-only">
-          <DialogTitle>Détail du bien</DialogTitle>
-          <DialogDescription>Informations sur le bien à l'achat proposé par votre conseiller</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-6">
-          <AchatOffrePhoto offre={offre} ratio="aspect-[16/10]" className="rounded-xl" />
-
-          <div>
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold leading-none',
-                enAttente ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
-              )}
-            >
-              {ACHAT_STATUT_COURT[offre.statut] ?? 'Bien proposé'}
-            </span>
+      <DialogContent className={DETAIL_DIALOG}>
+        <DetailHeader
+          titleAs={DialogTitle}
+          descriptionAs={DialogDescription}
+          media={<AchatOffrePhoto offre={offre} ratio="aspect-[16/10]" className="rounded-2xl" />}
+          badge={<DashBadge tone={enAttente ? 'primary' : 'muted'}>{ACHAT_STATUT_COURT[offre.statut] ?? 'Bien proposé'}</DashBadge>}
+          title={
             <AddressLink
               address={offre.adresse}
-              className="mt-3 text-xl font-semibold leading-snug"
+              className="text-[19px] font-semibold leading-snug sm:text-xl"
               iconClassName="text-muted-foreground"
             />
-            {details && <p className="mt-1 text-[15px] text-muted-foreground">{details}</p>}
-            {prix && (
-              <p className="mt-2 text-[17px] text-foreground">
-                <span className="font-semibold">{prix}</span>
-                <span className="text-muted-foreground"> · prix de vente</span>
-              </p>
-            )}
-          </div>
+          }
+          subtitle={details || "Informations sur le bien à l'achat proposé par votre conseiller"}
+        />
 
-          <div className="rounded-xl border border-border/70 p-4">
+        <DetailBody>
+          <KeyFacts
+            columns={4}
+            items={[
+              prix ? { label: 'Prix de vente', value: prix, emphasis: true } : null,
+              pieces ? { label: 'Pièces', value: pieces, icon: Home } : null,
+              offre.surface ? { label: 'Surface', value: `${offre.surface} m²`, icon: Maximize } : null,
+              offre.etage ? { label: 'Étage', value: offre.etage, icon: Layers } : null,
+              offre.disponibilite ? { label: 'Disponible dès', value: offre.disponibilite, icon: CalendarCheck } : null,
+            ]}
+          />
+
+          <DetailSection className="bg-primary/5">
             <AchatProchaineEtape offre={offre} visitesDuBien={visitesDuBien} handlers={wrapped} busy={busy} demandeEnvoyee={demandeEnvoyee} negociation={negociation} notaire={notaire} />
-          </div>
+          </DetailSection>
 
           {visitesDuBien.length > 0 && (
-            <Bloc titre="Vos visites">
-              <div className="space-y-3">
+            <DetailSection title="Vos visites" icon={CalendarDays}>
+              <div className="divide-y divide-border/50">
                 {visitesDuBien.map((v) => {
                   const medias = mediasPartages(v);
                   const cr = v.compte_rendu && typeof v.compte_rendu === 'object' ? v.compte_rendu : null;
                   const lignesCr = cr ? CR_LIBELLES.filter(([k]) => cr[k]).map(([k, l]) => [l, String(cr[k])]) : [];
                   return (
-                    <div key={v.id} className="rounded-xl bg-muted/50 p-3.5">
-                      {v.date_visite && <p className="text-sm font-semibold capitalize text-foreground">{formatVisite(v.date_visite)}</p>}
+                    <div key={v.id} className="py-3 first:pt-0 last:pb-0">
+                      {v.date_visite && <p className="text-[15px] font-semibold capitalize text-foreground">{formatVisite(v.date_visite)}</p>}
                       <p className="mt-0.5 text-sm text-muted-foreground">{libelleVisite(v)}</p>
                       {(v.feedback_agent || v.feedback_coursier) && (
                         <p className="mt-1.5 whitespace-pre-line text-sm text-muted-foreground">{v.feedback_agent || v.feedback_coursier}</p>
@@ -166,9 +165,9 @@ export function AchatOffreDetailsDialog({
                         <div className="mt-3 grid grid-cols-2 gap-2">
                           {medias.map((m) =>
                             m.video ? (
-                              <video key={m.url} src={m.url} controls preload="metadata" className="col-span-2 max-h-64 w-full rounded-lg bg-black" />
+                              <video key={m.url} src={m.url} controls preload="metadata" className="col-span-2 max-h-64 w-full rounded-xl bg-black" />
                             ) : (
-                              <a key={m.url} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg">
+                              <a key={m.url} href={m.url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-xl">
                                 <img src={m.url} alt="Photo de la visite" loading="lazy" className="aspect-[4/3] w-full object-cover" />
                               </a>
                             ),
@@ -179,40 +178,37 @@ export function AchatOffreDetailsDialog({
                   );
                 })}
               </div>
-            </Bloc>
+            </DetailSection>
           )}
 
           {noteSuiviClient(offre.commentaires) && (
-            <Bloc titre="Suivi">
-              <p className="flex items-start gap-2.5 rounded-xl bg-muted/50 p-3.5 text-sm leading-relaxed text-foreground">
-                <StickyNote className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <span className="whitespace-pre-line">{noteSuiviClient(offre.commentaires)}</span>
-              </p>
-            </Bloc>
+            <DetailSection title="Suivi" icon={StickyNote}>
+              <DetailText>{noteSuiviClient(offre.commentaires)}</DetailText>
+            </DetailSection>
           )}
 
           {offre.description && (
-            <Bloc titre="Description">
-              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{offre.description}</p>
-            </Bloc>
+            <DetailSection title="Description">
+              <DetailText>{offre.description}</DetailText>
+            </DetailSection>
           )}
 
           {infos.length > 0 && (
-            <Bloc titre="Informations utiles">
-              <dl className="divide-y divide-border/70">
+            <DetailSection title="Informations utiles">
+              <dl className="divide-y divide-border/50">
                 {infos.map((info) => (
-                  <div key={info.label} className="flex items-start justify-between gap-4 py-2.5">
+                  <div key={info.label} className="flex min-h-[44px] items-start justify-between gap-4 py-2.5">
                     <dt className="text-sm text-muted-foreground">{info.label}</dt>
-                    <dd className="text-right text-sm font-medium text-foreground">{info.value}</dd>
+                    <dd className="text-right text-[15px] font-medium text-foreground">{info.value}</dd>
                   </div>
                 ))}
               </dl>
-            </Bloc>
+            </DetailSection>
           )}
 
           {offre.adresse && (
-            <Bloc titre="Emplacement">
-              <div className="overflow-hidden rounded-xl border border-border/70">
+            <DetailSection title="Emplacement" icon={MapPin} className="overflow-hidden">
+              <div className="-mx-4 -mb-4 sm:-mx-5 sm:-mb-5">
                 <iframe
                   title={`Carte ${offre.adresse}`}
                   src={`https://www.google.com/maps?q=${encodeURIComponent(offre.adresse)}&output=embed`}
@@ -226,50 +222,35 @@ export function AchatOffreDetailsDialog({
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(offre.adresse)}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                  className="flex min-h-[48px] items-center justify-center gap-1.5 text-sm font-medium text-foreground hover:bg-muted/60"
                 >
                   <MapPin className="h-4 w-4" /> Ouvrir dans Google Maps
                 </a>
               </div>
-            </Bloc>
+            </DetailSection>
           )}
 
-          <p className="flex items-start gap-2 rounded-xl bg-muted/50 p-3.5 text-sm text-muted-foreground">
-            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <DetailNotice icon={Info}>
             Avant toute offre d'achat, votre conseiller vérifie avec vous le financement et l'état du bien.
-          </p>
+          </DetailNotice>
 
           {lienAnnonce && (
-            <a
+            <DetailLinkCard
               href={lienAnnonce}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-4 transition-colors hover:border-foreground/50"
-            >
-              <span>
-                <span className="block text-sm font-semibold text-foreground">Voir l'annonce d'origine</span>
-                <span className="block truncate text-xs text-muted-foreground">{lienAnnonce.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}</span>
-              </span>
-              <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
-            </a>
+              title="Voir l'annonce d'origine"
+              subtitle={lienAnnonce.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+              icon={ExternalLink}
+            />
           )}
-        </div>
+        </DetailBody>
 
-        <DialogFooter className="mt-2 border-t border-border/70 pt-4">
-          <Button variant="ghost" className="h-11 w-full rounded-full sm:w-auto" onClick={close}>
+        <DetailActions>
+          <Button variant="ghost" onClick={close}>
             Fermer
           </Button>
-        </DialogFooter>
+        </DetailActions>
       </DialogContent>
     </Dialog>
   );
 }
 
-function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
-  return (
-    <section className="border-t border-border/70 pt-5">
-      <h3 className="mb-3 text-[17px] font-semibold text-foreground">{titre}</h3>
-      {children}
-    </section>
-  );
-}

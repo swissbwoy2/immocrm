@@ -1,6 +1,6 @@
 import { trackedResendFetch } from "../_shared/tracked-resend.ts";
 const sendTrackedEmail = trackedResendFetch("mandate-submit-signature");
-import { renderCorporateEmail } from '../_shared/email-brand.ts';
+import { renderCorporateEmail, emailButton, emailDetails, emailParagraph } from '../_shared/email-shell.ts';
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       // Extract project domain for tracking link
       const projectUrl = supabaseUrl.replace("https://", "").replace(".supabase.co", "");
-      const trackingUrl = `https://immocrm.lovable.app/mandat-v3/suivi?token=${mandate.access_token}`;
+      const trackingUrl = `https://logisorama.ch/mandat-v3/suivi?token=${mandate.access_token}`;
 
       try {
         await sendTrackedEmail("https://api.resend.com/emails", {
@@ -169,17 +169,18 @@ Deno.serve(async (req) => {
             from: fromEmail,
             to: [email],
             subject: "Confirmation de votre mandat de recherche – Immo-rama.ch",
-html: renderCorporateEmail({ title: 'Confirmation de signature', category: 'VOTRE MANDAT', bodyHtml: `<p style="margin:0 0 18px;">Bonjour,</p>
-                <p style="margin:0 0 18px;">Votre mandat de recherche immobilière a bien été signé électroniquement.</p>
-                <p style="margin:0 0 18px;"><strong>Statut actuel :</strong> ${newStatus === "active" ? "Actif" : "En attente de paiement de l'acompte"}</p>
-                <p style="margin:0 0 18px;">Vous pouvez suivre l'avancement de votre dossier en cliquant sur le lien ci-dessous :</p>
-                <p style="text-align: center; margin: 30px 0;">
-                  <a href="${trackingUrl}" style="background-color: #205a43; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
-                    Suivre mon dossier
-                  </a>
-                </p>
-                <p style="color: #666; font-size: 12px;">Ce lien est personnel et confidentiel. Ne le partagez pas.</p>
-                ` }),
+html: renderCorporateEmail({
+              title: 'Confirmation de signature',
+              preview: "Votre mandat de recherche immobilière a bien été signé électroniquement.",
+              category: 'VOTRE MANDAT',
+              bodyHtml:
+                emailParagraph("Bonjour,") +
+                emailParagraph("Votre mandat de recherche immobilière a bien été signé électroniquement.") +
+                emailDetails([["Statut actuel", newStatus === "active" ? "Actif" : "En attente de paiement de l'acompte"]]) +
+                emailParagraph("Vous pouvez suivre l'avancement de votre dossier en cliquant sur le lien ci-dessous :") +
+                emailButton("Suivre mon dossier", trackingUrl) +
+                emailParagraph("Ce lien est personnel et confidentiel. Ne le partagez pas.", true),
+            }),
           }),
         });
       } catch (emailErr) {

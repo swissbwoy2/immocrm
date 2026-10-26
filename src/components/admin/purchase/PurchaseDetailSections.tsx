@@ -247,7 +247,7 @@ export function PurchaseDetailSections({ clientId, userId, mode, onUploadDoc }: 
                         </Button>
                       </div>
                     </div>
-                    {r.date_visite && <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(r.date_visite).toLocaleDateString('fr-CH')}{r.courtier_responsable ? ` · ${r.courtier_responsable}` : ''}</div>}
+                    {r.date_visite && <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(r.date_visite).toLocaleDateString('fr-CH', { timeZone: 'Europe/Zurich' })}{r.courtier_responsable ? ` · ${r.courtier_responsable}` : ''}</div>}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-xs">
                       {r.points_forts && <Mini icon={CheckCircle2} color="text-emerald-600" label="Points forts" text={r.points_forts} />}
                       {r.points_faibles && <Mini icon={AlertTriangle} color="text-amber-600" label="Points faibles" text={r.points_faibles} />}

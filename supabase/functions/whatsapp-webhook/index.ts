@@ -5,21 +5,35 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { sendWhatsAppText, sendWhatsAppButtons } from "../_shared/whatsapp-send-text.ts";
 import { forwardClientReplyToStaff } from "../_shared/whatsapp-forward-to-staff.ts";
 import { resolveClientProfileByPhone } from "../_shared/resolve-profile-by-phone.ts";
+import { formatDateFR } from "../_shared/date-fr.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-hub-signature-256",
 };
 
-const FR_MONTHS = [
-  "janvier", "février", "mars", "avril", "mai", "juin",
-  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
-];
-function formatDateFR(isoDate: string | null | undefined): string {
-  if (!isoDate) return "la date prévue";
-  const [y, m, d] = isoDate.split("-").map((n) => parseInt(n, 10));
-  if (!y || !m || !d) return isoDate;
-  return `${d} ${FR_MONTHS[m - 1]} ${y}`;
+/**
+ * Fin de mandat en toutes lettres (« 14 décembre 2026 », Europe/Zurich).
+ * Colonne vide : signature + 90 j + pause sur le cycle en cours (même calcul
+ * que mandate-renewal-action), sinon « la date prévue ».
+ */
+function mandateEndLabel(client: {
+  mandate_official_end_date?: string | null;
+  mandat_date_signature?: string | null;
+  mandate_pause_days?: number | null;
+}): string {
+  if (client.mandate_official_end_date) {
+    return formatDateFR(client.mandate_official_end_date, { fallback: "la date prévue" });
+  }
+  if (!client.mandat_date_signature) return "la date prévue";
+  const sig = new Date(client.mandat_date_signature);
+  if (isNaN(sig.getTime())) return "la date prévue";
+  const pause = client.mandate_pause_days ?? 0;
+  const days = Math.max(0, Math.floor((Date.now() - sig.getTime()) / 86400000) - pause);
+  const cycles = days > 90 ? Math.floor(days / 90) : 0;
+  const end = new Date(sig);
+  end.setDate(end.getDate() + cycles * 90 + 90 + pause);
+  return formatDateFR(end, { fallback: "la date prévue" });
 }
 
 // =============================================================
@@ -122,7 +136,7 @@ async function handleMandateButton(
     if (daysSinceSignature >= REFUND_DAY) {
       const result = await callRenewal("cancel_with_refund", { cancellation_reason: "searching_alone" });
       if (result?.ok) {
-        const endDate = formatDateFR(client.mandate_official_end_date);
+        const endDate = mandateEndLabel(client);
         await sendWhatsAppText(phoneE164, `💰 Demande de remboursement enregistrée. Votre mandat reste actif jusqu'au ${endDate}. Le remboursement sera traité sous 30 jours après cette date.`);
       } else {
         await sendWhatsAppText(phoneE164, `⚠️ Erreur lors de la demande : ${result?.error || "erreur"}. Un agent va vous contacter.`);
@@ -168,7 +182,7 @@ async function handleMandateButton(
 
   // === DECLINE CANCEL ===
   if (isCancelNoRefundDecline) {
-    const endDate = formatDateFR(client.mandate_official_end_date);
+    const endDate = mandateEndLabel(client);
     await sendWhatsAppText(phoneE164, `✅ Très bien, votre mandat reste actif jusqu'au ${endDate}. Nous continuons nos recherches pour vous !`);
     await supabase
       .from("whatsapp_pending_actions")

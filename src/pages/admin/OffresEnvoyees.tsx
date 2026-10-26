@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { DashBadge } from "@/components/client/dashboard/DashPrimitives";
+import { DETAIL_DIALOG, DetailHeader, DetailBody, KeyFacts, DetailSection, DetailRow, DetailText, DetailContact, DetailActions, chfDetail, dateTimeCH } from "@/components/details/DetailPrimitives";
 import { Label } from "@/components/ui/label";
 import { 
   Send, MapPin, Home, Calendar, User, Filter, Eye, ExternalLink, Phone, Building, Forward, Clock, 
@@ -23,7 +25,7 @@ import { PremiumKPICard } from "@/components/premium/PremiumKPICard";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { groupOffresByEnvoi } from "@/utils/visitesCalculator";
-import { Users } from "lucide-react";
+import { Users, Loader2 } from "lucide-react";
 
 interface Visite {
   id: string;
@@ -1022,232 +1024,140 @@ export default function AdminOffresEnvoyees() {
 
       {/* Dialog détail offre */}
       <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 flex-wrap">
-              Détails de l'offre
-              {selectedOffre && getStatusBadge(selectedOffre.statut)}
-            </DialogTitle>
-          </DialogHeader>
+        <DialogContent className={DETAIL_DIALOG}>
+          <DetailHeader
+            titleAs={DialogTitle}
+            descriptionAs={DialogDescription}
+            eyebrow="Détails de l'offre"
+            title={selectedOffre ? (selectedOffre.titre || selectedOffre.adresse) : "Détails de l'offre"}
+            subtitle={
+              selectedOffre ? (
+                <span className="flex flex-col gap-0.5">
+                  {selectedOffre.titre && selectedOffre.adresse && (
+                    <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 shrink-0" />{selectedOffre.adresse}</span>
+                  )}
+                  {selectedOffre.date_envoi && (
+                    <span className="first-letter:uppercase">Envoyée le {dateTimeCH(selectedOffre.date_envoi)}</span>
+                  )}
+                </span>
+              ) : undefined
+            }
+            badge={selectedOffre ? getStatusBadge(selectedOffre.statut) : undefined}
+          />
 
           {selectedOffre && (
-            <div className="space-y-6">
-              {/* Timeline dans le dialogue */}
-              <div className="p-4 bg-muted/30 rounded-xl border">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider mb-3 block">Progression</Label>
+            <DetailBody>
+              <KeyFacts
+                columns={4}
+                items={[
+                  { label: estPrixDAchat(selectedOffre.prix) ? 'Prix de vente' : 'Prix', value: chfDetail(selectedOffre.prix), emphasis: true },
+                  selectedOffre.pieces ? { label: 'Pièces', value: selectedOffre.pieces, icon: Home } : null,
+                  selectedOffre.surface ? { label: 'Surface', value: `${selectedOffre.surface} m²` } : null,
+                  selectedOffre.etage ? { label: 'Étage', value: selectedOffre.etage } : null,
+                ]}
+              />
+
+              <DetailSection title="Progression">
                 <OfferTimeline currentStatut={selectedOffre.statut} />
-              </div>
+              </DetailSection>
 
-              {/* En-tête avec adresse */}
-              <div className="p-4 bg-muted/40 rounded-xl border border-border/70">
-                <h4 className="font-semibold text-lg">{selectedOffre.titre || selectedOffre.adresse}</h4>
-                <div className="flex items-center gap-2 mt-1 text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  {selectedOffre.adresse}
-                </div>
-                {selectedOffre.date_envoi && (
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Envoyée le {format(new Date(selectedOffre.date_envoi), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
-                  </p>
-                )}
-              </div>
-
-              {/* Lien de l'annonce avec prévisualisation */}
-              {selectedOffre.lien_annonce && (
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Lien de l'annonce</Label>
-                  <LinkPreviewCard url={selectedOffre.lien_annonce} showInline />
-                </div>
+              {(selectedOffre.type_bien || selectedOffre.disponibilite || selectedOffre.code_immeuble || selectedOffre.agent_id || selectedOffre.client_id) && (
+                <DetailSection title="Informations">
+                  <DetailRow icon={Home} label="Type de bien" value={selectedOffre.type_bien} />
+                  <DetailRow icon={Calendar} label="Disponibilité" value={selectedOffre.disponibilite} />
+                  <DetailRow icon={Building} label="Code immeuble" value={selectedOffre.code_immeuble} />
+                  <DetailRow label="Agent" value={getAgentName(selectedOffre.agent_id)} />
+                  <DetailRow label="Client" value={getClientName(selectedOffre.client_id)} />
+                </DetailSection>
               )}
 
-              {/* Caractéristiques */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="p-3 bg-muted rounded-lg text-center">
-                  <p className="text-xs text-muted-foreground">Prix</p>
-                  <p className="font-bold text-primary">{selectedOffre.prix.toLocaleString()} CHF</p>
-                </div>
-                {selectedOffre.pieces && (
-                  <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-xs text-muted-foreground">Pièces</p>
-                    <p className="font-bold">{selectedOffre.pieces}</p>
-                  </div>
-                )}
-                {selectedOffre.surface && (
-                  <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-xs text-muted-foreground">Surface</p>
-                    <p className="font-bold">{selectedOffre.surface} m²</p>
-                  </div>
-                )}
-                {selectedOffre.etage && (
-                  <div className="p-3 bg-muted rounded-lg text-center">
-                    <p className="text-xs text-muted-foreground">Étage</p>
-                    <p className="font-bold">{selectedOffre.etage}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Type et disponibilité */}
-              <div className="grid grid-cols-2 gap-4">
-                {selectedOffre.type_bien && (
-                  <div>
-                    <Label className="text-muted-foreground">Type de bien</Label>
-                    <p className="font-medium flex items-center gap-2 mt-1">
-                      <Home className="h-4 w-4" />
-                      {selectedOffre.type_bien}
-                    </p>
-                  </div>
-                )}
-                {selectedOffre.disponibilite && (
-                  <div>
-                    <Label className="text-muted-foreground">Disponibilité</Label>
-                    <p className="font-medium mt-1">{selectedOffre.disponibilite}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Description */}
-              {selectedOffre.description && (
-                <div>
-                  <Label className="text-muted-foreground mb-2 block">Description</Label>
-                  <div className="p-4 bg-muted/50 rounded-lg max-h-48 overflow-y-auto">
-                    <p className="text-sm whitespace-pre-wrap">{selectedOffre.description}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Commentaires agent */}
-              {selectedOffre.commentaires && (
-                <div>
-                  <Label className="text-muted-foreground mb-2 block">Commentaires de l'agent</Label>
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
-                    <p className="text-sm whitespace-pre-wrap">{selectedOffre.commentaires}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Infos immeuble */}
-              {selectedOffre.code_immeuble && (
-                <div className="flex items-center gap-2">
-                  <Building className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm">Code immeuble: <strong>{selectedOffre.code_immeuble}</strong></span>
-                </div>
-              )}
-
-              {/* Contacts */}
               {(selectedOffre.concierge_nom || selectedOffre.locataire_nom) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <DetailSection title="Contacts sur place" icon={Phone}>
                   {selectedOffre.concierge_nom && (
-                    <div className="p-3 border rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-1">Concierge</p>
-                      <p className="font-medium">{selectedOffre.concierge_nom}</p>
-                      {selectedOffre.concierge_tel && (
-                        <a 
-                          href={`tel:${selectedOffre.concierge_tel}`} 
-                          className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline"
-                        >
-                          <Phone className="h-3 w-3" />
-                          {selectedOffre.concierge_tel}
-                        </a>
-                      )}
-                    </div>
+                    <DetailContact role="Concierge" name={selectedOffre.concierge_nom} phone={selectedOffre.concierge_tel} />
                   )}
                   {selectedOffre.locataire_nom && (
-                    <div className="p-3 border rounded-lg">
-                      <p className="text-xs text-muted-foreground mb-1">Locataire actuel</p>
-                      <p className="font-medium">{selectedOffre.locataire_nom}</p>
-                      {selectedOffre.locataire_tel && (
-                        <a 
-                          href={`tel:${selectedOffre.locataire_tel}`} 
-                          className="text-sm text-primary flex items-center gap-1 mt-1 hover:underline"
-                        >
-                          <Phone className="h-3 w-3" />
-                          {selectedOffre.locataire_tel}
-                        </a>
-                      )}
-                    </div>
+                    <DetailContact role="Locataire actuel" name={selectedOffre.locataire_nom} phone={selectedOffre.locataire_tel} />
                   )}
-                </div>
+                </DetailSection>
+              )}
+
+              {selectedOffre.description && (
+                <DetailSection title="Description">
+                  <DetailText>{selectedOffre.description}</DetailText>
+                </DetailSection>
+              )}
+
+              {selectedOffre.commentaires && (
+                <DetailSection title="Commentaires de l'agent">
+                  <DetailText>{selectedOffre.commentaires}</DetailText>
+                </DetailSection>
               )}
 
               {/* Section Visites */}
               {(() => {
                 const visites = visitesMap.get(selectedOffre.id) || [];
                 const now = new Date();
-                
+
                 const getVisiteStatus = (visite: Visite) => {
-                  if (visite.statut === 'effectuee') return { label: 'Effectuée', variant: 'default' as const, icon: CheckCircle };
-                  if (visite.statut === 'annulee') return { label: 'Annulée', variant: 'destructive' as const, icon: XCircle };
+                  if (visite.statut === 'effectuee') return { label: 'Effectuée', tone: 'success' as const, icon: CheckCircle };
+                  if (visite.statut === 'annulee') return { label: 'Annulée', tone: 'danger' as const, icon: XCircle };
                   const visiteDate = new Date(visite.date_visite);
-                  if (visiteDate < now) return { label: 'Passée', variant: 'secondary' as const, icon: Clock };
-                  return { label: 'À venir', variant: 'outline' as const, icon: Calendar };
+                  if (visiteDate < now) return { label: 'Passée', tone: 'muted' as const, icon: Clock };
+                  return { label: 'À venir', tone: 'neutral' as const, icon: Calendar };
                 };
 
                 return (
-                  <div className="space-y-3 pt-4 border-t">
-                    <Label className="text-muted-foreground flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Visites ({visites.length})
-                    </Label>
-                    
+                  <DetailSection title={`Visites (${visites.length})`} icon={Calendar}>
                     {visites.length === 0 ? (
-                      <div className="p-4 bg-muted/50 rounded-lg text-center text-muted-foreground text-sm">
-                        {selectedOffre.statut === 'visite_planifiee' 
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOffre.statut === 'visite_planifiee'
                           ? "Visite programmée mais aucune date enregistrée"
                           : "Aucune visite pour cette offre"
                         }
-                      </div>
+                      </p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="divide-y divide-border/50">
                         {visites.map(visite => {
                           const status = getVisiteStatus(visite);
                           const StatusIcon = status.icon;
                           return (
-                            <div key={visite.id} className="p-3 border rounded-lg space-y-2">
-                              <div className="flex items-center justify-between flex-wrap gap-2">
-                                <div className="flex items-center gap-2">
-                                  <StatusIcon className="h-4 w-4 text-primary" />
-                                  <span className="font-medium">
-                                    {format(new Date(visite.date_visite), 'EEEE d MMMM yyyy à HH:mm', { locale: fr })}
-                                  </span>
-                                </div>
-                                <Badge variant={status.variant}>
-                                  {status.label}
-                                </Badge>
+                            <div key={visite.id} className="space-y-1.5 py-3 first:pt-0 last:pb-0">
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <span className="flex items-center gap-2 text-[15px] font-medium first-letter:uppercase">
+                                  <StatusIcon className="h-4 w-4 shrink-0 text-primary" />
+                                  <span className="first-letter:uppercase">{dateTimeCH(visite.date_visite)}</span>
+                                </span>
+                                <DashBadge tone={status.tone}>{status.label}</DashBadge>
                               </div>
                               {visite.notes && (
                                 <p className="text-sm text-muted-foreground">
-                                  <span className="font-medium">Notes:</span> {visite.notes}
+                                  <span className="font-medium text-foreground">Notes : </span>{visite.notes}
                                 </p>
                               )}
                               {visite.feedback_agent && (
-                                <div className="text-sm bg-muted p-2 rounded">
-                                  <span className="font-medium">Feedback agent:</span> {visite.feedback_agent}
-                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  <span className="font-medium text-foreground">Feedback agent : </span>{visite.feedback_agent}
+                                </p>
                               )}
                             </div>
                           );
                         })}
                       </div>
                     )}
-                  </div>
+                  </DetailSection>
                 );
               })()}
 
-              {/* Agent et Client */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div>
-                  <Label className="text-muted-foreground">Agent</Label>
-                  <p className="font-medium mt-1">{getAgentName(selectedOffre.agent_id)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Client</Label>
-                  <p className="font-medium mt-1">{getClientName(selectedOffre.client_id)}</p>
-                </div>
-              </div>
-            </div>
+              {selectedOffre.lien_annonce && (
+                <DetailSection title="Lien de l'annonce" bare>
+                  <LinkPreviewCard url={selectedOffre.lien_annonce} showInline />
+                </DetailSection>
+              )}
+            </DetailBody>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0 flex-wrap">
+          <DetailActions>
             {selectedOffre && !estPrixDAchat(selectedOffre.prix) && !['candidature_deposee', 'acceptee', 'signature_effectuee', 'bail_conclu', 'refusee'].includes(selectedOffre.statut || '') && (
               <Button
                 variant="outline"
@@ -1256,7 +1166,7 @@ export default function AdminOffresEnvoyees() {
               >
                 {markingCandidature ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2" />
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Enregistrement...
                   </>
                 ) : (
@@ -1267,8 +1177,17 @@ export default function AdminOffresEnvoyees() {
                 )}
               </Button>
             )}
-            <Button 
-              variant="secondary"
+            {selectedOffre?.lien_annonce && (
+              <Button
+                variant="outline"
+                onClick={() => window.open(selectedOffre.lien_annonce!, '_blank')}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                Ouvrir l'annonce
+              </Button>
+            )}
+            <Button
+              variant={selectedOffre?.client_id ? "outline" : "default"}
               onClick={() => {
                 setDetailDialogOpen(false);
                 handleOpenTransferDialog(selectedOffre!);
@@ -1277,15 +1196,6 @@ export default function AdminOffresEnvoyees() {
               <Forward className="w-4 h-4 mr-2" />
               Envoyer à un client
             </Button>
-            {selectedOffre?.lien_annonce && (
-              <Button 
-                variant="outline" 
-                onClick={() => window.open(selectedOffre.lien_annonce!, '_blank')}
-              >
-                <ExternalLink className="w-4 h-4 mr-2" />
-                Ouvrir l'annonce
-              </Button>
-            )}
             {selectedOffre?.client_id && (
               <Button onClick={() => {
                 setDetailDialogOpen(false);
@@ -1295,7 +1205,7 @@ export default function AdminOffresEnvoyees() {
                 Voir le client
               </Button>
             )}
-          </DialogFooter>
+          </DetailActions>
         </DialogContent>
       </Dialog>
 

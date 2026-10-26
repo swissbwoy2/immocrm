@@ -1,6 +1,7 @@
 import { format, differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
 import { useMemo } from 'react';
 import { fr } from 'date-fns/locale';
+import { formatZurichDay, formatZurichTime, formatZurichTimeRange } from '@/lib/dateZurich';
 import { 
   Calendar, Clock, User, Users, CheckCircle, XCircle, Trash2,
   Home, Maximize, Building
@@ -248,10 +249,10 @@ export function PremiumDayEvents({
                           </span>
                           <div>
                             <p className="font-semibold text-sm">
-                              {format(eventDate, 'HH:mm')}
+                              {formatZurichTimeRange(firstVisite.date_visite, firstVisite.date_visite_fin)}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {format(eventDate, "EEEE d MMMM", { locale: fr })}
+                              {formatZurichDay(firstVisite.date_visite, { year: false })}
                             </p>
                           </div>
                         </div>
@@ -363,12 +364,12 @@ export function PremiumDayEvents({
                         <h4 className="text-base font-semibold mt-2 text-foreground">
                           {data.title}
                         </h4>
-                        {!data.all_day && (
+                        {!data.all_day && formatZurichTime(data.event_date) && (
                           <div className="flex items-center gap-2 mt-2">
                             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-background/70">
                               <Clock className="h-3.5 w-3.5 text-primary" />
                             </span>
-                            <span className="text-sm font-medium">{format(eventDate, 'HH:mm')}</span>
+                            <span className="text-sm font-medium">{formatZurichTime(data.event_date)}</span>
                           </div>
                         )}
                         {data.description && (

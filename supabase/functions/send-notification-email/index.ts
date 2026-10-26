@@ -1,4 +1,5 @@
 import { renderNotificationEmail as generateEmailHtml, escapeEmailHtml, emailUrl } from '../_shared/email-brand.ts';
+import { humanizeISODates } from '../_shared/date-fr.ts';
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.7.1";
 import { Resend } from "../_shared/tracked-resend.ts";
@@ -227,8 +228,9 @@ serve(async (req) => {
       );
     }
 
-    const userName = profile.prenom ? `${profile.prenom}` : undefined;
-    let emailHtml = generateEmailHtml(title, message, notification_type, link, userName);
+    const userName = profile.prenom?.trim() || undefined;
+    // Dates ISO brutes dans le message (« 2026-12-14 ») -> « 14 décembre 2026 » (Zurich)
+    let emailHtml = generateEmailHtml(title, humanizeISODates(message ?? ""), notification_type, link, userName);
 
     // --- Broadcast open/click tracking (writes into lead_email_logs) ---
     let trackingLogId: string | null = null;

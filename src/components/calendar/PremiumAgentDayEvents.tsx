@@ -1,5 +1,6 @@
 import { differenceInDays, differenceInHours, isToday, isTomorrow } from 'date-fns';
 import { toSwissTime, formatSwissDate, formatSwissTime } from '@/lib/dateUtils';
+import { formatZurichDay, formatZurichTime, formatZurichTimeRange } from '@/lib/dateZurich';
 import { 
   Calendar, Clock, User, MapPin, CheckCircle, XCircle, Trash2,
   MessageSquare, AlertTriangle, ThumbsUp, ThumbsDown, Minus, Eye, Pencil,
@@ -80,7 +81,7 @@ export function PremiumAgentDayEvents({
 
   const getTimeRemaining = (dateVisite: string) => {
     const now = new Date();
-    const visiteDate = toSwissTime(dateVisite);
+    const visiteDate = new Date(dateVisite);
     const timeDiff = visiteDate.getTime() - now.getTime();
     
     if (timeDiff <= 0) {
@@ -107,8 +108,7 @@ export function PremiumAgentDayEvents({
     const groups = new Map<string, any[]>();
     
     visites.forEach(visite => {
-      const visiteDate = toSwissTime(visite.date_visite);
-      const timeKey = `${visiteDate.getHours()}:${visiteDate.getMinutes()}`;
+      const timeKey = formatZurichTime(visite.date_visite);
       const key = `${visite.adresse}-${timeKey}`;
       
       if (!groups.has(key)) {
@@ -190,15 +190,15 @@ export function PremiumAgentDayEvents({
                         title: `Visite - ${v.adresse}${suffix}`,
                         description: clients,
                         location: v.adresse,
-                        startDate: toSwissTime(v.date_visite),
+                        startDate: new Date(v.date_visite),
                       });
                     });
                     events.forEach(ev => {
                       icsEvents.push({
                         title: ev.title,
                         description: ev.description || '',
-                        startDate: toSwissTime(ev.event_date),
-                        endDate: ev.end_date ? toSwissTime(ev.end_date) : undefined,
+                        startDate: new Date(ev.event_date),
+                        endDate: ev.end_date ? new Date(ev.end_date) : undefined,
                         allDay: ev.all_day,
                       });
                     });
@@ -237,7 +237,7 @@ export function PremiumAgentDayEvents({
                 if (item.type === 'visite-group') {
                   const group = item.data as any[];
                   const firstVisite = group[0];
-                  const eventDate = toSwissTime(firstVisite.date_visite);
+                  const eventDate = new Date(firstVisite.date_visite);
                   const timeInfo = getTimeRemaining(firstVisite.date_visite);
                   const allEffectuees = group.every(v => v.statut === 'effectuee');
                   const isPast = allEffectuees || new Date(firstVisite.date_visite) < new Date();
@@ -328,10 +328,10 @@ export function PremiumAgentDayEvents({
                             </span>
                             <div>
                               <p className="font-semibold text-sm">
-                                {formatSwissTime(eventDate)}
+                                {formatZurichTimeRange(firstVisite.date_visite, firstVisite.date_visite_fin)}
                               </p>
                               <p className="text-xs text-muted-foreground">
-                                {formatSwissDate(eventDate, "EEEE d MMMM")}
+                                {formatZurichDay(firstVisite.date_visite, { year: false })}
                               </p>
                             </div>
                           </div>
@@ -452,7 +452,7 @@ export function PremiumAgentDayEvents({
                               lien_annonce: firstVisite.offres?.lien_annonce,
                             }),
                             location: firstVisite.adresse,
-                            startDate: toSwissTime(firstVisite.date_visite),
+                            startDate: new Date(firstVisite.date_visite),
                           }}
                           size="sm"
                           variant="outline"
@@ -611,10 +611,10 @@ export function PremiumAgentDayEvents({
                           <h4 className="text-base font-semibold mt-2 text-foreground">
                             {data.title}
                           </h4>
-                          {!data.all_day && (
+                          {!data.all_day && formatZurichTime(data.event_date) && (
                             <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                               <Clock className="h-4 w-4" />
-                              <span>{formatSwissTime(eventDate)}</span>
+                              <span>{formatZurichTime(data.event_date)}</span>
                             </div>
                           )}
                           {data.description && (
