@@ -1,5 +1,6 @@
 // One-shot cleanup: removes orphan files from message-attachments bucket
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { denyIfNotInternal } from "../_shared/internal-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +34,9 @@ async function listAllRecursive(supabase: any, prefix = ""): Promise<string[]> {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  // Réservé aux appels internes (cron, base, équipe) : aucun appel anonyme ni client.
+  const refus = await denyIfNotInternal(req, corsHeaders, "purge-orphan-attachments");
+  if (refus) return refus;
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
