@@ -89,6 +89,8 @@ export default defineConfig(({ mode }) => {
           // Le HTML n'est jamais précaché : après une publication, l'ancien index.html pointait vers des
           // fichiers supprimés (page blanche, routes qui ne s'ouvrent plus). Les pages passent par le réseau d'abord.
           globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
+          // Sans page de secours précachée : sinon le service worker plante à l'installation (index.html absent du précache).
+          navigateFallback: null,
           runtimeCaching: [
             {
               urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
