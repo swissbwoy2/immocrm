@@ -58,11 +58,11 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'propose_action',
-    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve) : note_agent (demande ou information pour l'agent : visite à organiser ou replanifier, réponse à une offre, question pour une régie… ; la conversation reste avec Steeve), changement_criteres (le client demande de modifier ses critères, zones, budget…), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
+    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve). Jamais pour ce que tes outils font directement : critères (modifier_criteres), réponse à une offre (repondre_offre), demande de visite (demander_visite). Types : note_agent (demande ou information pour l'agent : visite déjà fixée à replanifier, question particulière pour une régie… ; la conversation reste avec Steeve), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
     input_schema: {
       type: 'object',
       properties: {
-        type: { type: 'string', enum: ['note_agent', 'changement_criteres', 'relance_regie', 'preuve_paiement'] },
+        type: { type: 'string', enum: ['note_agent', 'relance_regie', 'preuve_paiement'] },
         titre: { type: 'string', description: 'Titre court pour l’équipe, ex. « Ajouter Morges aux zones ».' },
         texte: { type: 'string', description: "Détail pour l'équipe, ou brouillon de l'e-mail de relance (vouvoiement, factuel, sans promesse)." },
         bien: { type: 'string', description: 'Pour relance_regie : adresse du bien telle qu’elle figure dans les candidatures.' },
@@ -109,7 +109,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'modifier_criteres',
-    description: "Modifie ses critères de recherche sur demande explicite et claire : budget maximum (CHF par mois), nombre de pièces, régions / communes (texte complet qui remplace l'actuel), type de bien, souhaits particuliers. Seulement les champs demandés ; en cas de doute (« un peu plus de budget »), demande d'abord la valeur exacte. L'avant/après est tracé et l'agent prévenu.",
+    description: "Modifie TOI-MÊME ses critères de recherche, tout de suite, sans validation humaine, sur demande claire du client : budget maximum (CHF par mois), nombre MINIMUM de pièces, régions / communes (liste complète), type de bien, souhaits particuliers. Seulement les champs demandés. Ajout « en plus » des critères actuels : pièces = la plus petite des deux tailles (ex. 3 pièces actuelles + « 2,5 pièces en plus » → 2.5, qui couvre 2,5 et 3) ; budget = le plus élevé des deux (1800 actuel + « jusqu'à 1900 » → 1900) ; régions = les actuelles ET les nouvelles. Remplacement : seulement les nouvelles valeurs. Si on ne sait pas s'il veut remplacer ou ajouter, ou si la valeur est floue (« un peu plus de budget »), une seule question précise, puis agis. Après l'appel, dis au client ce qui a changé (avant → après). L'avant/après est tracé et l'agent prévenu.",
     input_schema: {
       type: 'object',
       properties: {
@@ -257,6 +257,8 @@ const PROPOSAL_LABEL: Record<string, string> = {
 export async function proposeAction(ctx: ToolContext, input: Record<string, any>): Promise<ToolOutcome> {
   const { db, dossier, conversationId } = ctx;
   const kind = String(input?.type || '');
+  // Les critères se modifient directement (modifier_criteres) : jamais de demande de validation pour ça.
+  if (kind === 'changement_criteres') return { content: json({ erreur: 'Les critères se modifient directement avec modifier_criteres, sans validation humaine : appelle modifier_criteres avec les nouvelles valeurs.' }), isError: true };
   if (!(PROPOSAL_KINDS as readonly string[]).includes(kind)) return { content: 'Type de proposition inconnu.', isError: true };
   const title = String(input?.titre || '').replace(/\s+/g, ' ').trim().slice(0, 120);
   const body = String(input?.texte || '').trim().slice(0, 1500);
