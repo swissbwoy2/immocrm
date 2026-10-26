@@ -4,7 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
-import { computeDeterministic, finalStatus, nextBackoffSeconds } from "./logic.ts";
+import { computeDeterministic, finalStatus, isRcItem, nextBackoffSeconds } from "./logic.ts";
 import { anthropicCaller, costOf } from "../_shared/steeve/anthropic.ts";
 
 const CLAUDE_MODEL = "claude-haiku-5-5";
@@ -12,7 +12,7 @@ const TRIAGE_INSTRUCTIONS =
   "Tu qualifies un dossier de candidature locative suisse pour l'équipe interne. " +
   "Utilise uniquement les faits fournis ; n'invente aucune donnée. " +
   "Tu ne soumets jamais la candidature et ne contactes personne. " +
-  "Si des pièces obligatoires manquent, readiness doit être 'blocked'. Réponds en français, de façon concise.";
+  "Si des pièces obligatoires manquent, readiness doit être 'blocked'. L'attestation RC ménage n'est jamais obligatoire : ne bloque jamais un dossier pour elle. Réponds en français, de façon concise.";
 
 /** Triage par Claude (Steeve) : même schéma que l'ancienne analyse, réponse structurée imposée. */
 async function callClaude(apiKey: string, facts: unknown) {
@@ -71,7 +71,7 @@ async function callOpenAI(apiKey: string, model: string, facts: unknown) {
           "Tu qualifies un dossier de candidature locative suisse pour l'équipe interne. " +
           "Utilise uniquement les faits fournis ; n'invente aucune donnée. " +
           "Tu ne soumets jamais la candidature et ne contactes personne. " +
-          "Si des pièces obligatoires manquent, readiness doit être 'blocked'. Réponds en français, de façon concise.",
+          "Si des pièces obligatoires manquent, readiness doit être 'blocked'. L'attestation RC ménage n'est jamais obligatoire : ne bloque jamais un dossier pour elle. Réponds en français, de façon concise.",
         input: [{ role: "user", content: JSON.stringify(facts) }],
         text: { format: { type: "json_schema", name: "postulation_triage", strict: true, schema: AI_SCHEMA } },
       }),
@@ -142,6 +142,12 @@ async function processJob(db: any, job: any) {
     if ("result" in r) { ai = r.result; responseId = r.responseId; } else { aiError = r.error; responseId = (r as any).responseId ?? null; }
   }
 
+  // RC ménage : jamais bloquante, même si l'IA la cite.
+  if (ai && Array.isArray(ai.missing_items)) {
+    const blocking = ai.missing_items.filter((m: string) => !isRcItem(String(m)));
+    if (ai.readiness === "blocked" && blocking.length === 0 && ai.missing_items.length > 0) ai.readiness = "ready";
+    ai.missing_items = blocking;
+  }
   const status = finalStatus(det.missing, ai);
   const ai_result = {
     source: ai ? aiSource : "deterministic",
@@ -152,6 +158,7 @@ async function processJob(db: any, job: any) {
     readiness: status,
     priority: ai?.priority ?? det.priority,
     missing_items: Array.from(new Set([...det.missing, ...(ai?.missing_items ?? [])])),
+    optional_items: det.optional,
     concise_staff_summary: ai?.concise_staff_summary ?? det.summary,
     recommended_next_actions: ai?.recommended_next_actions ?? det.actions,
   };

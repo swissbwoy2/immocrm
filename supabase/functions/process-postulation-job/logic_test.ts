@@ -34,3 +34,12 @@ Deno.test("permis B → permis de séjour ; Suisse → pièce d'identité", () =
 Deno.test("backoff exponentiel plafonné", () => {
   assertEquals([1, 2, 3, 10].map(nextBackoffSeconds), [30, 60, 120, 3600]);
 });
+
+Deno.test("RC ménage absente : jamais bloquante, signalée comme recommandée", () => {
+  const docs = ["piece_identite", "extrait_poursuites", "fiche_salaire", "fiche_salaire", "fiche_salaire", "attestation_domicile", "contrat_travail"]
+    .map((t) => ({ type_document: t, date_upload: new Date().toISOString() }));
+  const d = computeDeterministic({ offre: { prix: 1000 }, client: { revenus_mensuels: 4000, type_permis: "Suisse" }, candidates: [], documents: docs });
+  assertEquals(d.missing, []);
+  assertEquals(d.optional, ["Attestation RC ménage (recommandée, non bloquante)"]);
+  assertEquals(finalStatus(d.missing, null), "ready");
+});

@@ -18,8 +18,11 @@ Deno.serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  // Facultatif : { task_id } pour exécuter tout de suite une tâche du registre (copilote de l'équipe).
+  const body = await req.json().catch(() => ({}));
+  const taskId = typeof body?.task_id === "string" && /^[0-9a-f-]{36}$/i.test(body.task_id) ? body.task_id : null;
   try {
-    const report = await runOperator({ db, mail: realMailPort(db), callModel: apiKey ? anthropicCaller(apiKey) : null });
+    const report = await runOperator({ db, mail: realMailPort(db), callModel: apiKey ? anthropicCaller(apiKey) : null, taskId });
     console.log("[steeve-operator]", JSON.stringify({ ...report, erreurs: report.erreurs.length }));
     return json(200, { success: true, report });
   } catch (err) {

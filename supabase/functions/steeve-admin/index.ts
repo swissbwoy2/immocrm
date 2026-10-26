@@ -1,9 +1,11 @@
-// Steeve, copilote de l'admin (lecture seule). Appel depuis /admin/steeve avec la session de l'admin.
+// Steeve, copilote de l'admin. Appel depuis /admin/steeve avec la session de l'admin.
 // Garde-fous : utilisateur authentifié ET admin (vérifié en base), plafond quotidien, outils en lecture seule
 // exécutés avec la session de l'admin (chaque fonction revérifie le rôle). Voir _shared/steeve/admin-chat.ts.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { anthropicCaller } from "../_shared/steeve/anthropic.ts";
 import { handleAdminChat } from "../_shared/steeve/admin-chat.ts";
+import { runOperator } from "../_shared/steeve/operator.ts";
+import { realMailPort } from "../_shared/steeve/operator-mail.ts";
 
 const ALLOWED_ORIGIN = /^https:\/\/((www\.)?logisorama\.ch|id-preview--f4e29d86-2c22-4626-ac70-fd341e0305cf\.lovable\.app|f4e29d86-2c22-4626-ac70-fd341e0305cf\.lovableproject\.com)$/i;
 const MAX_BODY_BYTES = 60_000;
@@ -45,9 +47,13 @@ Deno.serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
-  const result = await handleAdminChat({
-    serviceDb, userDb, userId: user.id, body,
-    callModel: apiKey ? anthropicCaller(apiKey) : null,
-  });
+  const callModel = apiKey ? anthropicCaller(apiKey) : null;
+  // Reprise d'un dossier : la tâche créée (droits vérifiés en base avec la session de l'admin) est exécutée
+  // tout de suite par Steeve opérateur, réservée avec un jeton (jamais en même temps que le passage planifié).
+  const runTask = async (taskId: string) => {
+    const r = await runOperator({ db: serviceDb, mail: realMailPort(serviceDb), callModel, taskId });
+    return { mode: r.mode, tache: r.tache ?? null, erreurs: r.erreurs };
+  };
+  const result = await handleAdminChat({ serviceDb, userDb, userId: user.id, body, callModel, runTask });
   return reply(result.status, result.body);
 });

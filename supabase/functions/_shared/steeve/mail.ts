@@ -41,6 +41,11 @@ async function writeAll(t: SmtpTransport, data: Uint8Array) {
   while (off < data.length) off += await t.write(data.subarray(off));
 }
 
+/** Le message a peut-être été accepté par le serveur : à vérifier dans les envoyés avant toute nouvelle tentative. */
+export class SmtpUncertainError extends Error {
+  override name = 'SmtpUncertainError';
+}
+
 export class LeanSmtp {
   private buffer = '';
   constructor(private readonly t: SmtpTransport) {}
@@ -104,8 +109,15 @@ export class LeanSmtp {
     for (const r of recipients) await this.cmd(`RCPT TO:<${r}>`, [250, 251], 'destinataire');
     await this.cmd('DATA', 354, 'DATA');
     const body = raw.replace(/\r?\n/g, '\r\n').replace(/^\./gm, '..');
-    await writeAll(this.t, latin1Bytes(body + (body.endsWith('\r\n') ? '' : '\r\n') + '.\r\n'));
-    const r = await this.expect(250, 'envoi');
+    // Une fois le message transmis, une coupure ou un délai dépassé ne dit pas s'il est parti : résultat inconnu.
+    let r: { code: number; text: string };
+    try {
+      await writeAll(this.t, latin1Bytes(body + (body.endsWith('\r\n') ? '' : '\r\n') + '.\r\n'));
+      r = await this.reply();
+    } catch (err) {
+      throw new SmtpUncertainError(`SMTP : réponse non reçue après la transmission (${(err as Error).message})`);
+    }
+    if (r.code !== 250) throw new Error(`SMTP envoi : ${r.text.slice(0, 200)}`);
     return r.text.slice(0, 200);
   }
 
