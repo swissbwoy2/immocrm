@@ -43,19 +43,22 @@ export function CandidatCriteresForm({ onSaved }: { onSaved?: () => void }) {
     <div className="space-y-5">
       <MandatFormStep4 data={data} onChange={(p) => setData((prev) => ({ ...prev, ...p }))} hideAmountHints />
       <div className="space-y-1.5">
-        <label htmlFor="crit-date-entree" className="text-sm font-medium text-muted-foreground">Date d'entrée souhaitée</label>
+        <label htmlFor="crit-date-entree" className="text-sm font-medium text-foreground">Date d'entrée souhaitée</label>
         <input
           id="crit-date-entree"
           type="date"
           value={dateEntree}
           onChange={(e) => setDateEntree(e.target.value)}
-          className="w-full bg-muted/40 border border-border rounded-xl px-4 py-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+          className="min-h-[44px] w-full min-w-0 bg-muted/40 border border-border rounded-xl px-4 py-3 text-[15px] text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
         />
       </div>
-      <Button onClick={submit} disabled={saving} size="lg" className="w-full min-h-[44px]">
-        {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-        Enregistrer mes critères
-      </Button>
+      {/* Enregistrement collé en bas (mobile et dialogue) */}
+      <div className="sticky bottom-0 z-10 -mx-1 rounded-[22px] bg-background/90 px-1 pt-2 pb-[max(env(safe-area-inset-bottom),0.5rem)] backdrop-blur-xl">
+        <Button onClick={submit} disabled={saving} size="lg" className="w-full min-h-[48px]">
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
+          Enregistrer mes critères
+        </Button>
+      </div>
     </div>
   );
 }
