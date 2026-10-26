@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { logPushStep } from '@/hooks/usePushNotifications';
 
 type DeviceState = 'web' | 'granted' | 'denied' | 'prompt' | 'unknown';
 
@@ -52,6 +53,13 @@ export function PushNotificationsCard() {
             .eq('client_id', client.id)
             .maybeSingle();
           if (pr && typeof pr.push_enabled === 'boolean') setPushEnabled(pr.push_enabled);
+        } else {
+          // Équipe (admin, agent…) : réglage porté par le profil.
+          const { data: prof } = await (supabase.from('profiles') as any)
+            .select('notifications_push')
+            .eq('id', user.id)
+            .maybeSingle();
+          if (prof && typeof prof.notifications_push === 'boolean') setPushEnabled(prof.notifications_push);
         }
         await refreshDevice();
       } finally {
@@ -61,10 +69,12 @@ export function PushNotificationsCard() {
   }, [user?.id]);
 
   const togglePush = async (checked: boolean) => {
+    if (!user) return;
     setPushEnabled(checked);
-    if (!clientId) return;
-    const { error } = await (supabase.from('notification_preferences') as any)
-      .upsert({ client_id: clientId, push_enabled: checked }, { onConflict: 'client_id' });
+    const { error } = clientId
+      ? await (supabase.from('notification_preferences') as any)
+          .upsert({ client_id: clientId, push_enabled: checked }, { onConflict: 'client_id' })
+      : await (supabase.from('profiles') as any).update({ notifications_push: checked }).eq('id', user.id);
     if (error) {
       setPushEnabled(!checked);
       toast.error("Impossible d'enregistrer ce réglage");
@@ -73,13 +83,22 @@ export function PushNotificationsCard() {
     }
   };
 
+  const recheckToken = async () => {
+    if (!user) return;
+    const { count } = await supabase.from('device_tokens').select('token', { count: 'exact', head: true }).eq('user_id', user.id);
+    setHasToken((count ?? 0) > 0);
+  };
+
   const enableOnDevice = async () => {
     try {
       const { PushNotifications } = await import('@capacitor/push-notifications');
       const res = await PushNotifications.requestPermissions();
+      if (user) logPushStep(user.id, Capacitor.getPlatform(), 'bouton_activer', res.receive);
       if (res.receive === 'granted') {
+        // Le jeton reçu est enregistré par l'écouteur branché au démarrage de l'app.
         await PushNotifications.register();
         toast.success('Notifications autorisées sur ce téléphone');
+        window.setTimeout(() => void recheckToken(), 4000);
       } else {
         toast.error('Autorisez les notifications dans les réglages du téléphone (Réglages › Logisorama › Notifications).');
       }
@@ -111,7 +130,7 @@ export function PushNotificationsCard() {
         <div className="flex items-center justify-between gap-4 rounded-xl border border-[#ebebeb] p-4">
           <div className="min-w-0">
             <p className="text-[15px] font-medium text-[#222222]">Cloche et bannières dans l'app</p>
-            <p className="mt-0.5 text-[14px] text-[#6a6a6a]">Toujours actives : offres, visites, messages et suivi de votre dossier.</p>
+            <p className="mt-0.5 text-[14px] text-[#6a6a6a]">Toujours actives : la cloche reçoit toutes vos notifications.</p>
           </div>
           <Switch checked disabled aria-label="Notifications dans l'application (toujours actives)" />
         </div>
@@ -123,13 +142,13 @@ export function PushNotificationsCard() {
             </Label>
             <p className="mt-0.5 text-[14px] text-[#6a6a6a]">Recevoir une alerte même quand l'application est fermée.</p>
           </div>
-          <Switch id="param-push" checked={pushEnabled} onCheckedChange={togglePush} disabled={!clientId} />
+          <Switch id="param-push" checked={pushEnabled} onCheckedChange={togglePush} />
         </div>
 
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-[#f7f7f7] p-4">
           <Smartphone className="h-5 w-5 shrink-0 text-[#222222]" />
           <p className="min-w-0 flex-1 text-[14px] text-[#3f3f3f]">{deviceText[device]}</p>
-          {isNative && device !== 'granted' && (
+          {isNative && (device !== 'granted' || hasToken === false) && (
             <Button type="button" size="sm" onClick={enableOnDevice} className="h-9 rounded-lg">
               Activer sur ce téléphone
             </Button>
