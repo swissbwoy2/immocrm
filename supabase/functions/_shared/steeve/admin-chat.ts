@@ -4,6 +4,7 @@
 // deno-lint-ignore-file no-explicit-any
 import { costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type ToolDefinition } from './anthropic.ts';
 import { toPlainReply } from './engine.ts';
+import { zurichToUtc } from './inbox.ts';
 
 export const ADMIN_MAX_MESSAGE_CHARS = 4000;
 const MAX_TOOL_ROUNDS = 6;
@@ -34,6 +35,7 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
 - Appelle les outils dont tu as besoin (plusieurs si utile) avant de répondre. Pour une question générale (« comment ça va ? », « quoi de neuf ? »), commence par kpi puis blocages.
 - Tu as le détail : offres (liste par client, statut ou étape du « Suivi des offres », avec dates et prochaine action), postulations (demandes en cours, file, blocages, envois) et visites (date, adresse, mode, coursier). Ne réponds jamais « ouvre la fiche dans l'application » ou « je n'ai que le total » : appelle l'outil de détail. « Suivi des offres » = offres avec suivi_auto ; « demande mon attention » = etape a_gerer, puis attente_annonceur en retard ; « faut-il fixer des visites » = offres etape a_gerer et attente_annonceur.
 - Tu lis les e-mails de l'application (outil emails : info@ avec les messages Flatfox des régies, visites@, relocation@). Pour savoir si une régie ou un annonceur a répondu, cherche avec l'adresse du bien (rue + numéro), puis le nom du client ; donne la date, qui a écrit et ce que dit le message. Ne dis jamais que tu n'as pas accès aux e-mails. Si la réponse change le dossier (refus, visite, pièces), dis ce que tu proposes de faire.
+- Visites : « valide le créneau » = fixer_visite avec la date donnée (puis ecrire_a au client si message_requis) ; « inscris-le » / visite groupée sur inscription Flatfox = inscrire_visite (la routine Chrome s'en charge). Tu ne réponds jamais que tu ne peux pas : choisis l'outil, et si l'offre est ambiguë, liste les dossiers possibles en une ligne chacun et demande lequel.
 - Une liste : une ligne par élément (client — adresse — date — ce qu'il faut faire), au plus 10, puis le total s'il y en a plus.
 - Réponse en français, tutoiement, directe et structurée : quelques lignes ou une courte liste avec des tirets, les priorités d'abord. Pas de tableau, pas de titre, pas de gras.
 - Montants en CHF, dates au format suisse (JJ.MM.AAAA). Les dépenses de Steeve sont en USD.
@@ -129,6 +131,31 @@ export const ADMIN_TOOLS: ToolDefinition[] = [
         limite: { type: 'number', description: '8 par défaut, 20 au plus.' },
         inclure_envoyes: { type: 'boolean', description: 'Inclure nos e-mails envoyés (vrai par défaut).' },
       },
+    },
+  },
+  {
+    name: 'fixer_visite',
+    description: "Valide un créneau de visite précis donné par l'admin (« valide le créneau du 29.10 à 18h pour X ») : enregistre la visite de l'offre (date future, pas de conflit à ± 90 min avec une autre visite du client), met la note de suivi. Ensuite, si message_requis est vrai, préviens le client avec ecrire_a (date, heure, adresse, venir avec son dossier). Offre identifiée avec offres, visites ou etat_dossier.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        offre_id: { type: 'string' },
+        debut: { type: 'string', description: 'Date et heure de Zurich, AAAA-MM-JJTHH:MM.' },
+        fin: { type: 'string', description: 'Heure de fin facultative, AAAA-MM-JJTHH:MM.' },
+      },
+      required: ['offre_id', 'debut'],
+    },
+  },
+  {
+    name: 'inscrire_visite',
+    description: "Inscrit le client à une visite groupée / sur inscription d'une annonce Flatfox : tâche confiée à la partie Chrome de la surveillance (compte Flatfox de l'agence), à son prochain passage (08h, 13h, 18h). En mode à blanc, elle prépare et alerte sans s'inscrire. La confirmation Flatfox reçue dans info@ enregistre ensuite la visite et prévient le client. Hors Flatfox : refusé (demande de visite ou appel).",
+    input_schema: {
+      type: 'object',
+      properties: {
+        offre_id: { type: 'string' },
+        creneau: { type: 'string', description: 'Créneau souhaité si l’admin en donne un (ex. « 29.10 18h-19h »), sinon vide = premier créneau disponible.' },
+      },
+      required: ['offre_id'],
     },
   },
   {
@@ -276,6 +303,17 @@ export async function runAdminTool(userDb: any, name: string, input: any, ctx: {
       p_periode: ['a_venir', 'passees', 'toutes'].includes(periode) ? periode : 'a_venir',
       p_jours: num(input?.jours, 1, 90, 14), p_limite: num(input?.limite, 1, 50, 20),
     }];
+  }
+  else if (name === 'fixer_visite' || name === 'inscrire_visite') {
+    if (!uuid(input?.offre_id)) return { content: 'offre_id invalide (outils offres, visites ou etat_dossier).', isError: true };
+    if (name === 'inscrire_visite') {
+      call = ['admin_steeve_inscrire_visite', { p_offre_id: input.offre_id, p_creneau: input?.creneau ? String(input.creneau).slice(0, 120) : null }];
+    } else {
+      const debut = zurichToUtc(String(input?.debut ?? ''));
+      const fin = input?.fin ? zurichToUtc(String(input.fin)) : null;
+      if (!debut) return { content: 'Date invalide : AAAA-MM-JJTHH:MM (heure de Zurich).', isError: true };
+      call = ['admin_steeve_fixer_visite', { p_offre_id: input.offre_id, p_debut: debut.toISOString(), p_fin: fin ? fin.toISOString() : null }];
+    }
   }
   else if (name === 'emails') {
     const boite = String(input?.boite ?? '');
