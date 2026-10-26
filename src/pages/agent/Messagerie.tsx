@@ -180,20 +180,14 @@ const Messagerie = () => {
 
       const convIds = convs.map(c => c.id);
 
-      // Count unread messages (not from agent)
-      const { data } = await supabase
-        .from('messages')
-        .select('conversation_id')
-        .eq('masque_messagerie', false)
-        .eq('read', false)
-        .neq('sender_type', 'agent')
-        .in('conversation_id', convIds);
+      // Count unread messages (not from agent) — compté en base, sans plafond de lignes
+      void convIds;
+      const { data } = await (supabase.rpc as any)('unread_message_counts', { p_exclude_sender: 'agent' });
 
       if (data) {
         const countsMap = new Map<string, number>();
-        data.forEach(msg => {
-          const count = countsMap.get(msg.conversation_id) || 0;
-          countsMap.set(msg.conversation_id, count + 1);
+        (data as { conversation_id: string; unread: number }[]).forEach((row) => {
+          countsMap.set(row.conversation_id, Number(row.unread) || 0);
         });
         setUnreadCountsMap(countsMap);
       }
@@ -609,12 +603,19 @@ const Messagerie = () => {
         setVisitesMap(visitesMapping);
       }
 
-      // Mark messages as read
+      // Mark messages as read (en base puis dans les compteurs affichés)
       await supabase
         .from('messages')
         .update({ read: true })
         .eq('conversation_id', convId)
-        .neq('sender_type', 'agent');
+        .neq('sender_type', 'agent')
+        .eq('read', false);
+      setUnreadCountsMap((prev) => {
+        if (!prev.has(convId)) return prev;
+        const next = new Map(prev);
+        next.delete(convId);
+        return next;
+      });
     } catch (error) {
       console.error('Error loading messages:', error);
     } finally {
