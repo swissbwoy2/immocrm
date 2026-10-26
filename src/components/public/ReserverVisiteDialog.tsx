@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CalendarCheck, CheckCircle2, Loader2, BellRing, UserRound } from 'lucide-react';
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton';
+import { ForgotPasswordLink } from '@/components/auth/ForgotPasswordLink';
 import { Choice, Field, PrimaryButton, SecondaryButton, SheetDialog } from '@/components/funnel-ui/FunnelKit';
 import { fetchCreneauxReservations } from '@/lib/creneauxCapacite';
 import { useQueryClient } from '@tanstack/react-query';
@@ -77,6 +79,37 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
   const espace = useMemo(() => espaceDuRole((userRoles ?? []) as string[]), [userRoles]);
   const [profilCharge, setProfilCharge] = useState(false);
 
+  // Non connecte : onglet « J'ai deja un compte » (connexion dans la modale) / « Creer mon compte ».
+  const [onglet, setOnglet] = useState<'connexion' | 'nouveau'>('nouveau');
+  const [identifiants, setIdentifiants] = useState({ email: '', password: '' });
+  const [connexionEnCours, setConnexionEnCours] = useState(false);
+  const [messageConnexion, setMessageConnexion] = useState<string | null>(null);
+
+  // Une fois connecte depuis la modale : on quitte le mode « compte seulement »
+  // pour retomber sur le parcours connecte (reservation ou « Etre averti »).
+  useEffect(() => {
+    if (connecte && accountOnly && !done) setAccountOnly(false);
+  }, [connecte, accountOnly, done]);
+
+  const seConnecter = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const email = identifiants.email.trim().toLowerCase();
+    if (!EMAIL_RE.test(email) || !identifiants.password) return toast.error('Saisissez votre e-mail et votre mot de passe');
+    setConnexionEnCours(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password: identifiants.password });
+      if (error) {
+        toast.error(error.message?.includes('Invalid login credentials') ? 'E-mail ou mot de passe incorrect' : (error.message || 'Connexion impossible'));
+        return;
+      }
+      setIdentifiants({ email, password: '' });
+      setMessageConnexion(null);
+      toast.success('Vous êtes connecté');
+    } finally {
+      setConnexionEnCours(false);
+    }
+  };
+
   // Personne connectee : on reprend ses coordonnees du profil, sans rien lui redemander.
   useEffect(() => {
     if (!open || !user?.id) { setProfilCharge(false); return; }
@@ -119,6 +152,18 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
         close(false);
         return;
       }
+      if (payload?.code === 'account_exists' && connecte) {
+        // Session refusee par le serveur (expiree) : on demande une reconnexion.
+        toast.error('Votre session a expiré, reconnectez-vous pour réserver');
+        return;
+      }
+      if (payload?.code === 'account_exists') {
+        // Compte existant : jamais de re-saisie ni d'inscription silencieuse, on passe a la connexion.
+        setIdentifiants({ email: form.email.trim().toLowerCase(), password: '' });
+        setMessageConnexion('Un compte existe déjà avec cet e-mail. Connectez-vous pour continuer.');
+        setOnglet('connexion');
+        return;
+      }
       if (payload?.code === 'slot_full') {
         setSlotFull(true);
         setCreneauId(null);
@@ -140,7 +185,10 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
 
   const close = (o: boolean) => {
     onOpenChange(o);
-    if (!o) setTimeout(() => { setDone(false); setCreneauId(null); setSlotFull(false); setAccountOnly(false); }, 200);
+    if (!o) setTimeout(() => {
+      setDone(false); setCreneauId(null); setSlotFull(false); setAccountOnly(false);
+      setOnglet('nouveau'); setMessageConnexion(null); setIdentifiants((i) => ({ ...i, password: '' }));
+    }, 200);
   };
 
   const allFull = creneaux.length > 0 && creneaux.every((c) => c.full);
@@ -186,7 +234,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
             {connecte ? (
               <PrimaryButton loading={alerting} onClick={etreAverti}>Être averti si un créneau se libère</PrimaryButton>
             ) : (
-              <PrimaryButton onClick={() => setAccountOnly(true)}>Créer mon compte / Se connecter</PrimaryButton>
+              <PrimaryButton onClick={() => { setAccountOnly(true); setOnglet('connexion'); }}>Créer mon compte / Se connecter</PrimaryButton>
             )}
           </>
         }
@@ -196,6 +244,7 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
 
   const set = (k: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
   const showForm = !done && !isLoading && !(creneaux.length === 0 && !accountOnly);
+  const enConnexion = !connecte && onglet === 'connexion';
 
   return (
     <SheetDialog
@@ -211,16 +260,20 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
         connecte ? (
           <PrimaryButton full onClick={allerAMonEspace}><UserRound className="h-4 w-4" />Aller à mon espace</PrimaryButton>
         ) : accountOnly ? (
-          <PrimaryButton full onClick={() => { close(false); navigate('/login'); }}>Se connecter</PrimaryButton>
+          <PrimaryButton full onClick={() => { setDone(false); setIdentifiants({ email: form.email.trim().toLowerCase(), password: '' }); setOnglet('connexion'); }}>Se connecter</PrimaryButton>
         ) : (
           <PrimaryButton full onClick={() => close(false)}>Fermer</PrimaryButton>
         )
       ) : showForm ? (
         <>
           <SecondaryButton onClick={() => close(false)}>Annuler</SecondaryButton>
-          <PrimaryButton loading={submitting} onClick={() => submit({ preventDefault() {} } as React.FormEvent)}>
-            {accountOnly && !connecte ? 'Créer mon compte / Se connecter' : 'Réserver'}
-          </PrimaryButton>
+          {enConnexion ? (
+            <PrimaryButton loading={connexionEnCours} onClick={() => seConnecter()}>Se connecter</PrimaryButton>
+          ) : (
+            <PrimaryButton loading={submitting} onClick={() => submit({ preventDefault() {} } as React.FormEvent)}>
+              {accountOnly && !connecte ? 'Créer mon compte' : 'Réserver'}
+            </PrimaryButton>
+          )}
         </>
       ) : undefined}
     >
@@ -229,6 +282,30 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
       ) : creneaux.length === 0 && !accountOnly ? (
         <p className="py-4 text-[15px] text-[#3f3f3f]">Aucun créneau de visite disponible pour le moment.</p>
       ) : (
+        <div className="grid gap-4">
+          {!connecte && (
+            <div className="grid grid-cols-2 gap-1 rounded-full bg-[#f2f2f2] p-1" role="tablist" aria-label="Compte">
+              {([['connexion', "J'ai déjà un compte"], ['nouveau', 'Créer mon compte']] as const).map(([k, l]) => (
+                <button key={k} type="button" role="tab" aria-selected={onglet === k} onClick={() => setOnglet(k)}
+                  className={`min-h-11 rounded-full px-3 text-[14px] font-semibold transition-colors ${onglet === k ? 'bg-white text-[#222222] shadow-sm' : 'text-[#6a6a6a]'}`}>
+                  {l}
+                </button>
+              ))}
+            </div>
+          )}
+          {enConnexion ? (
+            <form onSubmit={seConnecter} noValidate className="grid gap-3">
+              {messageConnexion && (
+                <p className="rounded-lg bg-[#f7f7f7] px-3 py-2 text-[14px] text-[#222222]">{messageConnexion}</p>
+              )}
+              <Field id="rv-login-email" label="E-mail" type="email" inputMode="email" maxLength={255} value={identifiants.email} onChange={(v) => setIdentifiants((i) => ({ ...i, email: v }))} autoComplete="email" />
+              <Field id="rv-login-password" label="Mot de passe" type="password" value={identifiants.password} onChange={(v) => setIdentifiants((i) => ({ ...i, password: v }))} autoComplete="current-password" />
+              <div className="flex justify-end"><ForgotPasswordLink defaultEmail={identifiants.email.trim()} /></div>
+              <GoogleSignInButton next={`${window.location.pathname}${window.location.search}`} />
+              <p className="text-[13px] leading-[1.4] text-[#6a6a6a]">Une fois connecté, {accountOnly ? 'vous pourrez être averti des prochaines dates.' : 'vous choisissez votre créneau sans rien ressaisir.'}</p>
+              <button type="submit" className="sr-only">Se connecter</button>
+            </form>
+          ) : (
         <form onSubmit={submit} noValidate className="grid gap-4">
           {!accountOnly && (
             <div>
@@ -261,10 +338,12 @@ export function ReserverVisiteDialog({ open, onOpenChange, annonce }: Props) {
           <p className="text-[13px] leading-[1.4] text-[#6a6a6a]">
             {connecte
               ? `Vous réservez avec votre compte${form.email ? ` (${form.email})` : ''}.`
-              : accountOnly ? 'Si vous avez déjà un compte, connectez-vous avec vos identifiants habituels.' : 'Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail.'}
+              : 'Un espace candidat sera créé avec cet e-mail ; vos identifiants vous seront envoyés par e-mail.'}
           </p>
           <button type="submit" className="sr-only">Réserver</button>
         </form>
+          )}
+        </div>
       )}
     </SheetDialog>
   );
