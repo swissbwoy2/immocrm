@@ -15496,6 +15496,54 @@ export type Database = {
         }
         Relationships: []
       }
+      steeve_partner_usage: {
+        Row: {
+          cache_read_tokens: number
+          cache_write_tokens: number
+          cost_usd: number
+          created_at: string
+          error: string | null
+          id: string
+          input_tokens: number
+          model: string | null
+          output_tokens: number
+          role: string
+          status: string
+          tools_used: string[]
+          user_id: string
+        }
+        Insert: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          role: string
+          status?: string
+          tools_used?: string[]
+          user_id: string
+        }
+        Update: {
+          cache_read_tokens?: number
+          cache_write_tokens?: number
+          cost_usd?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          role?: string
+          status?: string
+          tools_used?: string[]
+          user_id?: string
+        }
+        Relationships: []
+      }
       steeve_proposals: {
         Row: {
           body: string
@@ -18516,6 +18564,31 @@ export type Database = {
       }
       start_candidat_trial: { Args: never; Returns: string }
       steeve_admin_admit: { Args: { p_user_id: string }; Returns: Json }
+      steeve_annonceur_apercu: { Args: never; Returns: Json }
+      steeve_apply_annulation: {
+        Args: { p_client_id: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_apply_lien: {
+        Args: { p_client_id: string; p_lien: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_apply_refus: {
+        Args: { p_client_id: string; p_offre_id: string }
+        Returns: Json
+      }
+      steeve_apply_retrait: { Args: { p_offre_id: string }; Returns: undefined }
+      steeve_apply_visite: {
+        Args: {
+          p_client_id: string
+          p_date: string
+          p_fin: string
+          p_offre_id: string
+          p_source: string
+        }
+        Returns: Json
+      }
+      steeve_apporteur_apercu: { Args: never; Returns: Json }
       steeve_claim_run: { Args: { p_run_id: string }; Returns: Json }
       steeve_client_emails: {
         Args: { p_client_id: string; p_days?: number; p_limit?: number }
@@ -18533,11 +18606,26 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: boolean
       }
+      steeve_flag_offre: {
+        Args: { p_note: string; p_offre_id: string }
+        Returns: undefined
+      }
+      steeve_mail_candidates: { Args: { p_limit?: number }; Returns: Json }
+      steeve_mail_context: { Args: never; Returns: Json }
       steeve_norm: { Args: { t: string }; Returns: string }
       steeve_operator_mode: {
         Args: { p_mailbox_ready?: boolean }
         Returns: Json
       }
+      steeve_partner_admit: {
+        Args: { p_role?: string; p_user_id: string }
+        Returns: Json
+      }
+      steeve_partner_contact: {
+        Args: { p_message: string; p_role?: string; p_sujet: string }
+        Returns: Json
+      }
+      steeve_partner_role: { Args: { p_user_id: string }; Returns: string }
       steeve_pending_client_questions: {
         Args: { p_min_hours?: number }
         Returns: {
@@ -18551,6 +18639,7 @@ export type Database = {
       }
       steeve_pending_proposals_count: { Args: never; Returns: number }
       steeve_person_name: { Args: { p_user_id: string }; Returns: string }
+      steeve_proprio_apercu: { Args: never; Returns: Json }
       steeve_public_admit: {
         Args: { p_ip_hash: string; p_session_hash: string }
         Returns: Json
@@ -18586,6 +18675,10 @@ export type Database = {
       }
       steeve_requeue_postulations: { Args: never; Returns: number }
       steeve_scheduler_tick: { Args: never; Returns: Json }
+      steeve_set_note: {
+        Args: { p_note: string; p_offre_id: string }
+        Returns: undefined
+      }
       steeve_spend: { Args: { p_client_id: string }; Returns: Json }
       steeve_staff_can_handle: {
         Args: { p_client_id: string }
