@@ -6,7 +6,7 @@ export default defineTool({
   name: "list_pending_postulations",
   title: "Postulations à faire",
   description:
-    "Liste les postulations en attente de dépôt (offres au statut « souhaite_postuler »), avec le client concerné. Les demandes dont la préparation est en file, prête ou bloquée apparaissent en premier, avec job_id, statut, priorité, résumé et éléments manquants.",
+    "Liste les postulations en attente de dépôt (offres au statut « souhaite_postuler »), avec le client concerné. Les demandes dont la préparation est en file, prête ou bloquée apparaissent en premier, avec job_id, statut, priorité, résumé et éléments manquants. Le champ steeve donne l'état du registre partagé : si deja_envoye est vrai ou si un envoi est en cours, ne refais rien pour cette offre.",
   inputSchema: {
     limit: z.number().int().describe("Nombre maximum de postulations à retourner (défaut 25, max 100).").optional(),
   },
@@ -55,6 +55,8 @@ export default defineTool({
       const { data: clients } = await supabase.from("clients").select("id, user_id").in("id", clientIds);
       for (const c of clients ?? []) clientById.set(c.id, { user_id: c.user_id });
     }
+    // Registre partagé avec Steeve : dossier déjà envoyé, envoi en cours, demandes de formulaire (aucun travail refait).
+    const { data: registre } = await supabase.rpc("steeve_registre_offres", { p_offre_ids: rows.map((o) => o.id) });
     const userIds = [...new Set([...clientById.values()].map((c) => c.user_id).filter(Boolean))] as string[];
     const profileById = new Map<string, { prenom: string | null; nom: string | null; email: string | null }>();
     if (userIds.length) {
@@ -89,6 +91,7 @@ export default defineTool({
           type_bien: o.type_bien,
           lien_annonce: o.lien_annonce,
           statut: o.statut,
+          steeve: (registre as Record<string, unknown> | null)?.[o.id] ?? null,
           client: {
             client_id: o.client_id,
             prenom: profile?.prenom ?? null,

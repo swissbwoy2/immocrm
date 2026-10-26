@@ -3,6 +3,9 @@
 
 const POURSUITES_MAX_DAYS = 90;
 
+/** L'attestation RC ménage n'est jamais une pièce bloquante (règle de l'administrateur du 26.10.2026). */
+export const isRcItem = (label: string) => /\bRC\b|responsabilit[eé] civile/i.test(label);
+
 export function identityKind(typePermis?: string | null): "permis_sejour" | "piece_identite" {
   return typePermis && ["B", "C", "F", "N"].includes(typePermis) ? "permis_sejour" : "piece_identite";
 }
@@ -19,6 +22,7 @@ export function computeDeterministic(input: {
   );
 
   const missing: string[] = [];
+  const optional: string[] = [];
   const salaires = count(["fiche_salaire"]);
   if (salaires < 3) missing.push(`Fiches de salaire (${salaires}/3)`);
   if (!freshPoursuites) missing.push("Extrait des poursuites de moins de 3 mois");
@@ -27,7 +31,7 @@ export function computeDeterministic(input: {
   }
   if (count(["attestation_domicile"]) < 1) missing.push("Attestation de domicile");
   if (count(["contrat_travail", "attestation_employeur"]) < 1) missing.push("Contrat de travail / attestation employeur");
-  if (count(["rc_menage"]) < 1) missing.push("Attestation RC ménage");
+  if (count(["rc_menage"]) < 1) optional.push("Attestation RC ménage (recommandée, non bloquante)");
   if (!client?.revenus_mensuels) missing.push("Revenu mensuel non renseigné");
   if (!client?.type_permis) missing.push("Type de permis non renseigné");
 
@@ -52,6 +56,7 @@ export function computeDeterministic(input: {
 
   return {
     missing,
+    optional,
     indicators,
     priority,
     summary,

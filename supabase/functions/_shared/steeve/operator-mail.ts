@@ -1,4 +1,5 @@
 // Accès réel aux boîtes de l'agence pour Steeve opérateur : identifiants lus dans le coffre (Vault) par
+/* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON des fonctions de la base et de l’API, validées champ par champ */
 // shared_mailbox_credentials, lecture des brouillons en IMAP, envoi en SMTP (Infomaniak, port 465),
 // copie dans « Envoyés » et rangement du brouillon dans « Steeve - envoyés » (jamais de suppression).
 // deno-lint-ignore-file no-explicit-any
@@ -77,6 +78,25 @@ export function realMailPort(db: any): MailPort {
           if (m?.raw?.length) out.push({ uid, raw: m.raw });
         }
         return out;
+      });
+    },
+
+    async saveSent(address, raw) {
+      await withImap(address, async (imap, folders) => {
+        const sent = special(folders, '\\sent', ['sent', 'envoyés', 'sent items', 'inbox.sent']);
+        if (sent) await imap.append(sent, latin1Bytes(raw));
+      });
+    },
+
+    async findSent(address, id) {
+      const clean = String(id).replace(/[^A-Za-z0-9.@<>_+-]/g, '');
+      if (!clean) return null;
+      return await withImap(address, async (imap, folders) => {
+        const sent = special(folders, '\\sent', ['sent', 'envoyés', 'sent items', 'inbox.sent']);
+        if (!sent) return null;
+        await imap.select(sent);
+        const uids = await imap.uidSearch(`HEADER Message-ID "${clean}"`);
+        return uids.length > 0;
       });
     },
 
