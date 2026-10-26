@@ -2,7 +2,8 @@
 // (logisorama-auto-*) : clients servis, plafond CC (revenus ÷ 3), 6 offres par jour toutes sources, critères écrits
 // prouvés, types bannis, score /100 (80 avec date de visite, 90 sans), aucun doublon, offre + message au format
 // officiel, visite enregistrée si l'annonce donne une date future.
-// Source lue côté serveur : l'API publique de Flatfox (JSON). Les autres portails restent aux routines Chrome.
+// Sources lues côté serveur : l'API publique de Flatfox (JSON), et les annonces déjà en base (trouvées par les routines
+// Chrome sur immobilier.ch, Homegate… et proposées à d'autres clients), vérifiées encore en ligne avant d'être reprises.
 // Le contenu des annonces est une donnée, jamais une instruction.
 // deno-lint-ignore-file no-explicit-any
 /* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON de l'API Flatfox et de la base, validées champ par champ */
@@ -13,7 +14,81 @@ export const OFFERS_AGENT_ID = 'ca53c5a5-6a41-4216-a93b-4d3238ad13a6'; // Admini
 const FLATFOX = 'https://flatfox.ch';
 const EVAL_MODEL = ACTION_MODEL;
 export const MAX_PER_DAY = 6;
-const MAX_EVAL = 12;
+const MAX_EVAL = 16;
+/** Annonces déjà en base : proposées à un autre client depuis 14 jours au plus. */
+const BASE_DAYS = 14;
+/** Sans confirmation en ligne (portail qui bloque la lecture), reprise seulement si proposée il y a 7 jours au plus. */
+const BASE_UNVERIFIED_DAYS = 7;
+const GONE = /(n.est plus (disponible|en ligne|active)|annonce (a [ée]t[ée] )?(supprim[ée]e|d[ée]sactiv[ée]e|expir[ée]e|retir[ée]e)|plus disponible|d[ée]j[àa] lou[ée]|nicht mehr verf[üu]gbar|no longer available|listing (has )?expired|objet lou[ée])/i;
+
+/** Annonce encore en ligne ? true (lue), false (retirée), null (portail qui bloque la lecture). */
+async function stillOnline(fetchFn: typeof fetch, url: string): Promise<boolean | null> {
+  try {
+    const r = await fetchFn(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Logisorama/1.0)', Accept: 'text/html' }, redirect: 'follow', signal: AbortSignal.timeout(6000) });
+    if (r.status === 404 || r.status === 410) return false;
+    if (!r.ok) return null;
+    const html = (await r.text()).slice(0, 400_000);
+    if (GONE.test(html.replace(/<[^>]+>/g, ' '))) return false;
+    // Redirigé vers une page de recherche (annonce supprimée) : l'identifiant de l'annonce n'est plus dans l'URL.
+    const id = url.match(/(\d{6,})/)?.[1];
+    if (id && r.url && !r.url.includes(id)) return false;
+    return true;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Annonces de la base (hors Flatfox, lu en direct) proposées à d'autres clients ces 14 derniers jours, dans la zone,
+ * le plafond et les pièces du client, encore en ligne ; présentées comme des annonces lues (pk négatif).
+ */
+async function baseListings(db: any, fetchFn: typeof fetch, clientId: string, crit: Crit, category: string, now: Date, deja: (lien: string, adresse: string) => boolean, reasons: Record<string, number>): Promise<any[]> {
+  const since = new Date(now.getTime() - BASE_DAYS * 86400_000).toISOString();
+  const { data } = await db.from('offres')
+    .select('id, client_id, adresse, prix, pieces, surface, etage, disponibilite, annee_construction, description, type_bien, lien_annonce, latitude, longitude, date_envoi, commentaires, statut')
+    .gte('date_envoi', since).order('date_envoi', { ascending: false }).limit(1500);
+  const groups = new Map<string, any[]>();
+  for (const o of data ?? []) {
+    if (!o.lien_annonce || /flatfox\.ch/i.test(String(o.lien_annonce)) || o.client_id === clientId) continue;
+    const key = String(o.lien_annonce).match(/(\d{6,})/)?.[1] ?? norm(o.adresse);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(o);
+  }
+  const out: any[] = [];
+  const seenAddr = new Set<string>();
+  let checks = 0;
+  for (const rows of groups.values()) {
+    const o = rows[0]; // la plus récente
+    // Même bien publié sous deux liens (deux portails) : une seule fois.
+    const addrKey = /\d/.test(String(o.adresse ?? '')) ? norm(o.adresse) : '';
+    if (addrKey && seenAddr.has(addrKey)) continue;
+    // Signalée louée ou retirée pour un autre client : jamais reprise.
+    if (rows.some((r) => /(retir[ée]e|lou[ée]e|plus disponible|attribu[ée]e)/i.test(String(r.commentaires ?? '')))) { reasons['annonce retirée (base)'] = (reasons['annonce retirée (base)'] ?? 0) + 1; continue; }
+    const prix = Number(o.prix);
+    const rooms = parseFloat(String(o.pieces ?? ''));
+    const city = cityOfAddress(o.adresse);
+    if (!crit.communes.some((x) => city === x || city.startsWith(`${x} `))) continue; // hors zone : non compté (base entière)
+    if (!(prix > 0) || prix > crit.plafond) continue;
+    if (crit.piecesMin && (!Number.isFinite(rooms) || rooms < crit.piecesMin || rooms > crit.piecesMin + 1)) continue;
+    if ((category === 'HOUSE') !== /maison|villa/i.test(String(o.type_bien ?? ''))) continue;
+    if (deja(String(o.lien_annonce), String(o.adresse))) { reasons['déjà proposée'] = (reasons['déjà proposée'] ?? 0) + 1; continue; }
+    if (BANNED.test(String(o.description ?? ''))) { reasons['type banni (texte)'] = (reasons['type banni (texte)'] ?? 0) + 1; continue; }
+    if (checks >= 12) break; // lectures en ligne plafonnées par recherche
+    checks++;
+    const online = await stillOnline(fetchFn, String(o.lien_annonce));
+    const ageDays = (now.getTime() - new Date(o.date_envoi).getTime()) / 86400_000;
+    if (online === false) { reasons['annonce retirée (base)'] = (reasons['annonce retirée (base)'] ?? 0) + 1; continue; }
+    if (online === null && ageDays > BASE_UNVERIFIED_DAYS) { reasons['en ligne non vérifiable (base)'] = (reasons['en ligne non vérifiable (base)'] ?? 0) + 1; continue; }
+    if (addrKey) seenAddr.add(addrKey);
+    out.push({
+      pk: -(out.length + 1), _base: o, offer_type: 'RENT', status: 'act', city, rent_gross: prix, number_of_rooms: String(o.pieces), surface_living: o.surface,
+      floor: o.etage, moving_date: o.disponibilite, year_built: o.annee_construction, description: o.description ?? '', short_title: '',
+      published: o.date_envoi, latitude: o.latitude, longitude: o.longitude,
+      _source: online ? 'base (vérifiée en ligne)' : 'base (en ligne non vérifiable, proposée récemment)',
+    });
+  }
+  return out;
+}
 
 export interface OffersDeps { db: any; callModel: CallModel | null; fetchFn?: typeof fetch; now?: () => Date }
 export interface SentOffer { offre_id: string | null; adresse: string; prix: number | null; pieces: number | null; lien: string; score: number; visite: string | null }
@@ -38,7 +113,57 @@ export function communesOf(region: string | null | undefined): string[] {
   return Array.from(new Set(String(region ?? '')
     .split(/[,;/+]+|\bet\b|\bou\b|\n/i)
     .map((s) => norm(s.replace(/\b\d{4}\b/g, '').replace(/\(.*?\)/g, '')))
-    .filter((s) => s.length >= 2))).slice(0, 8);
+    .filter((s) => s.length >= 2 && !NOT_A_COMMUNE.test(s)))).slice(0, 8);
+}
+
+/** Mots de la recherche qui ne sont pas une commune (« et environs », « Vaud », « canton de Vaud »…). */
+const NOT_A_COMMUNE = /^(environs?|alentours?|region|agglomeration|banlieue|peripherie|proches?|vaud|vd|canton( de vaud)?|suisse( romande)?|romandie|ch)$/;
+const WITH_SURROUNDINGS = /\b(environs?|alentours?|region|agglomeration|banlieue|peripherie)\b/;
+
+/** Communes de l'agglomération, pour « X et environs » (noms normalisés comme `norm`). */
+export const AGGLOS: Record<string, string[]> = {
+  lausanne: ['lausanne', 'renens', 'prilly', 'pully', 'crissier', 'ecublens', 'bussigny', 'chavannes pres renens', 'epalinges', 'le mont sur lausanne',
+    'paudex', 'lutry', 'belmont sur lausanne', 'romanel sur lausanne', 'jouxtens mezery', 'cheseaux sur lausanne', 'saint sulpice', 'villars sainte croix'],
+  morges: ['morges', 'tolochenaz', 'lonay', 'preverenges', 'echichens', 'saint prex', 'denges', 'echandens'],
+  vevey: ['vevey', 'corseaux', 'corsier sur vevey', 'la tour de peilz', 'saint legier la chiesaz', 'chardonne', 'blonay', 'montreux'],
+  montreux: ['montreux', 'la tour de peilz', 'vevey', 'veytaux', 'villeneuve'],
+  nyon: ['nyon', 'prangins', 'eysins', 'gland', 'crans pres celigny', 'trelex', 'duillier'],
+  'yverdon les bains': ['yverdon les bains', 'cheseaux noreaz', 'montagny pres yverdon', 'grandson', 'treycovagnes', 'pomy'],
+  yverdon: ['yverdon les bains', 'cheseaux noreaz', 'montagny pres yverdon', 'grandson', 'treycovagnes', 'pomy'],
+  geneve: ['geneve', 'carouge', 'lancy', 'grand lancy', 'petit lancy', 'vernier', 'meyrin', 'onex', 'chene bougeries', 'thonex', 'plan les ouates', 'le grand saconnex', 'grand saconnex'],
+  fribourg: ['fribourg', 'villars sur glane', 'givisiez', 'granges paccot', 'marly', 'corminboeuf'],
+};
+/** Rectangle de l'agglomération (Flatfox) : [south, north, west, east]. */
+const AGGLO_ZONES: Record<string, [number, number, number, number]> = {
+  lausanne: [46.49, 46.59, 6.52, 6.72], morges: [46.48, 46.54, 6.42, 6.54], vevey: [46.42, 46.50, 6.80, 6.94],
+  montreux: [46.39, 46.47, 6.84, 6.96], nyon: [46.35, 46.43, 6.17, 6.30], yverdon: [46.74, 46.82, 6.58, 6.69], 'yverdon les bains': [46.74, 46.82, 6.58, 6.69],
+  geneve: [46.14, 46.26, 6.04, 6.22], fribourg: [46.76, 46.84, 7.08, 7.20],
+};
+
+/**
+ * Zone de recherche : communes acceptées (agglomération entière si « et environs ») et communes à interroger,
+ * avec le rectangle de l'agglomération quand il est connu.
+ */
+export function zoneOf(region: string | null | undefined): { communes: string[]; recherches: { commune: string; bbox: [number, number, number, number] | null }[] } {
+  const base = communesOf(region);
+  const environs = WITH_SURROUNDINGS.test(norm(region));
+  const communes = new Set<string>();
+  const recherches: { commune: string; bbox: [number, number, number, number] | null }[] = [];
+  for (const c of base) {
+    communes.add(c);
+    if (environs && AGGLOS[c]) {
+      AGGLOS[c].forEach((x) => communes.add(x));
+      recherches.push({ commune: c, bbox: AGGLO_ZONES[c] ?? null });
+    } else recherches.push({ commune: c, bbox: null });
+  }
+  return { communes: [...communes], recherches };
+}
+
+/** Commune d'une adresse « Rue X 5, 1004 Lausanne » → « lausanne ». */
+export function cityOfAddress(adresse: string | null | undefined): string {
+  const parts = String(adresse ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  const last = parts[parts.length - 1] ?? '';
+  return norm(last.replace(/^(ch[- ])?\d{4}\s*/i, '').replace(/\s+(vd|ge|fr|vs|ne)$/i, ''));
 }
 
 /** Rectangles connus (skill logisorama-extraction-portails) : repli si le géocodage ne répond pas. */
@@ -95,8 +220,8 @@ export const rentOf = (l: any): number | null => {
   return Number.isFinite(d) && d > 0 ? d : null;
 };
 export const roomsOf = (l: any): number | null => { const n = parseFloat(String(l.number_of_rooms ?? '')); return Number.isFinite(n) ? n : null; };
-export const linkOf = (l: any) => `${FLATFOX}${String(l.url || `/fr/${l.pk}/`).replace(/^\/[a-z]{2}\//, '/fr/')}`;
-export const addressOf = (l: any) => [l.street, [l.zipcode, l.city].filter(Boolean).join(' ')].filter((x) => String(x ?? '').trim()).join(', ') || String(l.public_address ?? '');
+export const linkOf = (l: any) => l._base ? String(l._base.lien_annonce) : `${FLATFOX}${String(l.url || `/fr/${l.pk}/`).replace(/^\/[a-z]{2}\//, '/fr/')}`;
+export const addressOf = (l: any) => l._base ? String(l._base.adresse) : [l.street, [l.zipcode, l.city].filter(Boolean).join(' ')].filter((x) => String(x ?? '').trim()).join(', ') || String(l.public_address ?? '');
 
 export interface Crit { communes: string[]; plafond: number; piecesMin: number | null; typeBien: string | null }
 
@@ -159,6 +284,7 @@ export async function evaluateListings(callModel: CallModel, client: Record<stri
     etage: l.floor ?? null, disponible: l.moving_date_type === 'imm' ? 'de suite' : l.moving_date ?? null, annee: l.year_built ?? null, renovee: l.year_renovated ?? null,
     equipements: (l.attributes ?? []).map((a: any) => a?.name).filter(Boolean), publiee: l.published ?? l.created ?? null,
     titre: [l.short_title, l.description_title].filter(Boolean).join(' — '), description: String(l.description ?? '').slice(0, 1600),
+    ...(l._base ? { source: l._source, lien: l._base.lien_annonce } : {}),
   }));
   const resp = await callModel({
     model: EVAL_MODEL,
@@ -229,7 +355,8 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
     const { data: cr } = await db.from('user_credits').select('mandat_statut').eq('user_id', c.user_id).maybeSingle();
     if (['aucun', 'expire', 'suspendu'].includes(String(cr?.mandat_statut ?? ''))) return fail('Mandat à l’arrêt (compteur) : aucune offre automatique.');
   }
-  const communes = communesOf(c.region_recherche);
+  const zone = zoneOf(c.region_recherche);
+  const communes = zone.communes;
   if (!communes.length) return fail('Aucune commune dans la recherche : demande au client où il cherche.');
   const budget = Number(c.budget_max) || 0;
   if (budget < 300) return fail('Budget absent ou incohérent : à préciser.');
@@ -264,8 +391,8 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
   const keep: any[] = [];
   const byPk = new Set<number>();
   const zonesSansCarte: string[] = [];
-  for (const commune of communes) {
-    const b = await bboxOf(fetchFn, commune);
+  for (const { commune, bbox } of zone.recherches) {
+    const b = bbox ?? await bboxOf(fetchFn, commune);
     if (!b) { zonesSansCarte.push(commune); continue; }
     let list: any[];
     try { list = await flatfoxIn(fetchFn, b, category, plafond); } catch (err) { return fail(`Lecture Flatfox impossible (${(err as Error).message}) : réessayer plus tard.`); }
@@ -278,11 +405,18 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
       keep.push(l);
     }
   }
-  if (zonesSansCarte.length === communes.length) return fail('Zone trop vague pour chercher (ex. un canton entier) : demande au client les communes précises.');
+  if (zonesSansCarte.length === zone.recherches.length) return fail('Zone trop vague pour chercher (ex. un canton entier) : demande au client les communes précises.');
+  // Annonces déjà en base (immobilier.ch, Homegate… trouvées par les routines), encore en ligne.
+  const deja = (lien: string, adresse: string) => prevLinks.has(String(lien).match(/(\d{6,})/)?.[1] ?? '') || (/\d/.test(adresse) && prevAddr.has(norm(adresse)));
+  const fromBase = await baseListings(db, fetchFn, clientId, crit, category, now, deja, reasons);
+  res.lues += fromBase.length;
+  // Même bien vu sur Flatfox et en base : gardé une seule fois (Flatfox, lu en direct).
+  const flatAddr = new Set(keep.map((l) => norm(addressOf(l))));
+  keep.push(...fromBase.filter((l) => !flatAddr.has(norm(addressOf(l)))));
   keep.sort((a, b) => String(b.published ?? b.created ?? '').localeCompare(String(a.published ?? a.created ?? '')));
   const short = keep.slice(0, MAX_EVAL);
   res.ecartees = Object.entries(reasons).map(([raison, n]) => ({ raison, n }));
-  if (!short.length) return { ...res, ok: true, motif: 'Aucune annonce conforme sur Flatfox pour le moment.' };
+  if (!short.length) return { ...res, ok: true, motif: 'Aucune annonce conforme pour le moment (Flatfox et annonces en base).' };
   if (!callModel) return fail('Lecture des annonces indisponible (clé IA absente).');
   if (max <= 0) return { ...res, ok: true, en_reserve: short.length, motif: `Plafond du jour atteint (${MAX_PER_DAY} offres) : la suite demain.` };
 
@@ -322,6 +456,7 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
 
   for (const { l, e, visite } of chosen) {
     const rooms = roomsOf(l);
+    const b = l._base;
     const offer = {
       client_id: clientId,
       adresse: addressOf(l),
@@ -329,10 +464,11 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
       pieces: rooms,
       surface: Number(l.surface_living ?? l.livingspace) || null,
       etage: l.floor !== null && l.floor !== undefined && l.floor !== '' ? String(l.floor) : null,
-      disponibilite: l.moving_date_type === 'imm' ? 'De suite' : l.moving_date ? dateCH(String(l.moving_date)) : null,
+      // Annonce de la base : disponibilité reprise telle qu'enregistrée (déjà au format suisse).
+      disponibilite: b ? (b.disponibilite ?? null) : l.moving_date_type === 'imm' ? 'De suite' : l.moving_date ? dateCH(String(l.moving_date)) : null,
       annee_construction: Number(l.year_built) || null,
       description: String(l.description ?? '').trim() || null,
-      type_bien: category === 'HOUSE' ? 'Maison' : 'Appartement',
+      type_bien: b ? (b.type_bien ?? 'Appartement') : category === 'HOUSE' ? 'Maison' : 'Appartement',
       statut: 'envoyee',
       lien_annonce: linkOf(l),
       envoi_auto: true,
@@ -349,7 +485,7 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
     if (error || !row?.id) { res.ecartees.push({ raison: `insertion refusée (${String(error?.message ?? '').slice(0, 60)})`, n: 1 }); continue; }
     sent.offre_id = row.id;
     if (visite) {
-      await db.from('visites').insert({ offre_id: row.id, client_id: clientId, agent_id: OFFERS_AGENT_ID, date_visite: visite.toISOString(), adresse: offer.adresse, statut: 'planifiee', source: 'flatfox', medias_coursier: [] });
+      await db.from('visites').insert({ offre_id: row.id, client_id: clientId, agent_id: OFFERS_AGENT_ID, date_visite: visite.toISOString(), adresse: offer.adresse, statut: 'planifiee', source: b ? 'annonce' : 'flatfox', medias_coursier: [] });
     }
     if (convId) {
       const content = buildOffreMessage({ ...offer, datesVisite: [visiteTxt ?? 'à fixer — si vous êtes intéressé, votre agent l’organise'] }, prof ?? null);
