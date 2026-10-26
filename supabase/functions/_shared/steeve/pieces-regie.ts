@@ -4,7 +4,7 @@
 // Règles de l'admin : jamais de pièce expirée ou trop ancienne, l'attestation RC ménage n'est jamais bloquante.
 // deno-lint-ignore-file no-explicit-any
 /* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON de la base et de l'API, validées champ par champ */
-import { costOf, type CallModel, type ContentBlock } from './anthropic.ts';
+import { ACTION_MODEL, costOf, type CallModel, type ContentBlock } from './anthropic.ts';
 
 export interface PieceRule { types: string[]; label: string; validite?: number; nombre?: number; bloquante: boolean }
 
@@ -24,7 +24,7 @@ export const MANUAL_PIECES: Record<string, string> = {
 };
 export const MAX_PIECE_BYTES = 8 * 1024 * 1024;
 export const MAX_MAIL_BYTES = 15 * 1024 * 1024;
-const READ_MODEL = 'claude-sonnet-5-5';
+const READ_MODEL = ACTION_MODEL;
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export interface DocCandidate { id: string; type_document: string; nom: string; mime: string; url: string; date_upload: string; bytes?: Uint8Array }

@@ -5,9 +5,9 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
 import { computeDeterministic, finalStatus, isRcItem, nextBackoffSeconds } from "./logic.ts";
-import { anthropicCaller, costOf } from "../_shared/steeve/anthropic.ts";
+import { ACTION_MODEL, anthropicCaller, costOf } from "../_shared/steeve/anthropic.ts";
 
-const CLAUDE_MODEL = "claude-haiku-5-5";
+const CLAUDE_MODEL = ACTION_MODEL;
 const TRIAGE_INSTRUCTIONS =
   "Tu qualifies un dossier de candidature locative suisse pour l'équipe interne. " +
   "Utilise uniquement les faits fournis ; n'invente aucune donnée. " +
@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
   }
 
   const { data: claimed, error: claimErr } = await db.rpc("claim_postulation_jobs", {
-    p_job_id: jobId, p_limit: jobId ? 1 : 10,
+    p_job_id: jobId, p_limit: jobId ? 1 : 3, // Opus 5.5 (effort élevé) : 3 dossiers par passage au plus
   });
   if (claimErr) { console.error("process-postulation-job: claim", claimErr.code); return json({ error: "claim" }, 500); }
 
