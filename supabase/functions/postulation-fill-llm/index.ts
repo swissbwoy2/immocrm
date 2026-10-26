@@ -174,11 +174,44 @@ Deno.serve(async (req) => {
     const { data: client } = await admin
       .from("clients")
       .select(
-        "id, user_id, adresse, date_naissance, etat_civil, situation_familiale, nationalite, type_permis, profession, employeur, revenus_mensuels, nombre_occupants, pieces, budget_max, source_revenus, curatelle, animaux, gerance_actuelle, motif_changement, date_engagement, secteur_activite",
+        "id, user_id, agent_id, adresse, date_naissance, etat_civil, situation_familiale, nationalite, type_permis, profession, employeur, revenus_mensuels, nombre_occupants, pieces, budget_max, source_revenus, curatelle, animaux, gerance_actuelle, motif_changement, date_engagement, secteur_activite",
       )
       .eq("id", clientId)
       .maybeSingle();
     if (!client) return json({ error: "Client introuvable" }, 404);
+
+    // Admin : tous les dossiers. Agent : ses clients (agent principal ou co-agent). Coursier : clients de ses visites.
+    const rolesAppelant: string[] = (roles ?? []).map((r: any) => r.role);
+    if (!rolesAppelant.includes("admin")) {
+      let accesClient = false;
+      const { data: agentAppelant } = await admin.from("agents").select("id").eq("user_id", caller.id).maybeSingle();
+      if (agentAppelant) {
+        if ((client as any).agent_id === agentAppelant.id) {
+          accesClient = true;
+        } else {
+          const { data: lien } = await admin
+            .from("client_agents")
+            .select("id")
+            .eq("client_id", clientId)
+            .eq("agent_id", agentAppelant.id)
+            .limit(1);
+          accesClient = !!lien?.length;
+        }
+      }
+      if (!accesClient && rolesAppelant.includes("coursier")) {
+        const { data: coursierAppelant } = await admin.from("coursiers").select("id").eq("user_id", caller.id).maybeSingle();
+        if (coursierAppelant) {
+          const { data: mission } = await admin
+            .from("visites")
+            .select("id")
+            .eq("client_id", clientId)
+            .eq("coursier_id", coursierAppelant.id)
+            .limit(1);
+          accesClient = !!mission?.length;
+        }
+      }
+      if (!accesClient) return json({ error: "Accès refusé à ce client" }, 403);
+    }
 
     let clientProfile: any = null;
     if (client.user_id) {
