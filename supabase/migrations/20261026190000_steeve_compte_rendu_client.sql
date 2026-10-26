@@ -1,4 +1,4 @@
--- Steeve se présente aux clients et leur envoie le point complet de leur dossier (demande de l'admin, 26.10.2026).
+-- Steeve se présente aux clients (location et achat) et leur envoie le point complet de leur dossier (demande de l'admin, 26.10.2026).
 -- steeve_presentation_client(client) : message de présentation (ce que Steeve fait pour le client).
 -- steeve_compte_rendu_client(client) : compte rendu calculé à partir de la base, sans modèle, rien d'inventé :
 --   recherche et mandat, offres (dernière, en attente de réponse, intéressé), visites (à venir, à décider),
@@ -25,7 +25,19 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT 'Bonjour ' || coalesce(nullif(trim(p.prenom), ''), '') || E', je suis Steeve, l''assistant de Logisorama et d''Immo-Rama. Je travaille avec ton agent sur ta recherche, 7 jours sur 7, et je te réponds ici, dans ta messagerie, à toute heure.\n\n'
+  SELECT CASE WHEN coalesce(c.journey_type, c.type_recherche, '') IN ('purchase_search', 'achat', 'Acheter') THEN
+      'Bonjour ' || coalesce(nullif(trim(p.prenom), ''), '') || E', je suis Steeve, l''assistant de Logisorama et d''Immo-Rama. Je travaille avec ton courtier sur ton projet d''achat, 7 jours sur 7, et je te réponds ici, dans ta messagerie, à toute heure.\n\n'
+      || E'Ce que je peux faire pour toi :\n'
+      || E'- te dire où en est ton projet : biens proposés, visites, pièces de ton dossier de financement, mandat ;\n'
+      || E'- noter ta réponse à un bien proposé (intéressé ou pas intéressé) ;\n'
+      || E'- demander une visite au vendeur ou à son courtier, avec tes disponibilités ;\n'
+      || E'- modifier tes critères (budget, nombre de pièces, régions, type de bien, souhaits) : ton courtier en tient compte tout de suite, y compris pour les biens hors marché de notre réseau ;\n'
+      || E'- te dire quelles pièces manquent pour l''appel d''offres bancaire et le suivre avec toi ;\n'
+      || E'- te passer ton courtier quand il faut une personne (offre d''achat, négociation, financement, signature chez le notaire, ou simplement si tu le demandes).\n\n'
+      || E'Écris-moi simplement, comme à une personne. Par exemple : « Où en est mon dossier de financement ? », « Je veux visiter la villa de Pully », « Ajoute Morges à mes régions ».\n\n'
+      || 'Je t''envoie juste après le point complet sur ton projet.'
+    ELSE
+      'Bonjour ' || coalesce(nullif(trim(p.prenom), ''), '') || E', je suis Steeve, l''assistant de Logisorama et d''Immo-Rama. Je travaille avec ton agent sur ta recherche, 7 jours sur 7, et je te réponds ici, dans ta messagerie, à toute heure.\n\n'
       || E'Ce que je peux faire pour toi :\n'
       || E'- te dire où en est ton dossier : offres reçues, visites, candidatures, pièces déposées ou manquantes, mandat ;\n'
       || E'- noter ta réponse à une offre (intéressé ou pas intéressé) ;\n'
@@ -36,6 +48,7 @@ AS $$
       || E'- te passer ton agent quand il faut une personne (signature, bail, paiement, ou simplement si tu le demandes).\n\n'
       || E'Écris-moi simplement, comme à une personne. Par exemple : « Où en est ma candidature ? », « Je veux visiter l''appartement de la rue du Lac », « Ajoute Morges à mes régions ».\n\n'
       || 'Je t''envoie juste après le point complet sur ton dossier.'
+    END
     FROM public.clients c LEFT JOIN public.profiles p ON p.id = c.user_id
    WHERE c.id = p_client_id;
 $$;
@@ -60,18 +73,25 @@ DECLARE
   v_manque text[] := '{}';
   v_next text[] := '{}';
   v_jour text[] := ARRAY['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'];
+  v_achat boolean;
 BEGIN
   SELECT cl.*, p.prenom INTO c FROM public.clients cl LEFT JOIN public.profiles p ON p.id = cl.user_id WHERE cl.id = p_client_id;
   IF NOT FOUND THEN RETURN NULL; END IF;
   v_prenom := coalesce(nullif(trim(c.prenom), ''), '');
+  v_achat := coalesce(c.journey_type, c.type_recherche, '') IN ('purchase_search', 'achat', 'Acheter');
 
-  t := 'Voici le point complet sur ton dossier au ' || to_char(p_now AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY') || ', ' || v_prenom || E'.\n\n';
+  t := 'Voici le point complet sur ton ' || CASE WHEN v_achat THEN 'projet d''achat' ELSE 'dossier' END || ' au ' || to_char(p_now AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY') || ', ' || v_prenom || E'.\n\n';
 
   -- Recherche et mandat
   t := t || E'Ta recherche\n';
-  v_line := '- ' || coalesce(upper(left(nullif(trim(c.type_bien), ''), 1)) || substr(trim(c.type_bien), 2), 'Logement')
+  v_line := '- ' || CASE WHEN v_achat THEN 'Achat : ' ELSE '' END || coalesce(upper(left(nullif(trim(c.type_bien), ''), 1)) || substr(trim(c.type_bien), 2), 'Logement')
          || CASE WHEN c.pieces IS NOT NULL THEN ', dès ' || public.steeve_fmt_pieces(c.pieces) || CASE WHEN c.pieces > 1 THEN ' pièces' ELSE ' pièce' END ELSE '' END
-         || CASE WHEN c.budget_max IS NOT NULL THEN ', jusqu''à ' || public.steeve_fmt_chf(c.budget_max) || ' par mois' ELSE '' END
+         || CASE WHEN c.budget_max IS NULL THEN ''
+                 WHEN v_achat AND c.budget_max >= 50000 THEN ', budget jusqu''à ' || public.steeve_fmt_chf(c.budget_max)
+                 WHEN v_achat THEN ''
+                 ELSE ', jusqu''à ' || public.steeve_fmt_chf(c.budget_max) || ' par mois' END
+         || CASE WHEN v_achat AND nullif(c.apport_personnel::text, '') IS NOT NULL AND c.apport_personnel::text ~ '^[0-9.]+$'
+                 THEN ', fonds propres ' || public.steeve_fmt_chf(c.apport_personnel::numeric) ELSE '' END
          || CASE WHEN nullif(trim(c.region_recherche), '') IS NOT NULL THEN ', régions : ' || left(trim(c.region_recherche), 200) ELSE '' END || '.';
   t := t || v_line || E'\n';
   IF c.mandat_date_signature IS NOT NULL THEN
@@ -79,16 +99,19 @@ BEGIN
            || CASE WHEN c.mandate_official_end_date IS NOT NULL THEN ', valable jusqu''au ' || to_char(c.mandate_official_end_date, 'DD.MM.YYYY') ELSE '' END
            || E'.\n';
   END IF;
-  t := t || E'- Pour changer un critère, écris-le-moi : je le mets à jour tout de suite et je relance la recherche.\n\n';
+  t := t || CASE WHEN v_achat THEN E'- Pour changer un critère, écris-le-moi : je le mets à jour tout de suite pour ton courtier.\n\n'
+              ELSE E'- Pour changer un critère, écris-le-moi : je le mets à jour tout de suite et je relance la recherche.\n\n' END;
 
   -- Offres
   SELECT count(*) FILTER (WHERE o.date_envoi IS NOT NULL), count(*) FILTER (WHERE o.date_envoi > p_now - interval '7 days')
     INTO v_n, v_n7 FROM public.offres o WHERE o.client_id = p_client_id AND coalesce(o.statut, '') NOT IN ('doublon', 'tiktok');
-  t := t || E'Tes offres\n';
+  t := t || CASE WHEN v_achat THEN E'Les biens proposés\n' ELSE E'Tes offres\n' END;
   IF v_n = 0 THEN
-    t := t || E'- Aucune offre envoyée pour l''instant : je lance les recherches avec tes critères.\n';
+    t := t || CASE WHEN v_achat THEN E'- Aucun bien proposé pour l''instant : ton courtier cherche avec tes critères, sur le marché et hors marché.\n'
+                   ELSE E'- Aucune offre envoyée pour l''instant : je lance les recherches avec tes critères.\n' END;
   ELSE
-    t := t || '- ' || v_n || ' offre' || CASE WHEN v_n > 1 THEN 's' ELSE '' END || ' reçue' || CASE WHEN v_n > 1 THEN 's' ELSE '' END
+    t := t || '- ' || v_n || CASE WHEN v_achat THEN ' bien' ELSE ' offre' END || CASE WHEN v_n > 1 THEN 's' ELSE '' END
+           || CASE WHEN v_achat THEN ' proposé' ELSE ' reçue' END || CASE WHEN v_n > 1 THEN 's' ELSE '' END
            || ' depuis le début, dont ' || v_n7 || E' ces 7 derniers jours.\n';
     SELECT o.adresse, o.prix, o.date_envoi INTO r FROM public.offres o
      WHERE o.client_id = p_client_id AND o.date_envoi IS NOT NULL AND coalesce(o.statut, '') NOT IN ('doublon', 'tiktok')
@@ -155,12 +178,13 @@ BEGIN
   LOOP
     v_n := v_n + 1;
     t := t || '- Visite du ' || to_char(r.date_visite AT TIME ZONE 'Europe/Zurich', 'DD.MM.YYYY') || ' — ' || coalesce(r.adresse, 'adresse à confirmer')
-           || E' : dis-moi si tu veux postuler.\n';
+           || CASE WHEN v_achat THEN E' : dis-moi s''il t''intéresse pour une offre d''achat.\n' ELSE E' : dis-moi si tu veux postuler.\n' END;
   END LOOP;
-  IF v_n > 0 THEN v_next := array_append(v_next, 'dis-moi pour chaque visite passée si tu veux postuler'::text); END IF;
+  IF v_n > 0 THEN v_next := array_append(v_next, CASE WHEN v_achat THEN 'dis-moi ce que tu penses des biens visités' ELSE 'dis-moi pour chaque visite passée si tu veux postuler' END); END IF;
   t := t || E'\n';
 
-  -- Candidatures
+  -- Candidatures (location)
+  IF NOT v_achat THEN
   t := t || E'Tes candidatures\n';
   v_n := 0;
   FOR r IN
@@ -182,10 +206,11 @@ BEGIN
   END LOOP;
   IF v_n = 0 THEN t := t || E'- Aucune candidature pour l''instant : après une visite qui te plaît, dis-moi « je veux postuler ».\n'; END IF;
   t := t || E'\n';
+  END IF;
 
   -- Pièces du dossier (location) : mêmes règles que le contrôle de postulation (process-postulation-job/logic.ts),
   -- documents du client et de son compte ; RC ménage jamais exigée.
-  IF coalesce(c.journey_type, c.type_recherche, '') NOT IN ('purchase_search', 'achat') THEN
+  IF NOT v_achat THEN
     SELECT array_remove(ARRAY[
       CASE WHEN (SELECT count(*) FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id)
                    AND d.type_document IN ('piece_identite', 'permis_sejour')) < 1
@@ -222,10 +247,33 @@ BEGIN
     t := t || E'- L''attestation RC ménage est conseillée mais jamais obligatoire.\n\n';
   END IF;
 
+  -- Pièces du dossier de financement (achat) : mêmes listes que « Mes documents » (parcours achat).
+  IF v_achat THEN
+    SELECT array_remove(ARRAY[
+      CASE WHEN NOT EXISTS (SELECT 1 FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document = 'piece_identite') THEN 'pièce d''identité' END,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document = 'extrait_poursuites') THEN 'extrait de l''office des poursuites' END,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document = 'certificat_salaire') THEN 'certificat de salaire annuel' END,
+      CASE WHEN (SELECT count(*) FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document LIKE 'fiche_salaire%') < 3 THEN '3 dernières fiches de salaire' END,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document = 'contrat_travail') THEN 'contrat de travail' END,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document = 'releve_bancaire_fonds_propres') THEN 'relevé bancaire des fonds propres' END,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document = 'decision_taxation') THEN 'dernière décision de taxation' END,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document = 'accord_transmission') THEN 'accord de transmission aux partenaires financiers' END,
+      CASE WHEN NOT EXISTS (SELECT 1 FROM public.documents d WHERE (d.client_id = p_client_id OR d.user_id = c.user_id) AND d.type_document = 'consentement_donnees') THEN 'consentement au traitement des données financières' END
+    ], NULL) INTO v_manque;
+    t := t || E'Ton dossier de financement\n';
+    IF cardinality(v_manque) = 0 THEN
+      t := t || E'- Ton dossier est complet : ton courtier peut lancer l''appel d''offres bancaire.\n\n';
+    ELSE
+      t := t || '- Pour lancer l''appel d''offres bancaire (indépendant et transparent), il manque : ' || array_to_string(v_manque, ', ') || E'.\n\n';
+      v_next := array_append(v_next, 'dépose les pièces de financement dans « Mes documents » (une photo nette ou un PDF suffit)'::text);
+    END IF;
+  END IF;
+
   -- Prochaines étapes
   t := t || E'Prochaines étapes\n';
   IF cardinality(v_next) = 0 THEN
-    t := t || E'- Rien à faire de ton côté pour l''instant : je continue les recherches et je te préviens dès qu''il y a du nouveau.\n';
+    t := t || CASE WHEN v_achat THEN E'- Rien à faire de ton côté pour l''instant : ton courtier continue les recherches et je te préviens dès qu''il y a du nouveau.\n'
+                   ELSE E'- Rien à faire de ton côté pour l''instant : je continue les recherches et je te préviens dès qu''il y a du nouveau.\n' END;
   ELSE
     FOR i IN 1 .. cardinality(v_next) LOOP
       t := t || '- ' || upper(left(v_next[i], 1)) || substr(v_next[i], 2) || E'.\n';
@@ -264,7 +312,6 @@ BEGIN
       FROM public.clients cl
      WHERE cl.statut = 'actif' AND cl.anonymise_at IS NULL AND cl.user_id IS NOT NULL
        AND public.steeve_client_servi(cl.id)
-       AND coalesce(cl.journey_type, cl.type_recherche, '') NOT IN ('purchase_search', 'achat')
        AND (p_client_id IS NULL OR cl.id = p_client_id)
      ORDER BY cl.created_at
   LOOP
