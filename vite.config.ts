@@ -7,6 +7,19 @@ import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 
 // https://vitejs.dev/config/
+/**
+ * Garde de démarrage injecté dans index.html : si l'app ne démarre pas (fichiers d'une ancienne version
+ * introuvables après une publication), on retire le service worker et ses caches puis on recharge une seule fois.
+ */
+const BOOT_GUARD = `(function(){var K='__boot_recover';function recover(why){try{if(sessionStorage.getItem(K))return;sessionStorage.setItem(K,why||'1');}catch(e){return;}var done=function(){location.reload();};try{var p=[];if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations){p.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}));}if(window.caches&&caches.keys){p.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}));}Promise.all(p).then(done,done);setTimeout(done,3000);}catch(e){done();}}window.addEventListener('error',function(e){var t=e&&e.target;if(t&&(t.tagName==='SCRIPT'||t.tagName==='LINK')){var u=t.src||t.href||'';if(u.indexOf('/assets/')>-1)recover('asset');}},true);setTimeout(function(){if(!window.__APP_BOOTED)recover('timeout');},15000);window.addEventListener('load',function(){setTimeout(function(){try{if(window.__APP_BOOTED)sessionStorage.removeItem(K);}catch(e){}},20000);});})();`;
+
+const bootGuardPlugin = () => ({
+  name: 'logisorama-boot-guard',
+  transformIndexHtml(html: string) {
+    return html.replace('<head>', `<head>\n    <script>${BOOT_GUARD}</script>`);
+  },
+});
+
 export default defineConfig(({ mode }) => {
   // Ensure critical backend env vars are always available at runtime.
   // (Vite only injects import.meta.env at dev-server start / build time.)
@@ -33,6 +46,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
+      bootGuardPlugin(),
       mcpPlugin(),
       mode === "development" && componentTagger(),
       VitePWA({
@@ -72,18 +86,16 @@ export default defineConfig(({ mode }) => {
           cleanupOutdatedCaches: true,
           skipWaiting: true,
           clientsClaim: true,
-          globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-          // Le HTML ne doit jamais être servi depuis un cache figé :
-          // on force le réseau d'abord pour récupérer les nouveaux hashes de bundle.
-          navigateFallback: "index.html",
-          navigateFallbackDenylist: [/^\/~oauth/, /^\/api\//],
+          // Le HTML n'est jamais précaché : après une publication, l'ancien index.html pointait vers des
+          // fichiers supprimés (page blanche, routes qui ne s'ouvrent plus). Les pages passent par le réseau d'abord.
+          globPatterns: ["**/*.{js,css,ico,png,svg,woff2}"],
           runtimeCaching: [
             {
               urlPattern: ({ request }: { request: Request }) => request.mode === "navigate",
               handler: "NetworkFirst",
               options: {
+                // Sans délai d'abandon : la copie en cache ne sert que hors connexion.
                 cacheName: "html-cache",
-                networkTimeoutSeconds: 5,
                 expiration: { maxEntries: 10 },
                 cacheableResponse: { statuses: [0, 200] },
               },
