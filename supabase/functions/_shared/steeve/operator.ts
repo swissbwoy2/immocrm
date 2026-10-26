@@ -17,6 +17,7 @@ import { costOf, type CallModel } from './anthropic.ts';
 import { buildTextEmail, isEmail, latin1, messageId, prepareDraftForSend, SmtpUncertainError } from './mail.ts';
 import { processInbox } from './inbox.ts';
 import { searchAndSendOffers } from './offers.ts';
+import { buildMailWithAttachments, evaluatePieces, isImage, MANUAL_PIECES, MAX_MAIL_BYTES, MAX_PIECE_BYTES, mimeOf, readPieces, REGIE_PIECES, type DocCandidate } from './pieces-regie.ts';
 
 export type Mode = 'off' | 'a_blanc' | 'autonome';
 export const BOX_VISITES = 'visites@immo-rama.ch';
@@ -113,11 +114,15 @@ export function qrEmail(o: { adresse: string; reference?: string | null }) {
 }
 
 /** Demande de visite à l'annonceur (depuis visites@). */
-export function visiteEmail(o: { adresse: string; reference?: string | null }) {
+export function visiteEmail(o: { adresse: string; reference?: string | null; disponibilites?: string | null }) {
   const ref = o.reference ? `, réf. ${o.reference}` : '';
+  // Créneaux souhaités par le client, sans aucune coordonnée (e-mail, téléphone) ni texte superflu.
+  const dispo = String(o.disponibilites ?? '')
+    .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, '').replace(/\+?\d[\d\s().-]{7,}\d/g, '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  const creneaux = dispo ? ` Notre client serait disponible : ${dispo.replace(/[.\s]+$/, '')}.` : '';
   return {
     subject: `Demande de visite – ${o.adresse}`,
-    text: `Bonjour,\n\nNous accompagnons un client intéressé par le logement ${o.adresse}${ref}. Serait-il possible d'organiser une visite ? Merci de nous indiquer les créneaux disponibles.\n\nMerci d'avance et belle journée,\n${SIGNATURE}`,
+    text: `Bonjour,\n\nNous accompagnons un client intéressé par le logement ${o.adresse}${ref}. Serait-il possible d'organiser une visite ?${creneaux} Merci de nous indiquer les créneaux disponibles.\n\nMerci d'avance et belle journée,\n${SIGNATURE}`,
   };
 }
 
@@ -305,11 +310,11 @@ async function handleQr(deps: Required<OperatorDeps>, mode: Mode, c: any, taskId
 async function handleVisite(deps: Required<OperatorDeps>, mode: Mode, taskId: string, rep: OperatorReport) {
   const { db, mail } = deps;
   const now = deps.now();
-  const { data: t } = await db.from('steeve_actions').select('id, offre_id, client_id, source, idempotency_key').eq('id', taskId).single();
+  const { data: t } = await db.from('steeve_actions').select('id, offre_id, client_id, source, idempotency_key, note').eq('id', taskId).single();
   const { data: o } = await db.from('offres').select('id, adresse, lien_annonce, statut').eq('id', t.offre_id).single();
   const { data: ref } = await db.from('contacts_annonceurs').select('reference').eq('offre_id', t.offre_id).not('reference', 'is', null).limit(1);
   const { data: emails } = await db.rpc('steeve_emails_regie', { p_offre_id: t.offre_id });
-  const { subject, text } = visiteEmail({ adresse: o.adresse, reference: ref?.[0]?.reference ?? null });
+  const { subject, text } = visiteEmail({ adresse: o.adresse, reference: ref?.[0]?.reference ?? null, disponibilites: t.source === 'client' ? t.note : null });
   const to = verifiedRecipient(emails);
   const key = t.idempotency_key;
   const base = { objet: subject, corps: text, mailbox: BOX_VISITES, canal: 'email' };
@@ -916,6 +921,156 @@ async function handleRechercheOffres(deps: Required<OperatorDeps>, mode: Mode, t
   }
 }
 
+// ---------- pièces demandées par une régie (lot 8) ----------
+
+const PORTAL = /@(flatfox\.ch|immobilier\.ch|homegate\.ch|immoscout24\.ch)$|(^|\.)flatfox\.ch$/i;
+const SIGNATURE_DOSSIERS = 'Immo-rama.ch – Relocation\nrelocation@immo-rama.ch · 021 634 31 61';
+
+/**
+ * La régie demande des pièces : Steeve les cherche dans le dossier, les lit (type, personne, validité, lisibilité)
+ * et les envoie lui-même depuis relocation@ en réponse à la régie ; sinon il les demande au client
+ * (application, e-mail, push) et les envoie dès le dépôt (réveil par le dépôt du document).
+ */
+async function handlePiecesRegie(deps: Required<OperatorDeps>, mode: Mode, taskId: string, rep: OperatorReport) {
+  const { db, mail } = deps;
+  const now = deps.now();
+  const at = now.toISOString();
+  const free = { verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: at, derniere_activite: at };
+  const { data: t } = await db.from('steeve_actions').select('id, client_id, offre_id, destinataire, objet, controles, tentatives, idempotency_key, statut').eq('id', taskId).single();
+  if (!t?.client_id || !t?.offre_id) {
+    await db.from('steeve_actions').update({ ...free, statut: 'bloque', motif: 'Client ou bien absent de la tâche.' }).eq('id', taskId);
+    return;
+  }
+  const codes: string[] = (t.controles?.pieces ?? []).map(String);
+  const auto = codes.filter((c) => REGIE_PIECES[c]);
+  const manual = codes.filter((c) => !REGIE_PIECES[c]).map((c) => MANUAL_PIECES[c] ?? c);
+  const { data: o } = await db.from('offres').select('adresse').eq('id', t.offre_id).maybeSingle();
+  const { data: cl } = await db.from('clients').select('user_id').eq('id', t.client_id).maybeSingle();
+  const { data: pr } = cl?.user_id ? await db.from('profiles').select('prenom, nom').eq('id', cl.user_id).maybeSingle() : { data: null };
+  const personne = [pr?.prenom, pr?.nom].filter(Boolean).join(' ') || 'le client';
+  const adresse = o?.adresse ?? 'le logement';
+  if (manual.length && !t.controles?.equipe_prevenue) {
+    await alertAdmins(db, `steeve-pieces-equipe-${taskId}`, 'Pièces de régie à réunir à la main',
+      `${personne} — ${adresse} : la régie demande aussi ${manual.join(', ')} (Steeve ne peut pas les réunir seul).`, '/admin/steeve', 'urgent');
+  }
+  if (!auto.length) {
+    await db.from('steeve_actions').update({ ...free, statut: 'bloque', motif: `Pièces à réunir par l'équipe : ${manual.join(', ')}`, controles: { ...t.controles, equipe_prevenue: true } }).eq('id', taskId);
+    return;
+  }
+
+  // Pièces du dossier (personne principale), les plus récentes d'abord ; seulement PDF et photos lisibles.
+  const types = [...new Set(auto.flatMap((c) => REGIE_PIECES[c].types))];
+  const { data: rows } = await db.from('documents').select('id, type_document, nom, type, url, date_upload, created_at, taille, candidate_id')
+    .eq('client_id', t.client_id).in('type_document', types).order('date_upload', { ascending: false }).limit(40);
+  const perType = new Map<string, number>();
+  const docs: DocCandidate[] = [];
+  for (const r of (rows ?? []).filter((x: any) => !x.candidate_id)) {
+    const mime = mimeOf(r);
+    if (mime !== 'application/pdf' && !isImage(mime)) continue;
+    if (Number(r.taille) > MAX_PIECE_BYTES) continue;
+    const n = perType.get(r.type_document) ?? 0;
+    if (n >= (r.type_document === 'fiche_salaire' ? 5 : 2)) continue;
+    const { data: blob } = await db.storage.from('client-documents').download(r.url);
+    if (!blob) continue;
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    if (bytes.length > MAX_PIECE_BYTES) continue;
+    perType.set(r.type_document, n + 1);
+    docs.push({ id: r.id, type_document: r.type_document, nom: r.nom || 'piece', mime, url: r.url, date_upload: r.date_upload ?? r.created_at, bytes });
+  }
+  let lectures: any[] = [];
+  if (docs.length) {
+    if (!deps.callModel) {
+      await db.from('steeve_actions').update({ ...free, statut: 'a_faire', note: 'Lecture des pièces indisponible (clé IA absente).' }).eq('id', taskId);
+      return;
+    }
+    const r = await readPieces(deps.callModel, docs, personne);
+    lectures = r.lectures;
+    rep.cout_usd += r.cost;
+  }
+  const res = evaluatePieces(auto, docs, lectures, now);
+  const missing = res.filter((x) => !x.ok && x.bloquante);
+  const optional = res.filter((x) => !x.ok && !x.bloquante);
+  const ready = res.filter((x) => x.ok);
+  const controles = { ...t.controles, equipe_prevenue: true, pret: ready.map((x) => x.label), manque: missing.map((x) => `${x.label} (${x.raison})`), non_bloquant: optional.map((x) => x.label) };
+
+  if (missing.length) {
+    // Demande au client (une fois, puis un rappel par jour, deux au plus), et suivi dans « Mes documents ».
+    const relances = Number(t.controles?.relances ?? 0);
+    const cle = `pieces-regie:${taskId}:${relances}`;
+    if (mode === 'a_blanc') {
+      await db.from('steeve_actions').update({ ...free, statut: 'a_blanc', controles, note: `Mode à blanc : aurait demandé au client ${missing.map((x) => x.label).join(', ')}.` }).eq('id', taskId);
+      return;
+    }
+    if (!inClientHours(now)) {
+      await db.from('steeve_actions').update({ ...free, statut: 'a_faire', controles, note: 'Message au client entre 8 h et 20 h.' }).eq('id', taskId);
+      return;
+    }
+    if (relances >= 3) {
+      await alertAdmins(db, `steeve-pieces-relances-${taskId}`, 'Pièces de régie toujours manquantes', `${personne} — ${adresse} : ${missing.map((x) => x.label).join(', ')} toujours manquant(s) après 2 rappels.`, '/admin/steeve', 'urgent');
+      await db.from('steeve_actions').update({ ...free, statut: 'en_attente_client', controles, echeance: null, note: 'Rappels épuisés : équipe prévenue.' }).eq('id', taskId);
+      return;
+    }
+    const deja = ready.length ? ` J'ai déjà ${ready.map((x) => x.label).join(', ')}.` : '';
+    const text = `${relances ? 'Petit rappel : p' : 'P'}our votre candidature à ${adresse}, la régie demande ${res.map((x) => x.label).join(', ')}.${deja} Il me manque : ${missing.map((x) => `${x.label} (${x.raison})`).join(', ')}. Déposez ${missing.length > 1 ? 'ces documents' : 'ce document'} dans « Mes documents » (https://logisorama.ch/client/documents) : dès réception, je l'envoie moi-même à la régie. L'équipe Immo-rama.ch`;
+    const { data: conv } = await db.from('conversations').select('id').eq('client_id', String(t.client_id)).eq('conversation_type', 'client-agent').order('last_message_at', { ascending: false }).limit(1);
+    if (conv?.[0]?.id) {
+      const { data: dup } = await db.from('messages').select('id').eq('conversation_id', conv[0].id).eq('payload->>steeve_cle', cle).limit(1);
+      if (!dup?.length) await db.from('messages').insert({ conversation_id: conv[0].id, sender_id: 'steeve', sender_type: 'assistant', content: `Bonjour ${pr?.prenom ?? ''}, ${text.charAt(0).toLowerCase()}${text.slice(1)}`.replace('Bonjour , ', 'Bonjour, '), payload: { steeve_operateur: true, steeve_cle: cle } });
+    }
+    for (const x of missing) {
+      const docType = REGIE_PIECES[x.code].types[0];
+      const { data: open } = await db.from('document_requests').select('id').eq('client_id', t.client_id).eq('document_type', docType).eq('status', 'pending').limit(1);
+      if (!open?.length) await db.from('document_requests').insert({ client_id: t.client_id, document_type: docType, document_label: x.label, status: 'pending', note: `Demandé par la régie pour ${adresse}` });
+    }
+    rep.pieces = (rep.pieces ?? 0) + 1;
+    await db.from('steeve_actions').update({ ...free, statut: 'en_attente_client', controles: { ...controles, relances: relances + 1 }, echeance: new Date(now.getTime() + 24 * 3600 * 1000).toISOString(), note: `Demandé au client : ${missing.map((x) => x.label).join(', ')}` }).eq('id', taskId);
+    return;
+  }
+
+  // Tout est prêt : envoi à la régie, en réponse à son e-mail, depuis relocation@.
+  const to = String(t.destinataire ?? '').toLowerCase();
+  if (!isEmail(to) || PORTAL.test(to) || /no-?reply|ne-pas-repondre/i.test(to)) {
+    await alertAdmins(db, `steeve-pieces-portail-${taskId}`, 'Pièces prêtes à déposer sur le portail', `${personne} — ${adresse} : ${ready.map((x) => x.label).join(', ')} prêtes ; la demande vient d'un portail (${to || 'adresse inconnue'}) : à déposer sur le portail.`, '/admin/steeve', 'urgent');
+    await db.from('steeve_actions').update({ ...free, statut: 'bloque', controles, motif: 'Demande reçue d’un portail : dépôt à faire sur le portail (pièces prêtes).' }).eq('id', taskId);
+    return;
+  }
+  if (!inSendingHours(now)) {
+    await db.from('steeve_actions').update({ ...free, statut: 'a_faire', controles, note: 'Pièces prêtes : envoi à la régie entre 7 h et 20 h.' }).eq('id', taskId);
+    return;
+  }
+  if (mode === 'a_blanc') {
+    await db.from('steeve_actions').update({ ...free, statut: 'a_blanc', controles, note: `Mode à blanc : aurait envoyé à ${to} ${ready.map((x) => x.label).join(', ')}.` }).eq('id', taskId);
+    rep.dossiers_a_blanc++;
+    return;
+  }
+  if (!(await mail.ready(BOX_RELOCATION))) {
+    await db.from('steeve_actions').update({ ...free, statut: 'bloque_acces', controles, motif: 'Boîte relocation@immo-rama.ch indisponible : aucun envoi depuis une autre adresse.' }).eq('id', taskId);
+    return;
+  }
+  const attachments = ready.flatMap((x) => x.docs).map((d) => ({ filename: d.nom, contentType: d.mime, bytes: d.bytes! }));
+  if (attachments.reduce((s, a) => s + a.bytes.length, 0) > MAX_MAIL_BYTES) {
+    await db.from('steeve_actions').update({ ...free, statut: 'bloque', controles, motif: 'Pièces trop lourdes pour un e-mail (15 Mo) : à envoyer par l’équipe.' }).eq('id', taskId);
+    return;
+  }
+  const { data: src } = t.controles?.mail_id ? await db.from('mailbox_emails').select('message_key, subject').eq('id', t.controles.mail_id).maybeSingle() : { data: null };
+  const subject0 = String(t.objet || src?.subject || `Candidature ${adresse}`);
+  const subject = /^re\s*:/i.test(subject0) ? subject0 : `Re: ${subject0}`;
+  const id = messageId('immo-rama.ch');
+  const optionalTxt = optional.length ? `\n\n${optional.map((x) => x.label).join(', ')} : à suivre dès que nous l'aurons.` : '';
+  const raw = buildMailWithAttachments({
+    from: BOX_RELOCATION, fromName: 'Immo-rama.ch – Relocation', to, subject, id, inReplyTo: src?.message_key ?? null, date: now,
+    text: `Bonjour,\n\nSuite à votre demande, veuillez trouver ci-joint pour la candidature de ${personne} (${adresse}) : ${ready.map((x) => x.label).join(', ')}.${optionalTxt}\n\nNous restons à votre disposition.\n\nMeilleures salutations,\n${SIGNATURE_DOSSIERS}`,
+    attachments,
+  });
+  await db.from('steeve_actions').update({ ...free, statut: 'en_cours', controles, mailbox: BOX_RELOCATION }).eq('id', taskId);
+  const r = await sendTracked(deps, { key: t.idempotency_key, box: BOX_RELOCATION, to: [to], raw, id, okStatut: 'en_attente_regie', label: `pièces pour ${adresse}` }, rep);
+  if (r === 'ok') {
+    rep.pieces = (rep.pieces ?? 0) + 1;
+    await messageClient(db, t.client_id, `Bonjour ${pr?.prenom ?? ''}, j'ai envoyé à la régie ${ready.map((x) => x.label).join(', ')} pour ${adresse}. Je vous tiens au courant dès sa réponse. L'équipe Immo-rama.ch`.replace('Bonjour , ', 'Bonjour, '), now);
+    await db.from('document_requests').update({ status: 'fulfilled', fulfilled_at: at }).eq('client_id', t.client_id).eq('status', 'pending').ilike('note', `Demandé par la régie pour ${adresse}%`);
+  }
+}
+
 // ---------- passage ----------
 
 /** Exécute une tâche du registre, réservée avec un jeton (jamais deux exécutants sur la même tâche). */
@@ -941,6 +1096,8 @@ async function runTask(deps: Required<OperatorDeps>, mode: Mode, t: any, lessons
     await handlePiece(deps, mode, t.id, rep);
   } else if (t.kind === 'recherche_offres') {
     await handleRechercheOffres(deps, mode, t.id, rep);
+  } else if (t.kind === 'envoi_piece_regie') {
+    await handlePiecesRegie(deps, mode, t.id, rep);
   } else {
     await db.from('steeve_actions').update({ statut: 'a_faire', verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() }).eq('id', t.id);
   }
@@ -951,7 +1108,7 @@ async function runTask(deps: Required<OperatorDeps>, mode: Mode, t: any, lessons
   }
 }
 
-const TASK_KINDS = ['demande_qr', 'relance_annonceur', 'envoi_dossier', 'demande_visite', 'demande_piece', 'recherche_offres'];
+const TASK_KINDS = ['demande_qr', 'relance_annonceur', 'envoi_dossier', 'demande_visite', 'demande_piece', 'recherche_offres', 'envoi_piece_regie'];
 /** Tâches sans effet hors de l'application (messages au client) : pas limitées aux heures d'envoi aux régies. */
 const INTERNAL_KINDS = ['demande_piece', 'recherche_offres'];
 
@@ -1022,6 +1179,15 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
 
     // 6. Réponses des régies et annonceurs reçues dans visites@ et relocation@ (lot 5).
     await step('courrier', async () => { await processInbox({ db, callModel: deps.callModel, now: deps.now }, rep.mode, rep); });
+
+    // 6 bis. Pièces demandées par les régies (créées par la lecture du courrier) et rappels au client après 24 h.
+    await step('pieces_regie', async () => {
+      await db.from('steeve_actions').update({ statut: 'a_faire', updated_at: now.toISOString() })
+        .eq('kind', 'envoi_piece_regie').eq('statut', 'en_attente_client').lt('echeance', now.toISOString());
+      const { data: tasks } = await db.from('steeve_actions').select('id, kind, offre_id, client_id').eq('statut', 'a_faire').eq('responsable', 'steeve')
+        .eq('kind', 'envoi_piece_regie').order('created_at').limit(5);
+      for (const t of tasks ?? []) await runTask(deps, rep.mode, t, lessons, rep);
+    });
 
     // 2. Demandes de formulaire Flatfox (chat + e-mail).
     await step('qr', async () => {

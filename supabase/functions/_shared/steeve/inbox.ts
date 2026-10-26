@@ -208,7 +208,7 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
             }
             notes.push(`${o.adresse} : visite fixée au ${r.quand}${r.deja ? ' (déjà enregistrée)' : ''}`);
             if (r.message_requis && !r.deja) {
-              await tellClient(db, o.client_id, `visite:${r.visite_id}:${start?.toISOString()}`, `Bonjour ${prenom}, bonne nouvelle : la visite de ${o.adresse} est fixée au ${r.quand}. Merci de venir avec votre dossier complet (pièce d'identité, 3 dernières fiches de salaire, extrait des poursuites). En cas d'empêchement, prévenez-nous au plus vite au +41 21 634 28 39. L'équipe Immo-rama.ch`, now);
+              await tellClient(db, o.client_id, `visite:${r.visite_id}:${start?.toISOString()}`, `Bonjour ${prenom}, bonne nouvelle : la visite de ${o.adresse} est fixée au ${r.quand}, confirmée par l'annonceur. Je l'ai mise dans votre agenda Logisorama. Merci de venir avec votre dossier complet (pièce d'identité, 3 dernières fiches de salaire, extrait des poursuites). En cas d'empêchement, prévenez-nous au plus vite au +41 21 634 28 39. L'équipe Immo-rama.ch`, now);
             }
             break;
           }
@@ -241,13 +241,19 @@ export async function processInbox(deps: { db: any; callModel: CallModel | null;
             break;
           }
           case 'pieces_demandees': {
-            const pieces = (Array.isArray(cls.pieces) ? cls.pieces : []).filter((p: string) => PIECES[p]).map((p: string) => PIECES[p]);
-            await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: 'Dossier : la régie demande un complément, votre agent vous le précise.' });
-            notes.push(`${o.adresse} : pièces demandées (${pieces.join(', ') || 'à préciser'})`);
-            if (pieces.length) {
-              await tellClient(db, o.client_id, `pieces:${m.id}:${o.offre_id}`, `Bonjour ${prenom}, pour votre candidature à ${o.adresse}, la régie demande : ${pieces.join(', ')}. Déposez-les dans « Mes documents » : https://logisorama.ch/client/documents. L'équipe Immo-rama.ch`, now);
-            }
-            await alert(db, `steeve-pieces-${m.id}`, 'La régie demande des pièces', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume}`, link, 'urgent');
+            // Steeve réunit lui-même les pièces (dossier du client) et les envoie à la régie ; ce qui manque est
+            // demandé au client et part dès son dépôt (tâche envoi_piece_regie, traitée juste après ce passage).
+            const codes = (Array.isArray(cls.pieces) ? cls.pieces : []).filter((p: string) => PIECES[p]);
+            await db.rpc('steeve_flag_offre', { p_offre_id: o.offre_id, p_note: 'Dossier : la régie demande un complément, Steeve s’en occupe.' });
+            const { error: taskError } = await db.from('steeve_actions').insert({
+              kind: 'envoi_piece_regie', canal: 'email', source: 'auto', responsable: 'steeve', statut: 'a_faire',
+              client_id: o.client_id, offre_id: o.offre_id, mailbox: 'relocation@immo-rama.ch', destinataire: m.from_email,
+              objet: String(m.subject ?? '').slice(0, 250), controles: { pieces: codes.length ? codes : ['autre'], mail_id: m.id },
+              idempotency_key: `piece_regie:${m.id}:${o.offre_id}`, updated_at: now.toISOString(),
+            });
+            if (taskError && taskError.code !== '23505') throw new Error(`pièces : ${taskError.message}`);
+            notes.push(`${o.adresse} : pièces demandées (${codes.map((p: string) => PIECES[p]).join(', ') || 'à préciser'}) — Steeve les réunit`);
+            await alert(db, `steeve-pieces-${m.id}`, 'La régie demande des pièces', `${prenom} ${o.client_nom ?? ''} — ${o.adresse} : ${resume} Steeve cherche les pièces dans le dossier et les envoie ; ce qui manque est demandé au client.`, link, 'normal');
             break;
           }
           case 'annonce_retiree':
