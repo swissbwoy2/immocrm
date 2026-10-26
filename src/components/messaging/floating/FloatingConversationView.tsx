@@ -416,7 +416,7 @@ export function FloatingConversationView({ conversationId, onBack }: Props) {
       <SteeveHandoffBar conversationId={conversationId} />
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto bg-muted/30 p-3">
+      <div ref={scrollRef} data-imr-chat-scroll className="flex-1 overflow-y-auto bg-muted/30 p-3">
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

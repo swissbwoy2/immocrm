@@ -146,7 +146,7 @@ export function FloatingMessenger() {
               exit="exit"
               className={
                 isMobile
-                  ? 'fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-3xl bg-background border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden'
+                  ? 'imr-kb-sheet fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-3xl bg-background border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden'
                   : 'fixed z-50 right-[180px] min-[1800px]:right-[200px] bottom-6 w-[380px] h-[min(560px,calc(100dvh-48px))] rounded-2xl bg-background border border-border/70 shadow-[0_0_0_1px_rgba(0,0,0,0.02),0_2px_6px_rgba(0,0,0,0.04),0_12px_32px_rgba(0,0,0,0.12)] flex flex-col overflow-hidden'
               }
               style={isMobile ? { paddingBottom: 'env(safe-area-inset-bottom, 0px)' } : undefined}

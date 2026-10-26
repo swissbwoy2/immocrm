@@ -1742,6 +1742,37 @@ html.imr-native-shell body {
   overscroll-behavior: none;
 }
 
+/* ==== Clavier ouvert (iPhone, app et Safari) : tout tient au-dessus du clavier ==== */
+/* Variables publiées par KeyboardInset : --imr-vv-top / --imr-vv-h = zone visible au-dessus du clavier. */
+html.imr-kb-open .imr-mobile-shell {
+  top: var(--imr-vv-top, 0px) !important;
+  bottom: auto !important;
+  height: var(--imr-vv-h, 100dvh) !important;
+}
+/* Panneaux de discussion en feuille (messagerie flottante, Steeve partenaires) : collés au clavier. */
+html.imr-kb-open .imr-kb-sheet {
+  top: calc(var(--imr-vv-top, 0px) + max(env(safe-area-inset-top, 0px), 8px)) !important;
+  bottom: auto !important;
+  height: calc(var(--imr-vv-h, 100dvh) - max(env(safe-area-inset-top, 0px), 8px)) !important;
+  padding-bottom: 0 !important;
+}
+/* Barre de saisie : la marge de l'indicateur d'accueil est inutile au-dessus du clavier. */
+html.imr-kb-open .imr-kb-composer {
+  padding-bottom: 0.5rem !important;
+}
+/* Steeve public / candidat : le panneau monte au-dessus du clavier, la mascotte s'efface le temps de l'écriture. */
+html.imr-kb-open .imr-kb-float {
+  top: calc(var(--imr-vv-top, 0px) + max(env(safe-area-inset-top, 0px), 8px)) !important;
+  bottom: auto !important;
+}
+html.imr-kb-open .imr-kb-float .imr-kb-float-panel {
+  height: calc(var(--imr-vv-h, 100dvh) - max(env(safe-area-inset-top, 0px), 8px) - 8px) !important;
+  max-height: 560px;
+}
+html.imr-kb-open .imr-kb-float .imr-kb-hide {
+  display: none !important;
+}
+
 /* ==== Mode immersif mobile (conversation plein écran) ==== */
 /* Aucun bouton flottant global ne doit recouvrir la barre de saisie. */
 body.imr-immersive [data-floating-widget],
