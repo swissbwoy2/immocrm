@@ -17486,6 +17486,38 @@ export type Database = {
       admin_copilot_blocages: { Args: { p_days?: number }; Returns: Json }
       admin_copilot_client: { Args: { p_query: string }; Returns: Json }
       admin_copilot_kpi: { Args: never; Returns: Json }
+      admin_copilot_offres: {
+        Args: {
+          p_client?: string
+          p_client_id?: string
+          p_clients_actifs?: boolean
+          p_etape?: string
+          p_jours?: number
+          p_limite?: number
+          p_statut?: string
+          p_suivi_auto?: boolean
+        }
+        Returns: Json
+      }
+      admin_copilot_postulations: {
+        Args: {
+          p_client?: string
+          p_client_id?: string
+          p_etat?: string
+          p_limite?: number
+        }
+        Returns: Json
+      }
+      admin_copilot_visites: {
+        Args: {
+          p_client?: string
+          p_client_id?: string
+          p_jours?: number
+          p_limite?: number
+          p_periode?: string
+        }
+        Returns: Json
+      }
       admin_delete_shared_mailbox: {
         Args: { p_id: string }
         Returns: undefined
@@ -18701,6 +18733,14 @@ export type Database = {
       }
       start_candidat_trial: { Args: never; Returns: string }
       steeve_admin_admit: { Args: { p_user_id: string }; Returns: Json }
+      steeve_admin_clients_vises: {
+        Args: { p_client: string; p_client_id: string }
+        Returns: {
+          client: string
+          client_id: string
+          statut: string
+        }[]
+      }
       steeve_admin_conv_for: { Args: { p_user: string }; Returns: string }
       steeve_admin_conversation: { Args: never; Returns: string }
       steeve_admin_ecrire: {
