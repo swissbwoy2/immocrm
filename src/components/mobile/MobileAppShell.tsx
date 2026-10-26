@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Menu, MessageCircle } from 'lucide-react';
+import { NOTIFICATIONS_CHANGED_EVENT } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useClientParcours } from '@/hooks/useClientParcours';
 import { useSidebar } from '@/components/ui/sidebar';
@@ -117,13 +118,13 @@ function useClientUnread(userId: string | null) {
   useEffect(() => {
     if (!userId) return;
     let alive = true;
-    (async () => {
+    const load = async () => {
       const { data, error } = await supabase
         .from('notifications')
         .select('type')
         .eq('user_id', userId)
         .eq('read', false)
-        .limit(200);
+        .limit(1000);
       if (!alive || error || !data) return;
       const count = (types: string[]) => data.filter((n: { type: string }) => types.includes(n.type)).length;
       setUnread({
@@ -131,8 +132,20 @@ function useClientUnread(userId: string | null) {
         offres: count(['new_offer']),
         agenda: count(['new_visit', 'visit_reminder']),
       });
-    })();
-    return () => { alive = false; };
+    };
+    void load();
+    // Mise à jour dès qu'une notification est lue ou reçue, au retour sur l'app et toutes les minutes.
+    const onChanged = () => void load();
+    const onVisible = () => { if (!document.hidden) void load(); };
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
+    document.addEventListener('visibilitychange', onVisible);
+    const timer = window.setInterval(() => { if (!document.hidden) void load(); }, 60_000);
+    return () => {
+      alive = false;
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, onChanged);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.clearInterval(timer);
+    };
   }, [userId]);
   return unread;
 }
