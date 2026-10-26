@@ -775,7 +775,7 @@ function buildClientEmail(p: ClientEmailParams): { subject: string; html: string
 
   const html = renderCorporateEmail({ title, preview, category: 'VOTRE MANDAT',
     bodyHtml: (p.isTest ? emailNotice('<strong>Aperçu de TEST</strong> — aucun mandat n’a été modifié.', 'warning') : '') + bodyHtml + emailButton('Accéder à mon espace', dashboardUrl),
-    footerHtml: 'Immo-Rama.ch · CHE-442.303.796 · Ch. de la Vignettaz 7 · 1023 Crissier<br><a href="mailto:info@immo-rama.ch" style="color:inherit;text-decoration:underline;">info@immo-rama.ch</a> · Email transactionnel lié à votre mandat de recherche.',
+    footerHtml: 'Immo-Rama.ch · CHE-442.303.796 · Chemin de l’Esparcette 5 · 1023 Crissier<br><a href="mailto:info@immo-rama.ch" style="color:inherit;text-decoration:underline;">info@immo-rama.ch</a> · Email transactionnel lié à votre mandat de recherche.',
   });
 
   return { subject: finalSubject, html };

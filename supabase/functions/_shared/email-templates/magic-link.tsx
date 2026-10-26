@@ -13,15 +13,15 @@ export const MagicLinkEmail = ({
   siteName,
   confirmationUrl,
 }: MagicLinkEmailProps) => (
-  <EmailLayout lang="en" category="ACCOUNT & SECURITY" preview={`Your login link for ${siteName}`}>
-<EmailHeading>Your login link</EmailHeading>
+  <EmailLayout lang="fr" category="COMPTE ET SÉCURITÉ" preview={`Votre lien de connexion à ${siteName}`}>
+<EmailHeading>Votre lien de connexion</EmailHeading>
         <EmailText>
-          Click the button below to log in to {siteName}. This link will expire
-          shortly.
+          Cliquez sur le bouton ci-dessous pour vous connecter à {siteName}. Ce lien
+          expire rapidement.
         </EmailText>
-        <EmailButton href={confirmationUrl}>Log In</EmailButton>
+        <EmailButton href={confirmationUrl}>Me connecter</EmailButton>
         <EmailText muted>
-          If you didn't request this link, you can safely ignore this email.
+          Si vous n’avez pas demandé ce lien, vous pouvez ignorer cet e-mail.
         </EmailText>
 
 </EmailLayout>

@@ -172,7 +172,7 @@ serve(async (req) => {
 
     // Initialize Resend
     const resend = new Resend(Deno.env.get('RESEND_API_KEY'), "import-clients-csv");
-    const appUrl = Deno.env.get('VITE_SUPABASE_URL')?.replace('.supabase.co', '.lovable.app').replace('https://', 'https://app-') || 'https://ydljsdscdnqrqnjvqela.lovable.app';
+    const appUrl = 'https://logisorama.ch';
 
     // Process each client
     for (const clientData of clients) {
@@ -329,7 +329,7 @@ serve(async (req) => {
               );
 
               await resend.emails.send({
-                from: 'Immo-Rama <onboarding@resend.dev>',
+                from: 'Logisorama <support@logisorama.ch>',
                 to: [clientData.user.email],
                 subject: '🎉 Votre compte Immo-Rama est maintenant activé !',
                 html: emailHtml,
@@ -393,7 +393,7 @@ serve(async (req) => {
               );
 
               await resend.emails.send({
-                from: 'Immo-Rama <onboarding@resend.dev>',
+                from: 'Logisorama <support@logisorama.ch>',
                 to: [clientData.user.email],
                 subject: 'Bienvenue chez Immo-Rama - Vos identifiants de connexion',
                 html: emailHtml,

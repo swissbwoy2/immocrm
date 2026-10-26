@@ -13,7 +13,7 @@ const corsHeaders = {
 const MANDAT_DURATION_DAYS = 90;
 const REMINDER_WINDOW_DAYS = 30; // À partir de J+60 (= 30 jours restants)
 const REFUND_ELIGIBILITY_DAY = 80;
-const APP_BASE_URL = "https://immocrm.lovable.app";
+const APP_BASE_URL = "https://logisorama.ch";
 
 function daysBetween(from: Date, to: Date): number {
   return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));

@@ -17,25 +17,25 @@ export const SignupEmail = ({
   recipient,
   confirmationUrl,
 }: SignupEmailProps) => (
-  <EmailLayout lang="en" category="ACCOUNT & SECURITY" preview={`Confirm your email for ${siteName}`}>
-<EmailHeading>Confirm your email</EmailHeading>
+  <EmailLayout lang="fr" category="COMPTE ET SÉCURITÉ" preview={`Confirmez votre adresse e-mail pour ${siteName}`}>
+<EmailHeading>Confirmez votre adresse e-mail</EmailHeading>
         <EmailText>
-          Thanks for signing up for{' '}
+          Merci pour votre inscription sur{' '}
           <a href={siteUrl} style={emailStyles.link}>
             <strong>{siteName}</strong>
           </a>
           !
         </EmailText>
         <EmailText>
-          Please confirm your email address (
+          Confirmez votre adresse e-mail (
           <a href={`mailto:${recipient}`} style={emailStyles.link}>
             {recipient}
           </a>
-          ) by clicking the button below:
+          ) en cliquant sur le bouton ci-dessous :
         </EmailText>
-        <EmailButton href={confirmationUrl}>Verify Email</EmailButton>
+        <EmailButton href={confirmationUrl}>Confirmer mon adresse</EmailButton>
         <EmailText muted>
-          If you didn't create an account, you can safely ignore this email.
+          Si vous n’avez pas créé de compte, vous pouvez ignorer cet e-mail.
         </EmailText>
 
 </EmailLayout>

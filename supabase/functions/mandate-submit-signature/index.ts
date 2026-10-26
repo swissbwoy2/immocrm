@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       // Extract project domain for tracking link
       const projectUrl = supabaseUrl.replace("https://", "").replace(".supabase.co", "");
-      const trackingUrl = `https://immocrm.lovable.app/mandat-v3/suivi?token=${mandate.access_token}`;
+      const trackingUrl = `https://logisorama.ch/mandat-v3/suivi?token=${mandate.access_token}`;
 
       try {
         await sendTrackedEmail("https://api.resend.com/emails", {

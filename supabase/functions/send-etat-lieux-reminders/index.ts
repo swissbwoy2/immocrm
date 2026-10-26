@@ -208,7 +208,7 @@ serve(async (req) => {
           });
 
           const emailResponse = await resend.emails.send({
-            from: "ImmoRama <noreply@resend.dev>",
+            from: "Logisorama <support@logisorama.ch>",
             to: [recipientEmail],
             subject: `🔑 Rappel : État des lieux demain - ${adresse}`,
             html: emailHtml,

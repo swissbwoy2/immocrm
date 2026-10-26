@@ -68,7 +68,7 @@ const TIERS: Tier[] = [
   },
 ];
 
-const OFFICE_ADDRESS = "Chemin de l'Esparsette 5, 1023 Crissier";
+const OFFICE_ADDRESS = "Chemin de l'Esparcette 5, 1023 Crissier";
 
 function normalizePhone(raw: string | null | undefined): string | null {
   if (!raw) return null;

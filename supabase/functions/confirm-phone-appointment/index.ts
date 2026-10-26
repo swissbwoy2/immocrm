@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     const durationLabel = durationMin > 0 && durationMin < 600 ? `${durationMin} minutes` : '30 minutes';
 
     const ADMIN_EMAIL = 'info@immo-rama.ch';
-    const OFFICE_ADDRESS = "Chemin de l'Esparsette 5, 1023 Crissier";
+    const OFFICE_ADDRESS = "Chemin de l'Esparcette 5, 1023 Crissier";
     const OFFICE_MAPS_URL =
       'https://www.google.com/maps/search/?api=1&query=' +
       encodeURIComponent(OFFICE_ADDRESS);

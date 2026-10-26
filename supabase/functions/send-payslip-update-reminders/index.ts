@@ -9,7 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const APP_BASE_URL = 'https://immocrm.lovable.app';
+const APP_BASE_URL = 'https://logisorama.ch';
 
 function formatDateFr(d: Date | string): string {
   // date-fr.ts : Europe/Zurich, date seule sans décalage de jour

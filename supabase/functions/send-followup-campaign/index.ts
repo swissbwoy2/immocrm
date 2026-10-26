@@ -214,7 +214,7 @@ function renderEmail(campaign: Campaign, lead: LeadData, unsubscribeToken: strin
         `<p style="margin:0;font-size:13px;line-height:20px;"><a href="${PUBLIC_BASE_URL}/?${utm('avis_google_site')}#avis" style="color:${T.green};text-decoration:underline;">Voir tous les témoignages sur le site →</a></p>` +
       `</td></tr></table>` +
       emailButton(`📍  Préférez un rendez-vous à nos bureaux ?`, `https://logisorama.ch/?${utm('cta_rdv_bureau_final')}#analyse-dossier`, 'secondary') +
-      emailParagraph("30 min avec un expert · Chemin de l'Esparsette 5, 1023 Crissier", true),
+      emailParagraph("30 min avec un expert · Chemin de l'Esparcette 5, 1023 Crissier", true),
     footerHtml: `CHE-442.303.796 · Suisse romande<br>Tu reçois cet email car tu nous as contactés via une de nos campagnes.<br><a href="${escapeHtml(unsubscribeUrl)}" style="color:${T.muted};text-decoration:underline;">Se désinscrire</a>`,
   });
 }

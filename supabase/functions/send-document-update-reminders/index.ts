@@ -10,7 +10,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const APP_BASE_URL = 'https://immocrm.lovable.app';
+const APP_BASE_URL = 'https://logisorama.ch';
 const COOLDOWN_DAYS = 7; // anti-spam : pas plus d'1 rappel par 7 jours
 const COOLDOWN_DAYS_EXPIRED = 5; // urgent : tous les 5 jours
 

@@ -13,16 +13,16 @@ export const RecoveryEmail = ({
   siteName,
   confirmationUrl,
 }: RecoveryEmailProps) => (
-  <EmailLayout lang="en" category="ACCOUNT & SECURITY" preview={`Reset your password for ${siteName}`}>
-<EmailHeading>Reset your password</EmailHeading>
+  <EmailLayout lang="fr" category="COMPTE ET SÉCURITÉ" preview={`Réinitialisez votre mot de passe ${siteName}`}>
+<EmailHeading>Réinitialisez votre mot de passe</EmailHeading>
         <EmailText>
-          We received a request to reset your password for {siteName}. Click
-          the button below to choose a new password.
+          Nous avons reçu une demande de réinitialisation de votre mot de passe
+          {siteName}. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.
         </EmailText>
-        <EmailButton href={confirmationUrl}>Reset Password</EmailButton>
+        <EmailButton href={confirmationUrl}>Choisir un nouveau mot de passe</EmailButton>
         <EmailText muted>
-          If you didn't request a password reset, you can safely ignore this
-          email. Your password will not be changed.
+          Si vous n’avez rien demandé, ignorez cet e-mail : votre mot de passe
+          reste inchangé.
         </EmailText>
 
 </EmailLayout>
