@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Camera, Save, Mail, Phone, User, Settings, Shield, Bell, RefreshCw, CalendarDays, Target, Compass } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { notifBannersEnabled, setNotifBannersEnabled } from '@/hooks/useNotifications';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { EmailConfigurationDialog } from '@/components/EmailConfigurationDialog';
@@ -22,7 +23,7 @@ type SectionKey = 'profil' | 'notifications' | 'agenda' | 'securite' | 'objectif
 
 const SECTIONS: SettingsSection<SectionKey>[] = [
   { key: 'profil', label: 'Profil', sub: 'Photo et coordonnées', icon: User },
-  { key: 'notifications', label: 'Notifications', sub: 'E-mails et envoi SMTP', icon: Bell },
+  { key: 'notifications', label: 'Notifications', sub: 'Application, e-mails et SMTP', icon: Bell },
   { key: 'agenda', label: 'Agenda', sub: 'Google Agenda', icon: CalendarDays },
   { key: 'securite', label: 'Sécurité', sub: 'Mot de passe et privilèges', icon: Shield },
   { key: 'objectifs', label: 'Objectifs', sub: 'Objectifs par défaut des agents', icon: Target },
@@ -42,6 +43,7 @@ export default function AdminParametres() {
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
   const [notificationsEmail, setNotificationsEmail] = useState(true);
+  const [bannersOn, setBannersOn] = useState(() => notifBannersEnabled());
   const [emailConfigOpen, setEmailConfigOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [forcingUpdate, setForcingUpdate] = useState(false);
@@ -347,6 +349,21 @@ export default function AdminParametres() {
               {/* Préférences de notification */}
               <SettingsCard id="admin-param-notifs" icon={Bell} title="Notifications" description="Gérez vos préférences de notification">
                 <SettingsList>
+                  <SettingRow
+                    htmlFor="notifications-bannieres"
+                    label="Notifications dans l'application"
+                    description="Afficher une bannière en direct à chaque nouvelle notification (sur cet appareil). La cloche reste toujours à jour."
+                  >
+                    <Switch
+                      id="notifications-bannieres"
+                      checked={bannersOn}
+                      onCheckedChange={(checked) => {
+                        setBannersOn(checked);
+                        setNotifBannersEnabled(checked);
+                        toast.success(checked ? 'Bannières de notification activées' : 'Bannières de notification désactivées');
+                      }}
+                    />
+                  </SettingRow>
                   <SettingRow
                     htmlFor="notifications-email"
                     label="Notifications par email"
