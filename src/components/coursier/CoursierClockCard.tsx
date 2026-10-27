@@ -55,6 +55,11 @@ export function CoursierClockCard({ time }: Props) {
           </Button>
         )}
       </div>
+      {active && elapsedSeconds >= 4 * 3600 && (
+        <p className="mt-3 rounded-2xl bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+          Vous êtes en service depuis plus de {Math.floor(elapsedSeconds / 3600)} h. Si vous avez terminé, pointez votre départ maintenant : l'équipe vérifie les sessions trop longues avant de payer.
+        </p>
+      )}
       <p className="mt-3 border-t border-border/60 pt-3 text-sm text-muted-foreground">
         Paie au <strong>temps travaillé</strong> : {formatChf(tarifHoraire)} par heure (pas par visite). Pointez votre <strong>arrivée</strong> au début du service, puis votre <strong>départ</strong> à la fin.
       </p>

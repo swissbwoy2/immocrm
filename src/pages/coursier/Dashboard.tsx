@@ -155,7 +155,7 @@ export default function CoursierDashboard() {
   /** Chiffres secondaires (section « Mes chiffres »). */
   const kpis = [
     { icon: Timer, label: 'Temps ce mois', value: formatDuration(time.minutesThisMonth) },
-    { icon: TrendingUp, label: 'Gains totaux', value: formatChf(time.earningsTotal) },
+    { icon: TrendingUp, label: 'À recevoir', value: formatChf(time.earningsAPayer, 2) },
     { icon: CheckCircle, label: 'Terminées ce mois', value: String(stats.completedThisMonth) },
     { icon: Clock, label: 'En cours', value: String(stats.inProgress) },
   ];

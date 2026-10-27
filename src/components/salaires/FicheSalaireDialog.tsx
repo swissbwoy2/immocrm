@@ -40,7 +40,6 @@ interface MissionCoursier {
   paye_coursier: boolean;
 }
 
-const TARIF_COURSIER = 5; // CHF par visite
 
 export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes, defaultMonth, defaultYear }: Props) {
   const queryClient = useQueryClient();
@@ -101,31 +100,39 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
       if (!employeData?.user_id) return [];
       const { data: coursier } = await supabase
         .from('coursiers')
-        .select('id')
+        .select('id, tarif_horaire')
         .eq('user_id', employeData.user_id)
         .single();
       if (!coursier) return [];
+      const tarif = Number((coursier as any).tarif_horaire) || 20;
 
       const startDate = `${annee}-${String(mois).padStart(2, '0')}-01`;
       const endMonth = Number(mois) === 12 ? 1 : Number(mois) + 1;
       const endYear = Number(mois) === 12 ? Number(annee) + 1 : Number(annee);
       const endDate = `${endYear}-${String(endMonth).padStart(2, '0')}-01`;
 
+      // Paie coursier = temps pointé (arrivée → départ) × tarif horaire ; sessions exclues non comptées.
       const { data, error } = await supabase
-        .from('visites')
-        .select('id, adresse, date_visite, paye_coursier')
+        .from('coursier_time_entries')
+        .select('*')
         .eq('coursier_id', coursier.id)
-        .eq('statut_coursier', 'termine')
-        .gte('date_visite', startDate)
-        .lt('date_visite', endDate);
+        .not('ended_at', 'is', null)
+        .gte('started_at', startDate)
+        .lt('started_at', endDate)
+        .order('started_at', { ascending: true });
       if (error) throw error;
-      return (data || []).map(v => ({
-        id: v.id,
-        adresse: v.adresse || 'Adresse N/A',
-        date_visite: v.date_visite,
-        montant: TARIF_COURSIER,
-        paye_coursier: v.paye_coursier || false,
-      }));
+      const heure = (iso: string) => new Date(iso).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' });
+      return ((data as any[]) || []).filter((e) => !e.exclue).map((e) => {
+        const minutes = e.duration_minutes || 0;
+        const t = e.paye && e.tarif_paye != null ? Number(e.tarif_paye) : tarif;
+        return {
+          id: e.id,
+          adresse: `Pointage ${heure(e.started_at)} – ${heure(e.ended_at)} (${Math.floor(minutes / 60)}h${String(minutes % 60).padStart(2, '0')})`,
+          date_visite: e.started_at,
+          montant: Math.round((minutes / 60) * t * 100) / 100,
+          paye_coursier: !!e.paye,
+        };
+      });
     },
     enabled: !!employeData?.user_id && mode === 'coursier',
   });
@@ -212,7 +219,7 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
             part_agent: m.montant,
             date: m.date_visite,
             payee: m.paye_coursier,
-            statut: 'termine',
+            statut: 'pointage',
           }))
         : (mode === 'commission' || mode === 'independant')
         ? transactions.map(t => ({
@@ -381,13 +388,13 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
             {mode === 'coursier' && selectedEmployeId && (
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm text-muted-foreground uppercase">
-                  Missions coursier — Visites terminées
+                  Coursier — Heures pointées
                 </h3>
                 {loadingMissions ? (
                   <p className="text-sm text-muted-foreground">Chargement des missions...</p>
                 ) : missions.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center bg-muted rounded-lg">
-                    Aucune mission terminée pour {MOIS_LABELS[Number(mois) - 1]} {annee}
+                    Aucune heure pointée pour {MOIS_LABELS[Number(mois) - 1]} {annee}
                   </p>
                 ) : (
                   <div className="space-y-2">
@@ -418,7 +425,7 @@ export default function FicheSalaireDialog({ open, onOpenChange, fiche, employes
                     ))}
                     <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                       <div className="flex justify-between font-semibold">
-                        <span>Total missions ({missions.length} visite{missions.length > 1 ? 's' : ''} × {formatCHF(TARIF_COURSIER)})</span>
+                        <span>Total ({missions.length} session{missions.length > 1 ? 's' : ''} pointée{missions.length > 1 ? 's' : ''})</span>
                         <span>{formatCHF(totalMissions)}</span>
                       </div>
                     </div>
