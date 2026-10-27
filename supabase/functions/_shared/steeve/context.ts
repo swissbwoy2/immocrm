@@ -329,6 +329,19 @@ const JOB_STATUS_LABEL: Record<string, string> = {
   completed: 'dossier traité',
 };
 
+/** Solution concrète pour chaque pièce qui bloque un dossier (au lieu de « je ne vois pas ce qui manque »). */
+export function debloquer(items: string[] | null): string[] {
+  return (items ?? []).map((x) => {
+    const t = x.toLowerCase();
+    if (/rc|responsabilit/.test(t)) return `${x} : jamais bloquante ; l'équipe peut la souscrire pour le client, ou il envoie sa police s'il en a une.`;
+    if (/domicile|h[ée]bergement|r[ée]sidence/.test(t)) return `${x} : attestation du contrôle des habitants de sa commune, ou, s'il est hébergé (chez un proche), attestation d'hébergement signée par l'hébergeur avec une copie de sa pièce d'identité — une photo envoyée dans la discussion suffit, Steeve la range.`;
+    if (/poursuite/.test(t)) return `${x} : extrait de moins de 3 mois, à commander en ligne (office des poursuites de son domicile ou easygov.swiss) ; une photo ou le PDF dans la discussion suffit.`;
+    if (/salaire|fiche/.test(t)) return `${x} : les 3 dernières ; photo ou PDF dans la discussion.`;
+    if (/contrat/.test(t)) return `${x} : contrat de travail ou attestation de l'employeur ; sans emploi : noter_situation.`;
+    return `${x} : photo ou PDF dans la discussion, Steeve le range.`;
+  });
+}
+
 export async function applications(db: Db, clientId: string) {
   const [{ data: cands }, { data: jobs }] = await Promise.all([
     db.from('candidatures').select('id, offre_id, statut, date_depot, created_at').eq('client_id', clientId).order('created_at', { ascending: false }).limit(10),
@@ -342,7 +355,9 @@ export async function applications(db: Db, clientId: string) {
   }
   const blockers = (ai: any): string[] | null => {
     if (!ai || typeof ai !== 'object') return null;
-    const raw = ai.missing ?? ai.manquants ?? ai.missing_documents ?? ai.blocking_reasons ?? null;
+    // Réponse de la routine Postulation : { ai: { missing_items: [...] } } (Mariama, Stand 6 : « je ne vois pas ce qui manque »).
+    const raw = ai.missing ?? ai.manquants ?? ai.missing_documents ?? ai.blocking_reasons ?? ai.missing_items
+      ?? ai.ai?.missing_items ?? ai.ai?.missing ?? ai.ai?.blocking_reasons ?? null;
     if (!Array.isArray(raw)) return null;
     return raw.slice(0, 8).map((x: any) => (typeof x === 'string' ? x : x?.label || x?.type || JSON.stringify(x)).slice(0, 120));
   };
@@ -356,6 +371,7 @@ export async function applications(db: Db, clientId: string) {
       bien: addresses[j.offre_id] || null,
       etat: JOB_STATUS_LABEL[j.status] || j.status,
       elements_manquants: j.status === 'blocked' ? blockers(j.ai_result) : null,
+      ...(j.status === 'blocked' ? { comment_debloquer: debloquer(blockers(j.ai_result)) } : {}),
     })),
   };
 }
