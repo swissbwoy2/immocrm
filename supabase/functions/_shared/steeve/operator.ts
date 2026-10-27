@@ -19,6 +19,7 @@ import { processInbox } from './inbox.ts';
 import { INTERNAL_MARK, relireMail, stripSubjectMarkers } from './relecture.ts';
 import { searchAndSendOffers } from './offers.ts';
 import { inClientLanguage } from './fichiers.ts';
+import { findImmobilierContacts } from './contacts.ts';
 import { buildMailWithAttachments, evaluatePieces, isImage, MANUAL_PIECES, MAX_MAIL_BYTES, MAX_PIECE_BYTES, mimeOf, readPieces, REGIE_PIECES, type DocCandidate } from './pieces-regie.ts';
 
 export type Mode = 'off' | 'a_blanc' | 'autonome';
@@ -57,6 +58,8 @@ export interface OperatorDeps {
   now?: () => Date;
   /** Exécuter seulement cette tâche du registre (demande de l'équipe, résultat rendu tout de suite). */
   taskId?: string | null;
+  /** Lecture des pages publiques (contacts des régies) ; fetch par défaut. */
+  fetchFn?: typeof fetch;
 }
 
 export interface OperatorReport {
@@ -69,6 +72,7 @@ export interface OperatorReport {
   retours_visites?: number;
   rappels_visites?: number;
   pieces_jointes?: number;
+  contacts_trouves?: number;
   dossiers_envoyes: number;
   dossiers_a_blanc: number;
   bloques: number;
@@ -1387,6 +1391,14 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
 
     // 6 ter. Toutes les offres « intéressé » sans visite : demande de visite (mode autonome), puis tâches automatiques
     // (demandes de visite, réponses de visite préparées par la lecture du courrier).
+    // 6 ter (avant). Demandes de visite bloquées faute d'adresse (annonces immobilier.ch) : adresse publiée de la régie
+    // trouvée sur sa page d'agence, toutes ses demandes reprises ; annonce disparue : demande annulée.
+    await step('contacts_regies', async () => {
+      if (rep.mode !== 'autonome') return;
+      const r = await findImmobilierContacts(db, input.fetchFn ?? fetch, now, 12);
+      rep.contacts_trouves = r.agences;
+    });
+
     await step('visites_a_fixer', async () => {
       if (rep.mode === 'autonome') {
         const { data: b } = await db.rpc('steeve_balayage_visites', { p_limit: 8 });
@@ -1472,7 +1484,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       etapes: steps,
       contacts: rep.qr + rep.relances + rep.dossiers_envoyes + (rep.visites ?? 0),
       erreurs: rep.erreurs.map((e) => ({ erreur: e.slice(0, 300) })),
-      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · rappels de visite ${rep.rappels_visites ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
+      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · rappels de visite ${rep.rappels_visites ?? 0} · contacts de régies trouvés ${rep.contacts_trouves ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
     }).eq('id', run.id);
   }
   return rep;
