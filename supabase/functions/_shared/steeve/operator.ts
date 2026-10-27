@@ -66,6 +66,7 @@ export interface OperatorReport {
   relances: number;
   visites_lancees?: number;
   retours_visites?: number;
+  rappels_visites?: number;
   dossiers_envoyes: number;
   dossiers_a_blanc: number;
   bloques: number;
@@ -81,6 +82,30 @@ export interface OperatorReport {
 }
 
 // ---------- utilitaires ----------
+
+const piecesTxt = (p: unknown) => (p == null || p === '' ? '' : `${String(p).replace('.', ',').replace(/,0$/, '')} pièces`);
+const chf = (n: unknown) => (n == null || n === '' ? '' : `${Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'")} CHF/mois`);
+
+/**
+ * Rappel avant visite (règle de l'admin du 27.10.2026) : le client n'apporte pas son dossier (sauf consigne stricte
+ * de l'annonceur) mais rapporte la demande de location, le QR code Flatfox ou le moyen de postuler.
+ */
+export function rappelVisitesMessage(vs: Array<{ prenom?: string | null; adresse?: string | null; pieces?: unknown; loyer?: unknown; quand?: string | null; flatfox?: boolean; dossier_exige?: boolean }>): string {
+  const prenom = String(vs[0]?.prenom ?? '').trim().split(/\s+/)[0] ?? '';
+  const desc = (v: typeof vs[number]) => {
+    const detail = [piecesTxt(v.pieces), chf(v.loyer)].filter(Boolean).join(', ');
+    return `${v.quand ?? ''} : ${v.adresse ?? 'le bien'}${detail ? ` (${detail})` : ''}`;
+  };
+  const tete = vs.length === 1
+    ? `Bonjour${prenom ? ` ${prenom}` : ''}, petit rappel pour ta visite ${desc(vs[0])}.`
+    : `Bonjour${prenom ? ` ${prenom}` : ''}, petit rappel pour tes visites :\n${vs.map((v) => `- ${desc(v)}`).join('\n')}`;
+  const exige = vs.filter((v) => v.dossier_exige);
+  const dossier = exige.length
+    ? `Pour ${exige.map((v) => v.adresse).join(' et ')}, l'annonceur demande que tu viennes avec ton dossier : prends-le avec toi.${exige.length < vs.length ? " Pour les autres, pas besoin de l'apporter, l'équipe l'a déjà." : ''}`
+    : "Pas besoin d'apporter ton dossier : l'équipe l'a déjà et s'en occupe.";
+  const qr = vs.some((v) => v.flatfox) ? ', QR code Flatfox' : ', QR code';
+  return `${tete}\n\n${dossier} En revanche, n'oublie surtout pas de récupérer sur place la demande de location (formulaire papier${qr}, lien ou tout autre moyen de postuler) et envoie-la-moi ici dès la sortie, en photo avec le trombone 📎 : l'équipe Immo-rama dépose ta candidature dans la foulée.\n\nEt dis-moi juste après la visite si le logement te plaît !`;
+}
 
 export function zurichParts(d: Date) {
   const f = new Intl.DateTimeFormat('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', hour12: false, weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -1340,6 +1365,8 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       let n = 0;
       for (const v of list ?? []) {
         const prenom = String(v.prenom ?? '').trim();
+        const detail = [piecesTxt(v.pieces), chf(v.loyer)].filter(Boolean).join(', ');
+        v.adresse = `${v.adresse}${detail ? `, ${detail}` : ''}`;
         const content = v.est_deleguee
           ? `Bonjour${prenom ? ` ${prenom}` : ''}, le compte rendu de la visite déléguée de ${v.adresse} (${v.le}) est dans ton espace. Le logement te plaît ? Si oui, dis-le-moi et je lance ta candidature tout de suite : un dossier qui part vite a plus de chances d'être retenu. Sinon, dis-moi ce qui ne va pas, j'affine ta recherche.`
           : `Bonjour${prenom ? ` ${prenom}` : ''}, comment s'est passée la visite de ${v.adresse} (${v.le}) ? Le logement te plaît ? Si oui, dis-le-moi et je lance ta candidature tout de suite : un dossier qui part vite a plus de chances d'être retenu. Sinon, dis-moi ce qui ne t'a pas plu, j'affine ta recherche.`;
@@ -1348,6 +1375,23 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
         if (!error) n++;
       }
       rep.retours_visites = n;
+    });
+
+    // 6 quinquies. Rappel avant chaque visite que le client fait lui-même (2 h à 28 h avant, une fois par visite,
+    // un message par client) : pas besoin d'apporter le dossier, mais rapporter la demande de location / le QR Flatfox.
+    await step('rappels_visites', async () => {
+      if (rep.mode !== 'autonome' || !inClientHours(now)) return;
+      const { data: list } = await db.rpc('steeve_visites_a_rappeler', { p_limit: 40 });
+      const parConv = new Map<string, any[]>();
+      for (const v of list ?? []) parConv.set(v.conversation_id, [...(parConv.get(v.conversation_id) ?? []), v]);
+      let n = 0;
+      for (const [conv, vs] of parConv) {
+        const { error } = await db.from('messages').insert({ conversation_id: conv, sender_id: 'steeve', sender_type: 'assistant',
+          content: rappelVisitesMessage(vs),
+          payload: { steeve_operateur: true, steeve_cle: `rappel_visite:${vs[0].visite_id}`, rappel_visites: vs.map((v) => String(v.visite_id)) } });
+        if (!error) n++;
+      }
+      rep.rappels_visites = n;
     });
 
     // 2. Demandes de formulaire Flatfox (chat + e-mail).
@@ -1380,7 +1424,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       etapes: steps,
       contacts: rep.qr + rep.relances + rep.dossiers_envoyes + (rep.visites ?? 0),
       erreurs: rep.erreurs.map((e) => ({ erreur: e.slice(0, 300) })),
-      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
+      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · rappels de visite ${rep.rappels_visites ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
     }).eq('id', run.id);
   }
   return rep;

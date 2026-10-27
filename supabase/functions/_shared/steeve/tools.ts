@@ -52,7 +52,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'propose_action',
-    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve). Jamais pour ce que tes outils font directement : critères (modifier_criteres), réponse à une offre (repondre_offre), demande de visite (demander_visite), visite déléguée (deleguer_visite), confirmation de présence (confirmer_visite), inscription à une visite groupée (inscrire_visite). Types : note_agent (demande ou information pour l'agent : visite déjà fixée à replanifier, question particulière pour une régie… ; la conversation reste avec Steeve), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
+    description: "Prépare une action que l'équipe validera et fera elle-même (rien n'est exécuté ni envoyé par Steeve). Jamais pour ce que tes outils font directement : critères (modifier_criteres), réponse à une offre (repondre_offre, y compris « je ne vais plus à la visite, pas intéressé » : jamais de note_agent pour faire annuler une visite chez l'annonceur), demande de visite (demander_visite), visite déléguée (deleguer_visite), confirmation de présence (confirmer_visite), inscription à une visite groupée (inscrire_visite). Types : note_agent (demande ou information pour l'agent : visite déjà fixée à replanifier, question particulière pour une régie… ; la conversation reste avec Steeve), relance_regie (brouillon poli de relance de la régie pour une candidature du client ; préciser le bien), preuve_paiement (le client dit avoir payé ou a déposé une preuve de paiement : l'équipe vérifie et active).",
     input_schema: {
       type: 'object',
       properties: {
@@ -71,7 +71,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres, ou identifiant de l'offre. Deux logements à la même adresse : l'identifiant de l'offre, ou l'adresse suivie des pièces et du loyer (ex. « Rue Haldimand 3, 4.5 pièces, 2950 CHF »)." },
       },
       required: ['bien'],
       additionalProperties: false,
@@ -79,11 +79,11 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'repondre_offre',
-    description: "Enregistre la réponse du client à une offre reçue, comme les boutons « Intéressé » / « Pas intéressé » de l'application : interesse ou refuse. Seulement sur demande claire du client pour un bien précis. Une offre déjà plus loin (visite, candidature) n'est pas modifiée. L'agent est prévenu.",
+    description: "Enregistre la réponse du client à une offre reçue, comme les boutons « Intéressé » / « Pas intéressé » de l'application : interesse ou refuse. Seulement sur demande claire du client pour un bien précis. « Pas intéressé » vaut aussi quand une visite est prévue ou faite : le client est retiré de sa visite, sans rien annuler chez l'annonceur (le créneau reste pour d'autres clients). Une candidature déjà déposée n'est pas modifiée. L'agent est prévenu.",
     input_schema: {
       type: 'object',
       properties: {
-        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres, ou identifiant de l'offre. Deux logements à la même adresse : l'identifiant de l'offre, ou l'adresse suivie des pièces et du loyer (ex. « Rue Haldimand 3, 4.5 pièces, 2950 CHF »)." },
         reponse: { type: 'string', enum: ['interesse', 'refuse'] },
       },
       required: ['bien', 'reponse'],
@@ -95,7 +95,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres, ou identifiant de l'offre. Deux logements à la même adresse : l'identifiant de l'offre, ou l'adresse suivie des pièces et du loyer (ex. « Rue Haldimand 3, 4.5 pièces, 2950 CHF »)." },
         precision: { type: 'string', description: 'Disponibilités ou précision donnée par le client, facultatif.' },
       },
       required: ['bien'],
@@ -126,7 +126,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres, ou identifiant de l'offre. Deux logements à la même adresse : l'identifiant de l'offre, ou l'adresse suivie des pièces et du loyer (ex. « Rue Haldimand 3, 4.5 pièces, 2950 CHF »)." },
         date: { type: 'string', description: "Facultatif : créneau DÉJÀ fixé ou proposé par l'annonceur, heure suisse au format AAAA-MM-JJTHH:MM (ex. 2026-10-30T17:30). Ne jamais inventer : sans créneau connu, laisse vide." },
         precision: { type: 'string', description: 'Ce que le client veut que le collaborateur vérifie, facultatif.' },
       },
@@ -140,7 +140,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres, ou identifiant de l'offre. Deux logements à la même adresse : l'identifiant de l'offre, ou l'adresse suivie des pièces et du loyer (ex. « Rue Haldimand 3, 4.5 pièces, 2950 CHF »)." },
         date: { type: 'string', description: 'Facultatif : créneau choisi, heure suisse AAAA-MM-JJTHH:MM.' },
       },
       required: ['bien'],
@@ -153,7 +153,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres, ou identifiant de l'offre. Deux logements à la même adresse : l'identifiant de l'offre, ou l'adresse suivie des pièces et du loyer (ex. « Rue Haldimand 3, 4.5 pièces, 2950 CHF »)." },
         date: { type: 'string', description: "Seulement si aucune visite n'est enregistrée : date et heure de sa visite, heure suisse AAAA-MM-JJTHH:MM (jamais inventée)." },
       },
       required: ['bien'],
@@ -166,7 +166,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres, ou identifiant de l'offre. Deux logements à la même adresse : l'identifiant de l'offre, ou l'adresse suivie des pièces et du loyer (ex. « Rue Haldimand 3, 4.5 pièces, 2950 CHF »)." },
         creneau: { type: 'string', description: "Créneau choisi s'il y en a plusieurs (ex. « jeudi 29.10 à 17h30 »), facultatif." },
       },
       required: ['bien'],
@@ -179,7 +179,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: {
       type: 'object',
       properties: {
-        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres (ou identifiant de l'offre)." },
+        bien: { type: 'string', description: "Adresse du bien telle qu'elle figure dans ses offres, ou identifiant de l'offre. Deux logements à la même adresse : l'identifiant de l'offre, ou l'adresse suivie des pièces et du loyer (ex. « Rue Haldimand 3, 4.5 pièces, 2950 CHF »)." },
         disponibilites: { type: 'string', description: 'Jours et heures donnés par le client, ex. « mardi 28.10 dès 17h ou jeudi 30.10 à 18h ».' },
       },
       required: ['bien', 'disponibilites'],
@@ -484,11 +484,18 @@ export async function requestPostulation(db: Db, clientId: string, bien: string)
  * visite à venir) ; le même bien publié deux fois (même adresse et même loyer) : la plus avancée ; sinon le client précise.
  */
 async function matchOffer(ctx: ToolContext, bien: string, opt: { visite?: boolean; when?: Date | null } = {}): Promise<{ id: string; adresse: string } | ToolOutcome> {
-  if (bien.trim().length < 2) return { content: 'Précise le bien (adresse).', isError: true };
-  const { data, error } = await ctx.db.rpc('steeve_client_offres_match', { p_client_id: ctx.dossier.clientId, p_ref: bien.slice(0, 120) });
+  const hints = offerHints(bien);
+  if (hints.ref.length < 2) return { content: 'Précise le bien (adresse).', isError: true };
+  const { data, error } = await ctx.db.rpc('steeve_client_offres_match', { p_client_id: ctx.dossier.clientId, p_ref: hints.ref.slice(0, 120) });
   if (error) return { content: 'Offres indisponibles pour le moment.', isError: true };
-  const list: any[] = data ?? [];
+  let list: any[] = data ?? [];
   if (!list.length) return { content: "Aucune offre de ce client ne correspond, même parmi ses offres anciennes : demande-lui l'adresse exacte ou le lien de l'annonce.", isError: true };
+  // Même immeuble, logements différents (2,5 et 4,5 pièces) : les pièces ou le loyer donnés départagent.
+  if (list.length > 1 && (hints.pieces != null || hints.loyer != null)) {
+    const fit = list.filter((o) => offerFits(o, hints));
+    if (!fit.length) return { content: `Aucune offre à cette adresse avec ${[hints.pieces != null ? `${hints.pieces} pièces` : '', hints.loyer != null ? `${hints.loyer} CHF` : ''].filter(Boolean).join(' et ')} : ${describeOffers(list)}. Demande au client lequel.`, isError: true };
+    list = fit;
+  }
   if (list.length === 1) return { id: list[0].offre_id, adresse: list[0].adresse };
   const pick = (id: string) => { const o = list.find((x) => x.offre_id === id); return { id: o.offre_id, adresse: o.adresse }; };
   if (opt.visite) {
@@ -508,7 +515,36 @@ async function matchOffer(ctx: ToolContext, bien: string, opt: { visite?: boolea
     const best = [...list].sort((a, b) => rank.indexOf(String(a.statut)) - rank.indexOf(String(b.statut)))[0];
     return pick(best.offre_id);
   }
-  return { content: `Plusieurs offres correspondent : ${list.map((o) => `${o.adresse} (${o.prix ?? '?'} CHF, ${o.pieces ?? '?'} p., ${o.statut}, reçue le ${o.envoyee_le ?? '?'})`).join(' ; ')}. Demande au client laquelle (loyer, pièces ou date), puis agis dès sa réponse.`, isError: true };
+  return { content: `Plusieurs offres correspondent (logements différents) : ${describeOffers(list)}. Si la conversation dit déjà lequel (pièces, loyer, date de visite), rappelle l'outil avec l'identifiant de l'offre dans bien ; sinon demande au client lequel, puis agis dès sa réponse.`, isError: true };
+}
+
+const describeOffers = (list: any[]) => list.map((o) => `${o.adresse} — ${o.pieces ?? '?'} pièces, ${o.prix ?? '?'} CHF${o.surface ? `, ${o.surface} m²` : ''}, ${o.statut}, reçue le ${o.envoyee_le ?? '?'} (id ${o.offre_id})`).join(' ; ');
+
+const num = (v: unknown) => Number(String(v ?? '').replace(',', '.').replace(/[^0-9.]/g, ''));
+
+/** L'offre a-t-elle les pièces et le loyer indiqués (tolérance de 5 CHF) ? */
+export function offerFits(o: { pieces?: unknown; prix?: unknown }, h: { pieces: number | null; loyer: number | null }): boolean {
+  if (h.pieces != null && !(Math.abs(num(o.pieces) - h.pieces) < 0.01)) return false;
+  if (h.loyer != null && !(Math.abs(num(o.prix) - h.loyer) <= 5)) return false;
+  return true;
+}
+
+/**
+ * Pièces et loyer écrits avec l'adresse (« Rue Haldimand 3, 4.5 pièces, 2950 CHF ») : retirés du texte cherché
+ * (la recherche exige tous les mots dans l'adresse), puis utilisés pour départager deux logements du même immeuble.
+ */
+export function offerHints(bien: string): { ref: string; pieces: number | null; loyer: number | null } {
+  let ref = ` ${String(bien ?? '')} `;
+  let pieces: number | null = null;
+  let loyer: number | null = null;
+  const p = ref.match(/[\s,;(](\d{1,2}(?:[.,]5)?)\s*(?:pi[eè]ces?|pcs?\.?|pces?\.?|p\.)(?=[\s,;)]|$)/i);
+  if (p) { pieces = Number(p[1].replace(',', '.')); ref = ref.replace(p[0], ' '); }
+  const l = ref.match(/(?:loyer\s*(?:de\s*)?|chf\s*|fr\.\s*)(\d{1,2}['’ ]?\d{3})(?:\.-)?/i)
+    ?? ref.match(/(\d{1,2}['’ ]?\d{3})\s*(?:\.-|chf\b|fr\.?(?=[\s,;)]|$)|francs\b)(?:\s*\/\s*mois)?/i);
+  if (l) { loyer = Number(l[1].replace(/['’ ]/g, '')); ref = ref.replace(l[0], ' '); }
+  if ((ref.match(/\(/g) ?? []).length !== (ref.match(/\)/g) ?? []).length) ref = ref.replace(/[()]/g, ' ');
+  ref = ref.replace(/\(\s*[,;]?\s*\)/g, ' ').replace(/\s+([,;])/g, '$1').replace(/([,;]\s*)+/g, ', ').replace(/^[\s,;]+|[\s,;–-]+$/g, '').replace(/\s{2,}/g, ' ').trim();
+  return { ref, pieces, loyer };
 }
 
 /** Information de l'agent (ou des admins) sans lui rendre la conversation. */
@@ -545,7 +581,13 @@ async function clientOfferAnswer(ctx: ToolContext, bien: string, reponse: string
   if (error) return { content: "La réponse n'a pas pu être enregistrée.", isError: true };
   if (!data?.ok) return { content: json({ enregistre: false, motif: data?.motif }) };
   if (!data.deja) await notifyTeam(ctx, reponse === 'interesse' ? 'Client intéressé (via Steeve)' : 'Offre refusée (via Steeve)', `${m.adresse} : ${reponse === 'interesse' ? 'intéressé' : 'pas intéressé'}.`);
-  return { content: json({ enregistre: true, bien: m.adresse, statut: data.statut, deja: Boolean(data.deja), suite: reponse === 'interesse' ? "Son agent est prévenu. Tu peux proposer de demander une visite." : "Son agent est prévenu." }) };
+  return { content: json({ enregistre: true, bien: m.adresse, statut: data.statut, deja: Boolean(data.deja),
+    visites_retirees: data.visites_retirees ?? 0,
+    suite: reponse === 'interesse'
+      ? "Son agent est prévenu. Tu peux proposer de demander une visite."
+      : (data.visites_retirees
+        ? "Son agent est prévenu. Le client est retiré de sa visite de ce bien ; la visite n'est PAS annulée chez l'annonceur (le créneau reste pour d'autres clients) : ne parle pas d'annulation à l'annonceur et ne demande rien à l'équipe."
+        : "Son agent est prévenu.") }) };
 }
 
 async function clientVisitRequest(ctx: ToolContext, bien: string, precision: string | null): Promise<ToolOutcome> {

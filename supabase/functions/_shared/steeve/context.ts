@@ -239,7 +239,7 @@ function zurich(dateIso: string | null | undefined): string | null {
 export async function visits(db: Db, clientId: string, scope: 'a_venir' | 'passees' | 'toutes', now: Date) {
   let q = db
     .from('visites')
-    .select('id, adresse, date_visite, statut, est_deleguee, client_decision, offre_id')
+    .select('id, adresse, date_visite, statut, est_deleguee, client_decision, offre_id, offres(pieces, prix, surface, etage)')
     .eq('client_id', clientId)
     .or('statut.is.null,statut.neq.annulee')
     .limit(10);
@@ -247,8 +247,13 @@ export async function visits(db: Db, clientId: string, scope: 'a_venir' | 'passe
   else if (scope === 'passees') q = q.lt('date_visite', now.toISOString()).order('date_visite', { ascending: false });
   else q = q.order('date_visite', { ascending: false });
   const { data } = await q;
+  // Deux logements du même immeuble (ex. 2,5 et 4,5 pièces) : la visite porte l'offre exacte (pièces, loyer, id).
   return (data || []).map((v: any) => ({
     adresse: v.adresse,
+    offre_id: v.offre_id ?? null,
+    pieces: v.offres?.pieces ?? null,
+    loyer_chf: v.offres?.prix ?? null,
+    etage: v.offres?.etage ?? null,
     date: zurich(v.date_visite),
     statut: VISIT_STATUS_LABEL[v.statut] || v.statut,
     visite_deleguee: !!v.est_deleguee,

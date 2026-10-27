@@ -103,6 +103,42 @@ export function withoutSelfError(text: string): string {
   return out || "J'ai vérifié les données : redemande-moi le point exact et je te réponds avec le détail.";
 }
 
+const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'");
+
+/**
+ * Note de réflexion écrite comme du texte (« Le client dit … : il veut donc … Je vérifie d'abord … ») : jamais
+ * publiée. Parle du client à la troisième personne ou de ce que Steeve va faire avant de répondre.
+ */
+export function isNarration(paragraph: string): boolean {
+  const t = fold(paragraph).trim();
+  if (!t) return false;
+  return /\b(le|la) client(e)? (dit|a dit|ecrit|a ecrit|demande|veut|voudrait|souhaite|repond|a repondu|confirme|precise|parle|semble|n'a pas|a deja)\b/.test(t)
+    || /\ble message (du client|de la cliente|de [a-z][\w-]+) (est|semble|peut|vise|concerne)\b/.test(t)
+    || /\b(il|elle) (veut|souhaite|demande) donc\b/.test(t)
+    || /\b(une seule question est (donc )?necessaire|je dois donc (verifier|regarder|demander|lui)|je dois d'abord (verifier|regarder|controler)|je commence par verifier|verifions d'abord)\b/.test(t)
+    || /^je (verifie|regarde|controle|consulte) d'abord\b/.test(t)
+    || /\b(sa|son) (demande|message|reponse) (est|reste) ambigu/.test(t);
+}
+
+/** Retire les paragraphes de réflexion ; rend '' si rien ne s'adresse au client. */
+export function withoutNarration(text: string): string {
+  const paras = text.split(/\n{2,}/);
+  const kept = paras.filter((p) => !isNarration(p));
+  // Une phrase de réflexion collée au début d'un paragraphe adressé au client (« … Je vérifie d'abord. Merci X ! »).
+  const cleaned = kept.map((p) => {
+    const parts = p.split(/(?<=[.!?…])\s+(?=[A-ZÀ-Ý«])/);
+    return parts.filter((x) => !isNarration(x)).join(' ');
+  }).filter((p) => p.trim());
+  return cleaned.join('\n\n').trim();
+}
+
+/** Réponse qui annonce une vérification sans rien répondre (« Je vérifie tes offres… ») : le travail n'est pas fait. */
+export function onlyAnnounces(text: string): boolean {
+  const t = fold(text).trim();
+  return t.length < 260 && /^(je (vais )?(verifie|verifier|regarde|regarder|controle|controler|consulte|consulter|m'en occupe|reviens)|laisse-moi (verifier|regarder)|un instant|deux secondes)\b/.test(t)
+    && !/\?/.test(t);
+}
+
 /**
  * Règles absolues vérifiées sur chaque réponse avant publication : Steeve ne parle jamais des e-mails personnels du
  * client (il n'y a pas accès) et ne décourage jamais un paiement. Rend la raison, ou null si la réponse est conforme.
@@ -351,6 +387,7 @@ export async function runTurn(opts: {
       let finalText = '';
       let transferred = false;
       let corrected = false;
+      let reformulated = false;
       for (let i = 0; i < MAX_MODEL_CALLS; i++) {
         if (Date.now() - startedAt > deadlineMs) throw new Error(`délai dépassé (${Math.round(deadlineMs / 1000)} s)`);
         const resp = await callModel({
@@ -376,6 +413,18 @@ export async function runTurn(opts: {
         }
         if (resp.stop_reason !== 'tool_use' || toolUses.length === 0) {
           finalText = textOf(resp.content);
+          // Réflexion écrite comme un message (« Le client dit … Je vérifie d'abord … ») : retirée ; s'il ne reste
+          // rien, ou seulement l'annonce d'une vérification, le modèle termine le travail et écrit au client.
+          const sansNotes = withoutNarration(finalText);
+          if ((!sansNotes || onlyAnnounces(sansNotes)) && !reformulated && i + 1 < MAX_MODEL_CALLS) {
+            reformulated = true;
+            totals.tools.push('garde_fou_reflexion');
+            messages.push({ role: 'assistant', content: resp.content });
+            messages.push({ role: 'user', content: "Ce texte n'a PAS été envoyé au client : c'est une note de réflexion ou une simple annonce (« je vérifie… »). Fais maintenant les vérifications et actions nécessaires avec tes outils, puis écris uniquement le message destiné au client : tu lui parles directement (tutoiement), naturellement, avec le résultat concret. Jamais « le client dit… », jamais ce que tu vas faire avant de répondre." });
+            finalText = '';
+            continue;
+          }
+          finalText = sansNotes; // vide : pas de publication de la réflexion (repli « sans réponse »).
           // Garde-fou : jamais de mention des e-mails du client, jamais de frein à un paiement. Une seule réécriture.
           const interdit = forbiddenReply(finalText);
           if (interdit && !corrected && i + 1 < MAX_MODEL_CALLS) {

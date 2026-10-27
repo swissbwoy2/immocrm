@@ -328,7 +328,7 @@ async function applyMail(db: any, m: any, cls: any, targets: any[], key: string,
           }
           notes.push(`${o.adresse} : visite fixée au ${r.quand}${r.deja ? ' (déjà enregistrée)' : ''}`);
           if (r.message_requis && !r.deja) {
-            await tellClient(db, o.client_id, `visite:${r.visite_id}:${start?.toISOString()}`, `Bonjour ${prenom}, bonne nouvelle : la visite de ${o.adresse} est fixée au ${r.quand}, confirmée par l'annonceur. Je l'ai mise dans votre agenda Logisorama. Merci de venir avec votre dossier complet (pièce d'identité, 3 dernières fiches de salaire, extrait des poursuites). En cas d'empêchement, prévenez-nous au plus vite au 021 634 31 61. L'équipe Immo-rama.ch`, now);
+            await tellClient(db, o.client_id, `visite:${r.visite_id}:${start?.toISOString()}`, `Bonjour ${prenom}, bonne nouvelle : la visite de ${o.adresse} est fixée au ${r.quand}, confirmée par l'annonceur. Je l'ai mise dans votre agenda Logisorama. Pas besoin d'apporter votre dossier : nous l'avons déjà. En revanche, pensez à récupérer sur place la demande de location (formulaire, QR code Flatfox ou lien pour postuler) et à nous l'envoyer en photo dans la messagerie dès la sortie : nous déposons votre candidature dans la foulée. En cas d'empêchement, prévenez-nous au plus vite au 021 634 31 61. L'équipe Immo-rama.ch`, now);
           }
           break;
         }
@@ -359,7 +359,7 @@ async function applyMail(db: any, m: any, cls: any, targets: any[], key: string,
               const label = labelZurich(sl.debut!);
               pris = { label, debut: sl.debut!.toISOString() };
               if (r.message_requis && !r.deja) {
-                await tellClient(db, o.client_id, `visite:${r.visite_id}:${sl.debut!.toISOString()}`, `Bonjour ${prenom}, bonne nouvelle : la visite de ${o.adresse} est fixée au ${label}. Je l'ai mise dans votre agenda Logisorama et je la confirme à l'annonceur. Merci de venir avec votre dossier complet (pièce d'identité, 3 dernières fiches de salaire, extrait des poursuites). En cas d'empêchement, prévenez-nous au plus vite au 021 634 31 61. L'équipe Immo-rama.ch`, now);
+                await tellClient(db, o.client_id, `visite:${r.visite_id}:${sl.debut!.toISOString()}`, `Bonjour ${prenom}, bonne nouvelle : la visite de ${o.adresse} est fixée au ${label}. Je l'ai mise dans votre agenda Logisorama et je la confirme à l'annonceur. Pas besoin d'apporter votre dossier : nous l'avons déjà. En revanche, pensez à récupérer sur place la demande de location (formulaire, QR code Flatfox ou lien pour postuler) et à nous l'envoyer en photo dans la messagerie dès la sortie : nous déposons votre candidature dans la foulée. En cas d'empêchement, prévenez-nous au plus vite au 021 634 31 61. L'équipe Immo-rama.ch`, now);
               }
               break;
             }
@@ -495,7 +495,7 @@ async function applyMail(db: any, m: any, cls: any, targets: any[], key: string,
       // Réponse unique à l'annonceur : le créneau est confirmé (e-mail depuis visites@, ou chat Flatfox par la routine).
       const flat = canal === 'flatfox';
       const lignes = acceptes.map((a) => `- ${a.adresse} : le ${a.label}`).join('\n');
-      const corps = `Bonjour,\n\nMerci pour votre retour. Nous confirmons ${acceptes.length > 1 ? 'les visites suivantes' : 'la visite'} :\n${lignes}\n\nNotre client sera présent avec son dossier complet.\n\nMerci d'avance et belle journée,\nImmo-rama.ch – Relocation\nvisites@immo-rama.ch · 021 634 31 61`;
+      const corps = `Bonjour,\n\nMerci pour votre retour. Nous confirmons ${acceptes.length > 1 ? 'les visites suivantes' : 'la visite'} :\n${lignes}\n\nNotre client sera présent. Merci de lui remettre sur place la demande de location (ou le moyen de postuler) : nous vous transmettrons son dossier complet rapidement après la visite.\n\nMerci d'avance et belle journée,\nImmo-rama.ch – Relocation\nvisites@immo-rama.ch · 021 634 31 61`;
       const { error: rErr } = await db.from('steeve_actions').insert({
         kind: 'reponse_annonceur', canal: flat ? 'flatfox' : 'email', source: 'auto', responsable: flat ? 'routine-chrome' : 'steeve', statut: 'a_faire',
         client_id: acceptes.length === 1 ? acceptes[0].client_id : null, offre_id: acceptes[0].offre_id, mailbox: 'visites@immo-rama.ch', destinataire: m.from_email,

@@ -137,7 +137,7 @@ export interface ModelRequest {
   messages: ModelMessage[];
   max_tokens: number;
   /** Force l'appel d'un outil (réponse structurée). */
-  tool_choice?: { type: 'tool'; name: string } | { type: 'auto' } | { type: 'any' };
+  tool_choice?: { type: 'tool'; name: string } | { type: 'auto' } | { type: 'any' } | { type: 'none' };
   /** Niveau d'effort (output_config.effort) ; par défaut « high » pour Opus et Sonnet. */
   effort?: Effort;
 }
@@ -177,7 +177,7 @@ export function buildRequest(req: ModelRequest): { body: Record<string, unknown>
   if (isOpus(req.model)) {
     body.output_config = { effort: effort ?? ACTION_EFFORT };
     body.max_tokens = Math.max(req.max_tokens, 32_000);
-    if (req.tool_choice && req.tool_choice.type !== 'auto') {
+    if (req.tool_choice && req.tool_choice.type !== 'auto' && req.tool_choice.type !== 'none') {
       const name = req.tool_choice.type === 'tool' ? req.tool_choice.name : null;
       body.tool_choice = { type: 'auto' };
       body.system = [...req.system, { type: 'text', text: name
