@@ -5321,33 +5321,66 @@ export type Database = {
       }
       coursier_time_entries: {
         Row: {
+          ajoute_par_admin: boolean
+          corrige_at: string | null
+          corrige_par: string | null
           coursier_id: string
           created_at: string
           duration_minutes: number | null
           ended_at: string | null
+          exclue: boolean
           id: string
+          motif_correction: string | null
           note: string | null
+          original_ended_at: string | null
+          original_started_at: string | null
+          paye: boolean
+          paye_at: string | null
+          paye_par: string | null
           started_at: string
+          tarif_paye: number | null
           updated_at: string
         }
         Insert: {
+          ajoute_par_admin?: boolean
+          corrige_at?: string | null
+          corrige_par?: string | null
           coursier_id: string
           created_at?: string
           duration_minutes?: number | null
           ended_at?: string | null
+          exclue?: boolean
           id?: string
+          motif_correction?: string | null
           note?: string | null
+          original_ended_at?: string | null
+          original_started_at?: string | null
+          paye?: boolean
+          paye_at?: string | null
+          paye_par?: string | null
           started_at?: string
+          tarif_paye?: number | null
           updated_at?: string
         }
         Update: {
+          ajoute_par_admin?: boolean
+          corrige_at?: string | null
+          corrige_par?: string | null
           coursier_id?: string
           created_at?: string
           duration_minutes?: number | null
           ended_at?: string | null
+          exclue?: boolean
           id?: string
+          motif_correction?: string | null
           note?: string | null
+          original_ended_at?: string | null
+          original_started_at?: string | null
+          paye?: boolean
+          paye_at?: string | null
+          paye_par?: string | null
           started_at?: string
+          tarif_paye?: number | null
           updated_at?: string
         }
         Relationships: [
