@@ -18,7 +18,7 @@ export interface Dossier {
   purchaseProject: Record<string, any> | null;
   client: Record<string, any>;
   demande: Record<string, any> | null;
-  persons: { id: string; type: string; label: string }[];
+  persons: { id: string; type: string; label: string; typeContrat?: string | null }[];
   agentName: string | null;
 }
 
@@ -32,7 +32,7 @@ const PERSON_TYPE_LABELS: Record<string, string> = {
 export async function loadDossier(db: Db, clientId: string): Promise<Dossier | null> {
   const { data: client } = await db
     .from('clients')
-    .select('id, user_id, agent_id, statut, type_recherche, journey_type, type_bien, pieces, budget_max, region_recherche, nombre_occupants, souhaits_particuliers, mandat_date_signature, date_ajout, created_at, mandate_pause_days, mandate_paused_at, mandate_official_end_date, mandat_renewal_count, refund_status, refund_eligible, refund_requested_at, cancellation_requested_at, demande_mandat_id, extrait_poursuites_date_emission')
+    .select('id, user_id, agent_id, statut, type_recherche, journey_type, type_bien, pieces, budget_max, region_recherche, nombre_occupants, souhaits_particuliers, mandat_date_signature, date_ajout, created_at, mandate_pause_days, mandate_paused_at, mandate_official_end_date, mandat_renewal_count, refund_status, refund_eligible, refund_requested_at, cancellation_requested_at, demande_mandat_id, extrait_poursuites_date_emission, type_contrat, source_revenus')
     .eq('id', clientId)
     .maybeSingle();
   if (!client) return null;
@@ -46,7 +46,7 @@ export async function loadDossier(db: Db, clientId: string): Promise<Dossier | n
       .eq('client_id', clientId)
       .order('created_at', { ascending: false })
       .limit(1),
-    db.from('client_candidates').select('id, type, prenom, nom').eq('client_id', clientId),
+    db.from('client_candidates').select('id, type, prenom, nom, type_contrat, source_revenus').eq('client_id', clientId),
     client.demande_mandat_id
       ? db.from('demandes_mandat').select('statut, montant_acompte, date_paiement, type_recherche, created_at').eq('id', client.demande_mandat_id).maybeSingle()
       : Promise.resolve({ data: null }),
@@ -78,7 +78,7 @@ export async function loadDossier(db: Db, clientId: string): Promise<Dossier | n
     persons: (people || []).map((p: any) => {
       const name = `${p.prenom || ''} ${p.nom || ''}`.trim();
       const role = PERSON_TYPE_LABELS[p.type] || p.type;
-      return { id: p.id, type: p.type, label: name ? `${name} (${role})` : role };
+      return { id: p.id, type: p.type, label: name ? `${name} (${role})` : role, typeContrat: p.type_contrat ?? null };
     }),
     agentName,
   };
@@ -111,6 +111,9 @@ const PURCHASE_REQUIRED: RequiredItem[] = [
   { label: 'Attestation employeur (si nécessaire)', types: ['attestation_employeur'], min: 1, optional: true },
 ];
 
+const SANS_SALAIRE = /sans emploi|retrait|[ée]tudiant|ch[ôo]mage|au foyer/i;
+const SALAIRE_TYPES = ['contrat_travail', 'fiche_salaire', 'fiche_salaire_1', 'attestation_employeur', 'certificat_salaire'];
+
 function docStatusLabel(statut?: string | null): string {
   const s = norm(statut);
   if (s === 'valide' || s === 'validé') return 'validé par l’équipe';
@@ -133,23 +136,32 @@ export async function documentsStatus(db: Db, dossier: Dossier) {
 
   const list = docs || [];
   const required = dossier.journey === 'achat' ? PURCHASE_REQUIRED : RENTAL_REQUIRED;
-  const people = [{ id: null as string | null, label: 'Client principal' }, ...dossier.persons.map((p) => ({ id: p.id as string | null, label: p.label }))];
+  const people = [
+    { id: null as string | null, label: 'Client principal', typeContrat: (dossier.client as any)?.type_contrat ?? null },
+    ...dossier.persons.map((p: any) => ({ id: p.id as string | null, label: p.label, typeContrat: p.typeContrat ?? null })),
+  ];
 
   const parPersonne = people.map((person) => {
     const own = list.filter((d: any) => (d.candidate_id ?? null) === person.id);
+    // Sans emploi, étudiant, retraité : pas de contrat de travail ni de fiches de salaire à réclamer (situation notée
+    // dans le dossier, ex. « Manal ne travaille pas », Phoebe licenciée). Indépendant : pas de contrat de travail.
+    const sansSalaire = SANS_SALAIRE.test(String(person.typeContrat ?? ''));
+    const independant = /ind[ée]pendant/i.test(String(person.typeContrat ?? ''));
     const items = required
       // Pièces facultatives : listées pour le client principal seulement.
       .filter((it) => person.id === null || !it.optional)
       .map((it) => {
         const count = own.filter((d: any) => it.types.includes(d.type_document)).length;
+        const nonRequis = (sansSalaire && SALAIRE_TYPES.some((t) => it.types.includes(t))) || (independant && it.types.includes('contrat_travail'));
         return {
           piece: it.label,
           deposees: count,
-          attendues: it.min,
-          statut: count >= it.min ? 'complet' : it.optional ? 'facultatif, absent' : 'manquant',
+          attendues: nonRequis ? 0 : it.min,
+          statut: nonRequis ? `non requis (${person.typeContrat})` : count >= it.min ? 'complet' : it.optional ? 'facultatif, absent' : 'manquant',
         };
       });
-    return { personne: person.label, pieces: items };
+    return { personne: person.label, situation: person.typeContrat ?? null, pieces: items,
+      ...(sansSalaire ? { note: 'Sans revenu salarié : la régie peut demander un justificatif de revenus (chômage, rente, bourse, aide) ou un garant.' } : {}) };
   });
 
   let poursuites: string | null = null;
@@ -172,6 +184,7 @@ export async function documentsStatus(db: Db, dossier: Dossier) {
       demandee_le: (r.created_at || '').slice(0, 10),
     })),
     derniers_documents: list.slice(0, 15).map((d: any) => ({
+      document_id: d.id,
       type: d.type_document,
       fichier: d.nom,
       etat: docStatusLabel(d.statut),
@@ -204,8 +217,17 @@ export async function offers(db: Db, clientId: string, opts: { status?: string; 
     .limit(Math.min(Math.max(opts.limit ?? 8, 1), 15));
   if (opts.status) q = q.eq('statut', opts.status);
   const { data } = await q;
+  // Demande de visite : où et quand elle est partie (le client demande « à qui as-tu écrit ? »).
+  const ids = (data || []).map((o: any) => o.id);
+  const { data: dv } = ids.length
+    ? await db.from('steeve_actions').select('offre_id, statut, canal, destinataire, created_at, executed_at, motif')
+      .eq('kind', 'demande_visite').in('offre_id', ids).order('created_at', { ascending: false })
+    : { data: [] };
+  const demande = new Map<string, any>();
+  for (const a of dv || []) if (!demande.has(a.offre_id)) demande.set(a.offre_id, visitRequestInfo(a));
   return (data || []).map((o: any) => ({
     id: o.id,
+    demande_de_visite: demande.get(o.id) ?? null,
     adresse: o.adresse,
     titre: o.titre || null,
     loyer_ou_prix_chf: o.prix,
@@ -217,6 +239,28 @@ export async function offers(db: Db, clientId: string, opts: { status?: string; 
     envoyee_le: (o.date_envoi || '').slice(0, 10),
     annonce: o.lien_annonce || null,
   }));
+}
+
+const VISIT_REQUEST_LABEL: Record<string, string> = {
+  a_faire: 'en file : part au prochain passage (7 h – 20 h)',
+  en_cours: 'en cours d’envoi',
+  en_attente_regie: 'envoyée, en attente de la réponse de l’annonceur',
+  fait: 'envoyée',
+  bloque: 'pas encore partie : l’équipe cherche le bon contact de l’annonceur',
+  bloque_acces: 'pas encore partie : l’équipe la fait à la main',
+  annule: 'annulée',
+  echec: 'à refaire par l’équipe',
+};
+
+/** Demande de visite vue par le client : canal et agence (domaine de l'adresse), jamais l'adresse e-mail complète. */
+export function visitRequestInfo(a: any) {
+  const domaine = String(a.destinataire ?? '').match(/@([a-z0-9.-]+)/i)?.[1] ?? null;
+  return {
+    etat: VISIT_REQUEST_LABEL[a.statut] ?? a.statut,
+    par: a.canal === 'flatfox' ? 'chat Flatfox de l’annonce' : a.canal === 'email' ? `e-mail depuis visites@immo-rama.ch${domaine ? ` à l’agence (${domaine})` : ''}` : a.canal === 'portail' ? 'formulaire du portail, par l’équipe' : a.canal ?? null,
+    demandee_le: String(a.created_at ?? '').slice(0, 10) || null,
+    envoyee_le: a.executed_at ? String(a.executed_at).slice(0, 10) : null,
+  };
 }
 
 const VISIT_STATUS_LABEL: Record<string, string> = {
@@ -239,7 +283,7 @@ function zurich(dateIso: string | null | undefined): string | null {
 export async function visits(db: Db, clientId: string, scope: 'a_venir' | 'passees' | 'toutes', now: Date) {
   let q = db
     .from('visites')
-    .select('id, adresse, date_visite, statut, est_deleguee, client_decision, offre_id')
+    .select('id, adresse, date_visite, statut, est_deleguee, client_decision, offre_id, offres(pieces, prix, surface, etage)')
     .eq('client_id', clientId)
     .or('statut.is.null,statut.neq.annulee')
     .limit(10);
@@ -247,8 +291,13 @@ export async function visits(db: Db, clientId: string, scope: 'a_venir' | 'passe
   else if (scope === 'passees') q = q.lt('date_visite', now.toISOString()).order('date_visite', { ascending: false });
   else q = q.order('date_visite', { ascending: false });
   const { data } = await q;
+  // Deux logements du même immeuble (ex. 2,5 et 4,5 pièces) : la visite porte l'offre exacte (pièces, loyer, id).
   return (data || []).map((v: any) => ({
     adresse: v.adresse,
+    offre_id: v.offre_id ?? null,
+    pieces: v.offres?.pieces ?? null,
+    loyer_chf: v.offres?.prix ?? null,
+    etage: v.offres?.etage ?? null,
     date: zurich(v.date_visite),
     statut: VISIT_STATUS_LABEL[v.statut] || v.statut,
     visite_deleguee: !!v.est_deleguee,

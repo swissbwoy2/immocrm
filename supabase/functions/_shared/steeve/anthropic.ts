@@ -51,7 +51,7 @@ export function costOf(model: string, usage: Usage): number {
 export type ContentBlock =
   | { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
-  | { type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }
+  | { type: 'tool_result'; tool_use_id: string; content: string | ContentBlock[]; is_error?: boolean }
   // Blocs de la recherche web (exécutée par Anthropic) : renvoyés tels quels au tour suivant.
   | { type: 'server_tool_use' | 'web_search_tool_result' | 'web_fetch_tool_result'; [key: string]: unknown }
   // PDF lu par le modèle (formulaire de demande de location).
@@ -105,11 +105,13 @@ export const IMMO_DOMAINS = [
   'flatfox.ch', 'immobilier.ch', 'homegate.ch', 'immoscout24.ch', 'comparis.ch', 'newhome.ch', 'anibis.ch', 'tutti.ch', 'acheter-louer.ch',
   'logisorama.ch', 'immo-rama.ch', 'naef.ch', 'bernard-nicod.ch', 'derham.ch', 'regiebraun.ch', 'gerofinance.ch', 'foncia.ch', 'wincasa.ch',
   'livit.ch', 'privera.ch', 'domicim.ch', 'retraitespopulaires.ch', 'apleona.ch', 'cogestim.ch', 'pilet-renaud.ch',
+  'immostreet.ch', 'properstar.ch', 'realadvisor.ch', 'urbanhome.ch', 'alle-immobilien.ch', 'ricardo.ch', 'home.ch', 'publimmo.ch',
+  'm3-immobilier.ch', 'cardis.ch', 'spg.ch', 'regie-du-rhone.ch', 'galland.ch', 'comptoir-immo.ch', 'regimo.ch', 'pbbg.ch', 'bory.ch',
 ];
 export const CLIENT_WEB_FETCH_TOOL: ServerToolDefinition = {
   type: 'web_fetch_20250910',
   name: 'web_fetch',
-  max_uses: 2,
+  max_uses: 3,
   allowed_domains: IMMO_DOMAINS,
   max_content_tokens: 8000,
 };
@@ -137,7 +139,7 @@ export interface ModelRequest {
   messages: ModelMessage[];
   max_tokens: number;
   /** Force l'appel d'un outil (réponse structurée). */
-  tool_choice?: { type: 'tool'; name: string } | { type: 'auto' } | { type: 'any' };
+  tool_choice?: { type: 'tool'; name: string } | { type: 'auto' } | { type: 'any' } | { type: 'none' };
   /** Niveau d'effort (output_config.effort) ; par défaut « high » pour Opus et Sonnet. */
   effort?: Effort;
 }
@@ -177,7 +179,7 @@ export function buildRequest(req: ModelRequest): { body: Record<string, unknown>
   if (isOpus(req.model)) {
     body.output_config = { effort: effort ?? ACTION_EFFORT };
     body.max_tokens = Math.max(req.max_tokens, 32_000);
-    if (req.tool_choice && req.tool_choice.type !== 'auto') {
+    if (req.tool_choice && req.tool_choice.type !== 'auto' && req.tool_choice.type !== 'none') {
       const name = req.tool_choice.type === 'tool' ? req.tool_choice.name : null;
       body.tool_choice = { type: 'auto' };
       body.system = [...req.system, { type: 'text', text: name

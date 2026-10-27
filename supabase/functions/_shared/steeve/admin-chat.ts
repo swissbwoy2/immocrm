@@ -3,7 +3,7 @@
 // (état réel, puis exécution de ce qui reste, avec les contrôles de Steeve opérateur et le journal).
 // deno-lint-ignore-file no-explicit-any
 import { ADMIN_WEB_FETCH_TOOL, costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type ToolDefinition } from './anthropic.ts';
-import { forbiddenReply, selfErrorReply, toPlainReply, withoutSelfError } from './engine.ts';
+import { forbiddenReply, selfErrorReply, toPlainReply, withoutNarration, withoutSelfError } from './engine.ts';
 import { zurichToUtc } from './dates.ts';
 import { facturesDuClient, type AbaNinjaPort } from './abaninja.ts';
 import { urlsRecherche } from './portails.ts';
@@ -29,7 +29,7 @@ lancer_tache reste disponible pour une tâche simple ciblée (QR, relance, envoi
 Dans ta conversation de la messagerie, tu as posté des demandes qui attendent la décision de l'admin (proposition d'un client, transfert, demande d'un propriétaire, annonceur, apporteur, candidat ou coursier, alerte de l'opérateur). Chaque demande porte une « réf. » (identifiants). Quand l'admin répond (« oui, vas-y », « non », une consigne) :
 1. Retrouve la demande concernée (la plus récente si ce n'est pas précisé ; s'il y a un doute entre plusieurs, demande laquelle).
 2. Fais l'action avec tes outils : postuler / reprendre un dossier (etat_dossier puis reprendre_dossier), chercher et envoyer des offres (chercher_offres), clore la proposition (decider_demande : traitee si c'est fait ou accepté, rejetee si l'admin refuse).
-3. Réponds TOI-MÊME à la personne avec ecrire_a (client : dans sa conversation ; autre rôle : notification), en français, tutoiement pour un client, vouvoiement sinon, court et concret : ce qui est fait, ce qui suit (ex. « J'ai envoyé ton dossier à la régie, je te fais un retour dès qu'elle répond. »). N'annonce jamais un envoi ou un résultat que l'outil n'a pas confirmé.
+3. Réponds TOI-MÊME à la personne avec ecrire_a (client : dans sa conversation ; autre rôle : notification), en français — ou dans la langue de la personne si elle écrit dans une autre langue, dit mal comprendre le français ou si l'admin le demande (kurde sorani ou kurmandji, arabe, albanais, tigrinya, portugais, espagnol, anglais, turc, persan… : tu sais les écrire, ne dis jamais le contraire et ne demande pas d'interprète ; adresses, montants, dates, boutons de l'application et noms des documents restent en français entre guillemets, puis une courte version française à la fin) —, tutoiement pour un client, vouvoiement sinon, court et concret : ce qui est fait, ce qui suit (ex. « J'ai envoyé ton dossier à la régie, je te fais un retour dès qu'elle répond. »). N'annonce jamais un envoi ou un résultat que l'outil n'a pas confirmé.
 4. Confirme à l'admin en une ou deux lignes ce qui est fait (vérifié) et ce que tu as écrit à la personne.
 Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec personnes (nom), puis ecrire_a.
 
@@ -46,7 +46,12 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
 - Visites : « valide le créneau » = fixer_visite avec la date donnée (puis ecrire_a au client si message_requis) ; « inscris-le » / visite groupée sur inscription Flatfox = inscrire_visite (la routine Chrome s'en charge). Tu ne réponds jamais que tu ne peux pas : choisis l'outil, et si l'offre est ambiguë, liste les dossiers possibles en une ligne chacun et demande lequel.
 - Une offre citée par adresse, lien ou numéro : trouver_offre (toutes les offres) avant de dire qu'elle n'existe pas ou de demander l'offre_id. « Postule pour X » : postuler. Paiement de l'acompte confirmé par l'admin : paiement_recu. Critères d'un client à changer : criteres_client. Réponses de visite en attente : reponses_visite, puis valider_reponse si l'admin dit de les envoyer.
 - Courriels : Steeve ne répond seul qu'aux e-mails de visite (créneau proposé accepté, disponibilités du client transmises, créneaux publiés d'une annonce Immo-Rama). Toute autre réponse : seulement si l'admin le demande.
-- Visite déclarée faite, créneau accepté, visite annulée : visite_statut. « Qui dois-je appeler ? », annonceurs sans adresse : a_appeler ; l'admin te donne l'e-mail ou le téléphone d'une régie : contact_annonceur (les demandes bloquées repartent seules).
+- Consigne durable de l'admin sur un dossier (« X ne travaille pas », « c'est son ancien contrat ») : enregistre-la avec situation_personne ou classer_document — elle vaut alors pour tous (Steeve client, contrôles), pas seulement pour cette conversation. Ne réponds jamais qu'aucun outil ne permet de l'enregistrer.
+- Client pas intéressé par une visite / « supprime X de ce créneau » : retirer_visite (visite_id de l'outil visites) — le client est retiré, le créneau reste dans l'agenda pour les autres clients et l'annonceur n'est ni prévenu ni relancé ; jamais visite_statut annulee ni « annuler auprès de l'annonceur » dans ce cas. Créneaux restés libres à proposer à d'autres clients intéressés par le même logement : creneaux_libres puis fixer_visite.
+- Même adresse, logements différents (un 2,5 et un 4,5 pièces du même immeuble) : identifie toujours l'offre par pièces, loyer, surface, étage et offre_id (outils visites, offres, trouver_offre) ; ne mélange jamais deux offres d'une même adresse, et cite pièces et loyer dans ta réponse.
+- Visites : le client n'apporte PAS son dossier (l'équipe l'a), sauf consigne stricte de l'annonceur. Rappelle-lui de rapporter la demande de location, le QR code Flatfox ou le moyen de postuler, pour que l'équipe dépose la candidature dès la sortie de la visite.
+- Messages écrits à une personne (ecrire_a) : uniquement le message, comme tu le lui dirais, jamais de note de réflexion (« le client dit… », « je vérifie d'abord… »).
+- Visite déclarée faite, créneau accepté, visite annulée chez l'annonceur (bien retiré, annonceur qui annule) : visite_statut. « Qui dois-je appeler ? », annonceurs sans adresse : a_appeler ; l'admin te donne l'e-mail ou le téléphone d'une régie : contact_annonceur (les demandes bloquées repartent seules).
 - « Réponses à vérifier » : mails_a_rattacher, puis rattacher_mail pour chaque e-mail (l'offre suggérée si l'admin dit « oui », ignorer s'il dit que c'est sans suite).
 - Avant d'affirmer qu'un dossier est « envoyé » : preuve_envoi. Noté déposé sans preuve et l'admin confirme qu'il n'est pas parti : postulation_pas_envoyee puis reprendre_dossier.
 - Factures, paiements, facture à renvoyer : factures (AbaNinja). Demande de résiliation ou de remboursement validée par l'admin : traiter_demande_mandat (raison exigée pour résilier), puis decider_demande et ecrire_a. Adresse ou loyer faux sur une offre : corriger_offre.
@@ -67,7 +72,7 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
  * Rappel envoyé à chaque tour : les réponses déjà publiées dans la conversation peuvent dater d'avant l'ajout d'un
  * outil ; sans ce rappel, le modèle répète « je n'ai pas accès aux e-mails » au lieu d'appeler l'outil.
  */
-export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : objectifs (objectifs de l’année et écart), urls_portails puis web_fetch (annonces immobilier.ch et Homegate par codes de lieux), trouver_offre (toutes les offres par adresse, lien ou numéro), postuler, paiement_recu, criteres_client, reponses_visite, valider_reponse, emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites, visite_statut, a_appeler, contact_annonceur, mails_a_rattacher, rattacher_mail, preuve_envoi, factures (AbaNinja), traiter_demande_mandat, corriger_offre, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
+export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : objectifs (objectifs de l’année et écart), urls_portails puis web_fetch (annonces immobilier.ch et Homegate par codes de lieux), trouver_offre (toutes les offres par adresse, lien ou numéro), postuler, paiement_recu, criteres_client, reponses_visite, valider_reponse, emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites (avec pièces, loyer et visite_id), retirer_visite, creneaux_libres, situation_personne, classer_document, visite_statut, a_appeler, contact_annonceur, mails_a_rattacher, rattacher_mail, preuve_envoi, factures (AbaNinja), traiter_demande_mandat, corriger_offre, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
 
 export const ADMIN_TOOLS: ToolDefinition[] = [
   {
@@ -159,7 +164,7 @@ export const ADMIN_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'fixer_visite',
-    description: "Valide un créneau de visite précis donné par l'admin (« valide le créneau du 29.10 à 18h pour X ») : enregistre la visite de l'offre (date future, pas de conflit à ± 90 min avec une autre visite du client), met la note de suivi. Ensuite, si message_requis est vrai, préviens le client avec ecrire_a (date, heure, adresse, venir avec son dossier). Offre identifiée avec offres, visites ou etat_dossier.",
+    description: "Valide un créneau de visite précis donné par l'admin (« valide le créneau du 29.10 à 18h pour X ») : enregistre la visite de l'offre (date future, pas de conflit à ± 90 min avec une autre visite du client), met la note de suivi. Ensuite, si message_requis est vrai, préviens le client avec ecrire_a (date, heure, adresse, pièces et loyer ; pas besoin d'apporter son dossier sauf consigne stricte de l'annonceur ; rapporter la demande de location, le QR code Flatfox ou le moyen de postuler). Offre identifiée avec offres, visites ou etat_dossier.",
     input_schema: {
       type: 'object',
       properties: {
@@ -314,6 +319,44 @@ export const ADMIN_TOOLS: ToolDefinition[] = [
       properties: { offre_id: { type: 'string' }, statut: { type: 'string', enum: ['effectuee', 'confirmee', 'annulee'] }, date: { type: 'string' } },
       required: ['offre_id', 'statut'],
     },
+  },
+  {
+    name: 'situation_personne',
+    description: "Note la situation professionnelle d'une personne d'un dossier sur ordre de l'admin (« Manal ne travaille pas », « Phoebe est au chômage ») : contrat de travail et fiches de salaire ne sont plus réclamés pour elle (Steeve client, contrôles de pièces). client_id du dossier ; personne = « client » ou le nom d'une personne liée.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        client_id: { type: 'string' },
+        personne: { type: 'string' },
+        situation: { type: 'string', enum: ['salarie', 'cdd', 'interimaire', 'independant', 'sans_emploi', 'chomage', 'etudiant', 'retraite', 'au_foyer'] },
+        precision: { type: 'string' },
+      },
+      required: ['client_id', 'situation'],
+    },
+  },
+  {
+    name: 'classer_document',
+    description: "Reclasse un document d'un dossier (type et personne) sur ordre de l'admin, ex. « Contrat BG.pdf est son ancien contrat de travail ». document_id donné par etat_dossier ou client ; personne = « client » ou le nom d'une personne liée.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        document_id: { type: 'string' },
+        type_document: { type: 'string', enum: ['piece_identite', 'permis_sejour', 'fiche_salaire', 'contrat_travail', 'attestation_employeur', 'extrait_poursuites', 'attestation_domicile', 'rc_menage', 'certificat_salaire', 'formulaire_location', 'autre'] },
+        personne: { type: 'string' },
+        date_emission: { type: 'string', description: 'AAAA-MM-JJ si connue.' },
+      },
+      required: ['document_id', 'type_document'],
+    },
+  },
+  {
+    name: 'retirer_visite',
+    description: "Retire un client d'une visite (il n'est pas intéressé, « supprime X de ce créneau ») : sa visite passe annulée avec décision « pas intéressé », le créneau reste dans l'agenda pour les autres clients, l'annonceur n'est pas prévenu. visite_id donné par l'outil visites. Ensuite ecrire_a au client si l'admin le demande.",
+    input_schema: { type: 'object', properties: { visite_id: { type: 'string' } }, required: ['visite_id'] },
+  },
+  {
+    name: 'creneaux_libres',
+    description: "Créneaux de visite déjà obtenus chez l'annonceur dont des clients se sont retirés (clients_inscrits = 0 : créneau libre) : à proposer à un autre client intéressé par le même logement (fixer_visite), sans recontacter l'annonceur.",
+    input_schema: { type: 'object', properties: { jours: { type: 'number', description: '14 par défaut, 60 au plus.' } } },
   },
   {
     name: 'a_appeler',
@@ -503,7 +546,35 @@ export async function runAdminTool(userDb: any, name: string, input: any, ctx: A
     const date = input?.date ? zurichToUtc(String(input.date).slice(0, 16)) : null;
     if (input?.date && !date) return { content: 'Date invalide : AAAA-MM-JJTHH:MM (heure de Zurich).', isError: true };
     call = ['admin_steeve_visite_statut', { p_offre_id: input.offre_id, p_statut: statut, p_date: date ? date.toISOString() : null }];
-  } else if (name === 'a_appeler') call = ['admin_steeve_a_appeler', { p_limite: num(input?.limite, 1, 50, 20) }];
+  } else if (name === 'situation_personne' || name === 'classer_document') {
+    // Personne liée désignée par son nom : résolue dans le dossier avec la session de l'admin.
+    let clientId = uuid(input?.client_id);
+    if (name === 'classer_document') {
+      if (!uuid(input?.document_id)) return { content: 'document_id invalide.', isError: true };
+      const { data: d } = await userDb.from('documents').select('client_id').eq('id', input.document_id).maybeSingle();
+      clientId = d?.client_id ?? null;
+      if (!clientId) return { content: 'Document introuvable.', isError: true };
+    }
+    if (!clientId) return { content: 'client_id invalide (outil personnes ou client).', isError: true };
+    const p = String(input?.personne ?? '').trim();
+    let candidateId: string | null = null;
+    if (p && !/^(client|principal|client principal|le client|la cliente)$/i.test(p)) {
+      const { data: cands } = await userDb.from('client_candidates').select('id, prenom, nom').eq('client_id', clientId);
+      const n = p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const hit = (cands ?? []).filter((c: any) => `${c.prenom ?? ''} ${c.nom ?? ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(n)
+        || n.split(/\s+/).filter((w) => w.length > 2).every((w) => `${c.prenom ?? ''} ${c.nom ?? ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(w)));
+      if (hit.length !== 1) return { content: `Personne « ${p} » ${hit.length ? 'ambiguë' : 'introuvable'} dans ce dossier : ${(cands ?? []).map((c: any) => `${c.prenom} ${c.nom}`).join(', ') || 'aucune personne liée'}.`, isError: true };
+      candidateId = hit[0].id;
+    }
+    call = name === 'situation_personne'
+      ? ['admin_steeve_situation_personne', { p_client_id: clientId, p_candidate_id: candidateId, p_situation: String(input?.situation ?? ''), p_precision: input?.precision ? String(input.precision).slice(0, 200) : null }]
+      : ['admin_steeve_classer_document', { p_document_id: input.document_id, p_type_document: String(input?.type_document ?? ''), p_candidate_id: candidateId,
+          p_date_emission: /^\d{4}-\d{2}-\d{2}$/.test(String(input?.date_emission ?? '')) ? input.date_emission : null }];
+  } else if (name === 'retirer_visite') {
+    if (!uuid(input?.visite_id)) return { content: 'visite_id invalide (outil visites).', isError: true };
+    call = ['admin_steeve_retirer_visite', { p_visite_id: input.visite_id }];
+  } else if (name === 'creneaux_libres') call = ['admin_copilot_creneaux_libres', { p_jours: num(input?.jours, 1, 60, 14) }];
+  else if (name === 'a_appeler') call = ['admin_steeve_a_appeler', { p_limite: num(input?.limite, 1, 50, 20) }];
   else if (name === 'contact_annonceur') {
     if (!uuid(input?.offre_id)) return { content: 'offre_id invalide.', isError: true };
     call = ['admin_steeve_contact_annonceur', { p_offre_id: input.offre_id, p_email: input?.email ? String(input.email).slice(0, 200) : null,
@@ -534,7 +605,10 @@ export async function runAdminTool(userDb: any, name: string, input: any, ctx: A
     // Mêmes règles absolues que les réponses de Steeve au client (aveu d'erreur, e-mails du client, paiement freiné).
     const refus = forbiddenReply(String(input?.message ?? ''));
     if (refus) return { content: `Message non envoyé : ${refus} Réécris-le.`, isError: true };
-    call = ['steeve_admin_ecrire', { p_message: String(input?.message ?? '').slice(0, 2000), ...ids }];
+    // Jamais de note de réflexion (« Le client dit… », « je vérifie d'abord… ») dans un message à une personne.
+    const message = withoutNarration(String(input?.message ?? ''));
+    if (!message) return { content: "Message non envoyé : c'est une note de réflexion, pas un message. Écris directement à la personne (tutoiement pour un client), naturellement, avec le résultat concret.", isError: true };
+    call = ['steeve_admin_ecrire', { p_message: message.slice(0, 2000), ...ids }];
   } else if (name === 'decider_demande') {
     if (!uuid(input?.proposal_id)) return { content: 'proposal_id invalide (voir la réf. de la demande).', isError: true };
     call = ['staff_decide_steeve_proposal', { p_id: input.proposal_id, p_status: input?.decision === 'rejetee' ? 'rejetee' : 'traitee', p_note: input?.note ? String(input.note).slice(0, 400) : null }];
@@ -651,6 +725,15 @@ export function historyFromConversation(rows: { sender_type: string; content: st
 }
 
 export const ADMIN_BUSY_MESSAGE = "Le plafond quotidien du copilote est atteint. Tu peux le relever dans le pilotage de Steeve, ou réessayer demain.";
+/** La réponse à l'admin affirme qu'un message a été envoyé / écrit à quelqu'un. */
+export function claimsMessageSent(text: string): boolean {
+  const t = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'");
+  return /\b(le |ton |mon )?message (est|a ete|a bien ete) (bien )?(envoye|publie|poste|parti)\b/.test(t)
+    || /\bj'ai (bien )?(ecrit|envoye un message|repondu) a [a-z]/.test(t)
+    || /\bje lui ai (bien )?(ecrit|envoye|repondu)\b/.test(t)
+    || /\bmessage envoye a\b/.test(t);
+}
+
 export const ADMIN_ERROR_MESSAGE = "Je n'arrive pas à répondre pour le moment. Réessaie dans un instant.";
 
 export async function handleAdminChat(opts: {
@@ -695,6 +778,7 @@ export async function handleAdminChat(opts: {
   let cost = 0;
   const used: string[] = [];
   let corrected = false;
+  let claimChecked = false;
   try {
     let text = '';
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
@@ -721,6 +805,14 @@ export async function handleAdminChat(opts: {
         }
         // Toujours fautive après la réécriture : les phrases d'aveu d'erreur sont retirées, jamais publiées.
         if (interdit) text = withoutSelfError(text);
+        // « Le message est envoyé à X » sans appel à ecrire_a dans cette demande : affirmation non prouvée.
+        if (claimsMessageSent(text) && !used.includes('ecrire_a') && !claimChecked && round < MAX_TOOL_ROUNDS) {
+          claimChecked = true;
+          messages.push({ role: 'assistant', content: resp.content });
+          messages.push({ role: 'user', content: "Ta réponse n'a pas été publiée : elle dit qu'un message a été envoyé ou écrit à une personne, mais ecrire_a n'a pas été appelé pour cette demande. Si l'admin veut que tu écrives à la personne, appelle ecrire_a maintenant puis confirme ; sinon réécris ta réponse sans affirmer d'envoi. Ne mentionne pas cette consigne." });
+          text = '';
+          continue;
+        }
         break;
       }
       messages.push({ role: 'assistant', content: resp.content });
@@ -736,6 +828,21 @@ export async function handleAdminChat(opts: {
       }
       messages.push({ role: 'user', content: results });
       text = '';
+    }
+    // Toutes les étapes d'outils utilisées sans réponse écrite : un dernier appel, sans outil, pour répondre à l'admin
+    // avec ce qui a été fait et trouvé (plus jamais « Je n'arrive pas à répondre » après un travail réel).
+    if (!text && messages.length && messages[messages.length - 1].role === 'user') {
+      const last = messages[messages.length - 1];
+      const ask = { type: 'text' as const, text: "Plus d'outil disponible pour cette demande. Réponds maintenant à l'admin, en français, avec ce que tu as déjà fait (actions réussies ou non) et trouvé, et ce qui reste à faire ; sans appeler d'outil." };
+      last.content = Array.isArray(last.content) ? [...last.content, ask] : [{ type: 'text', text: String(last.content) }, ask];
+      try {
+        const resp = await callModel({ model, max_tokens: 1400, system, tools: [WEB_SEARCH_TOOL, ADMIN_WEB_FETCH_TOOL, ...ADMIN_TOOLS], tool_choice: { type: 'none' }, messages });
+        for (const k of Object.keys(totals) as (keyof typeof totals)[]) totals[k] += resp.usage[k] ?? 0;
+        cost += costOf(model, resp.usage);
+        text = textOf(resp.content);
+        if (selfErrorReply(text)) text = withoutSelfError(text);
+        used.push('synthese');
+      } catch { /* repli : message d'erreur ci-dessous */ }
     }
     await finish({
       status: text ? 'done' : 'failed', model,

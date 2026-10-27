@@ -2,6 +2,7 @@
 // Le code décide (droits, plafonds, publication) ; le modèle comprend, choisit les outils et rédige.
 // deno-lint-ignore-file no-explicit-any
 import { CLIENT_WEB_FETCH_TOOL, costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type Usage } from './anthropic.ts';
+import { attachmentBlocks } from './fichiers.ts';
 import { accountPhase, depositAmount, loadDossier, overview, type Db } from './context.ts';
 import { staticWelcome, STEEVE_SYSTEM_PROMPT, welcomeInstructions } from './prompt.ts';
 import { runTool, STEEVE_TOOLS, transferToAgent } from './tools.ts';
@@ -70,8 +71,10 @@ function describeMessage(m: any): string {
   const parts: string[] = [];
   if (m.content) parts.push(String(m.content).slice(0, 1500));
   if (m.attachment_url && m.payload?.kind !== 'dossier_document') {
-    if (m.attachment_type === 'audio') parts.push('[message vocal : Steeve ne peut pas encore l’écouter]');
-    else parts.push(`[pièce jointe ${m.attachment_type || 'fichier'} : ${m.attachment_name || 'sans nom'}]`);
+    if (m.attachment_type === 'audio') parts.push('[message vocal : demande-lui de l’écrire en quelques mots]');
+    else if (m.payload?.document_classe) parts.push(`[pièce jointe ${m.attachment_name || 'sans nom'} : déjà classée dans ses documents (${m.payload?.document_type ?? 'document'})]`);
+    else if (m.payload?.fichier_lu) parts.push(`[pièce jointe ${m.attachment_name || 'sans nom'} : déjà lue — ${String(m.payload.fichier_lu).slice(0, 200)}]`);
+    else parts.push(`[pièce jointe ${m.attachment_type || 'fichier'} : ${m.attachment_name || 'sans nom'} — message_id ${m.id} ; son contenu est joint à la fin si elle date de moins de 72 h]`);
   }
   return `[${formatZurich(m.created_at)}] ${who} : ${parts.join(' ') || '(vide)'}`;
 }
@@ -101,6 +104,42 @@ export function withoutSelfError(text: string): string {
   const kept = text.split(/(?<=[.!?…])\s+|\n+/).filter((p) => p.trim() && !selfErrorReply(p));
   const out = kept.join(' ').replace(/\s{2,}/g, ' ').trim();
   return out || "J'ai vérifié les données : redemande-moi le point exact et je te réponds avec le détail.";
+}
+
+const fold = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'");
+
+/**
+ * Note de réflexion écrite comme du texte (« Le client dit … : il veut donc … Je vérifie d'abord … ») : jamais
+ * publiée. Parle du client à la troisième personne ou de ce que Steeve va faire avant de répondre.
+ */
+export function isNarration(paragraph: string): boolean {
+  const t = fold(paragraph).trim();
+  if (!t) return false;
+  return /\b(le|la) client(e)? (dit|a dit|ecrit|a ecrit|demande|veut|voudrait|souhaite|repond|a repondu|confirme|precise|parle|semble|n'a pas|a deja)\b/.test(t)
+    || /\ble message (du client|de la cliente|de [a-z][\w-]+) (est|semble|peut|vise|concerne)\b/.test(t)
+    || /\b(il|elle) (veut|souhaite|demande) donc\b/.test(t)
+    || /\b(une seule question est (donc )?necessaire|je dois donc (verifier|regarder|demander|lui)|je dois d'abord (verifier|regarder|controler)|je commence par verifier|verifions d'abord)\b/.test(t)
+    || /^je (verifie|regarde|controle|consulte) d'abord\b/.test(t)
+    || /\b(sa|son) (demande|message|reponse) (est|reste) ambigu/.test(t);
+}
+
+/** Retire les paragraphes de réflexion ; rend '' si rien ne s'adresse au client. */
+export function withoutNarration(text: string): string {
+  const paras = text.split(/\n{2,}/);
+  const kept = paras.filter((p) => !isNarration(p));
+  // Une phrase de réflexion collée au début d'un paragraphe adressé au client (« … Je vérifie d'abord. Merci X ! »).
+  const cleaned = kept.map((p) => {
+    const parts = p.split(/(?<=[.!?…])\s+(?=[A-ZÀ-Ý«])/);
+    return parts.filter((x) => !isNarration(x)).join(' ');
+  }).filter((p) => p.trim());
+  return cleaned.join('\n\n').trim();
+}
+
+/** Réponse qui annonce une vérification sans rien répondre (« Je vérifie tes offres… ») : le travail n'est pas fait. */
+export function onlyAnnounces(text: string): boolean {
+  const t = fold(text).trim();
+  return t.length < 260 && /^(je (vais )?(verifie|verifier|regarde|regarder|controle|controler|consulte|consulter|m'en occupe|reviens)|laisse-moi (verifier|regarder)|un instant|deux secondes)\b/.test(t)
+    && !/\?/.test(t);
 }
 
 /**
@@ -340,17 +379,24 @@ export async function runTurn(opts: {
       if (!last || last.sender_type !== 'client') return finish({ status: 'skipped', reason: 'deja_repondu' });
 
       const facts = await overview(db, dossier, now());
-      const messages: ModelMessage[] = [{
-        role: 'user',
-        content:
-          `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
-          `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
-          ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart(),
-      }];
+      // Langue d'écriture notée pour ce client (outil noter_langue, ou l'équipe) : toutes les réponses dans cette langue.
+      const { data: convLang } = await db.from('conversations').select('steeve_summary').eq('id', conversationId).single();
+      const langue = String((convLang?.steeve_summary as any)?.langue ?? '').trim();
+      const langueNote = langue
+        ? `Langue du client : ${langue}. Réponds-lui entièrement en ${langue} (phrases courtes), en gardant en français, entre guillemets ou parenthèses, les adresses, montants, dates, noms des boutons de l'application et des documents (ex. « trombone 📎 », « extrait des poursuites »).\n\n`
+        : '';
+      const contexte = langueNote +
+        `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
+        `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
+        ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart();
+      // Photos, captures et PDF envoyés par le client et pas encore classés : Steeve les voit vraiment.
+      const pieces = await attachmentBlocks(db, transcript, now());
+      const messages: ModelMessage[] = [{ role: 'user', content: pieces.length ? [{ type: 'text', text: contexte }, ...pieces] : contexte }];
 
       let finalText = '';
       let transferred = false;
       let corrected = false;
+      let reformulated = false;
       for (let i = 0; i < MAX_MODEL_CALLS; i++) {
         if (Date.now() - startedAt > deadlineMs) throw new Error(`délai dépassé (${Math.round(deadlineMs / 1000)} s)`);
         const resp = await callModel({
@@ -376,6 +422,18 @@ export async function runTurn(opts: {
         }
         if (resp.stop_reason !== 'tool_use' || toolUses.length === 0) {
           finalText = textOf(resp.content);
+          // Réflexion écrite comme un message (« Le client dit … Je vérifie d'abord … ») : retirée ; s'il ne reste
+          // rien, ou seulement l'annonce d'une vérification, le modèle termine le travail et écrit au client.
+          const sansNotes = withoutNarration(finalText);
+          if ((!sansNotes || onlyAnnounces(sansNotes)) && !reformulated && i + 1 < MAX_MODEL_CALLS) {
+            reformulated = true;
+            totals.tools.push('garde_fou_reflexion');
+            messages.push({ role: 'assistant', content: resp.content });
+            messages.push({ role: 'user', content: "Ce texte n'a PAS été envoyé au client : c'est une note de réflexion ou une simple annonce (« je vérifie… »). Fais maintenant les vérifications et actions nécessaires avec tes outils, puis écris uniquement le message destiné au client : tu lui parles directement (tutoiement), naturellement, avec le résultat concret. Jamais « le client dit… », jamais ce que tu vas faire avant de répondre." });
+            finalText = '';
+            continue;
+          }
+          finalText = sansNotes; // vide : pas de publication de la réflexion (repli « sans réponse »).
           // Garde-fou : jamais de mention des e-mails du client, jamais de frein à un paiement. Une seule réécriture.
           const interdit = forbiddenReply(finalText);
           if (interdit && !corrected && i + 1 < MAX_MODEL_CALLS) {
@@ -401,7 +459,7 @@ export async function runTurn(opts: {
             outcome = { content: `Erreur de lecture : ${err instanceof Error ? err.message : String(err)}`, isError: true };
           }
           if (outcome.transferred) transferred = true;
-          results.push({ type: 'tool_result', tool_use_id: use.id, content: outcome.content, ...(outcome.isError ? { is_error: true } : {}) });
+          results.push({ type: 'tool_result', tool_use_id: use.id, content: outcome.blocks?.length ? [{ type: 'text', text: outcome.content }, ...outcome.blocks] : outcome.content, ...(outcome.isError ? { is_error: true } : {}) });
         }
         messages.push({ role: 'user', content: results });
       }
