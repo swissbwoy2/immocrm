@@ -190,7 +190,8 @@ export function stripUntrusted(text: string): string {
 function stripContacts(text: string, allowed: RegExp): string {
   return text
     // Adresses e-mail (le personnel et les tiers ne sont jamais cités) ; seules les boîtes générales de l'agence restent.
-    .replace(/[A-Za-z0-9._%+-]+\s*(?:@|\(at\)|\[at\])\s*[A-Za-z0-9-]+(?:\s*(?:\.|\(dot\)|\[dot\])\s*[A-Za-z0-9-]+)+/gi,
+    // Pas d'espace autour d'un point simple : sinon « visites@immo-rama.ch. Ce » était avalé avec le mot suivant.
+    .replace(/[A-Za-z0-9._%+-]+(?:\s*@\s*|\s*\(at\)\s*|\s*\[at\]\s*)[A-Za-z0-9-]+(?:(?:\.|\s*\(dot\)\s*|\s*\[dot\]\s*)[A-Za-z0-9-]+)+/gi,
       (m) => (/^(?:info|visites|relocation|support)@(?:immo-rama|logisorama)\.ch$/i.test(m) ? m : '[adresse retirée]'))
     // Liens explicites (http, https, www), quel que soit le domaine : seuls les sites de l'agence restent.
     .replace(/\b(?:https?:\/\/|www\.)[^\s<>"]+/gi, (match) => {
@@ -521,6 +522,14 @@ export async function runTurn(opts: {
     return finish({ status: 'skipped', reason: 'conversation_en_mouvement' });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
+    // Crédit du fournisseur IA épuisé : l'admin est prévenu une fois par jour (Steeve ne peut plus répondre).
+    if (/credit balance|billing|insufficient/i.test(message)) {
+      const jour = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich' }).format(new Date());
+      try {
+        await notifyAdminsOnce(db, 'steeve_credit_alerte_jour', jour, 'Steeve en panne : crédit IA épuisé',
+          "Le compte Anthropic n'a plus de crédit : Steeve ne répond plus aux clients (leurs messages partent chez l'agent). Recharger le crédit et activer la recharge automatique.");
+      } catch (_e) { /* l'alerte ne bloque jamais le repli */ }
+    }
     try {
       return await fallback('failed', 'erreur', TECHNICAL_MESSAGE, message);
     } catch (inner) {

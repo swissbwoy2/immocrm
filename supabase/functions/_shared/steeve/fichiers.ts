@@ -75,19 +75,22 @@ export async function shrinkImage(bytes: Uint8Array, mime: string): Promise<{ by
     if (img.width >= img.height && img.width > MAX_EDGE_PX) img.resize(MAX_EDGE_PX, Image.RESIZE_AUTO);
     else if (img.height > MAX_EDGE_PX) img.resize(Image.RESIZE_AUTO, MAX_EDGE_PX);
     return { bytes: await img.encodeJPEG(82), mime: 'image/jpeg' };
-  } catch {
+  } catch (e) {
+    console.error('steeve fichiers: réduction impossible', mime, bytes.length, e instanceof Error ? e.message : String(e));
     return { bytes, mime };
   }
 }
 
 /** Bloc lisible par le modèle, ou la raison pour laquelle le fichier ne peut pas être lu. */
-export async function blockFor(raw: Uint8Array, rawMime: string, title: string): Promise<ContentBlock | { raison: string }> {
+export async function blockFor(raw: Uint8Array, rawMime: string, title: string, publicUrl?: string): Promise<ContentBlock | { raison: string }> {
   if (rawMime === 'application/pdf') {
     if (raw.length > MAX_PDF_BYTES) return { raison: 'PDF trop lourd (plus de 20 Mo)' };
     return { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64(raw) }, title: title.slice(0, 120) };
   }
   if (Object.values(IMAGE_MIME).includes(rawMime as never)) {
     const { bytes, mime } = await shrinkImage(raw, rawMime);
+    // Image trop lourde mais publique et sous 5 Mo : le modèle la lit directement par son adresse.
+    if (bytes.length > MAX_IMAGE_BYTES && publicUrl && raw.length <= 5_000_000) return { type: 'image', source: { type: 'url', url: publicUrl } };
     if (bytes.length > MAX_IMAGE_BYTES) return { raison: 'photo trop lourde : demander une capture d\'écran ou une photo moins lourde' };
     return { type: 'image', source: { type: 'base64', media_type: mime as 'image/jpeg', data: b64(bytes) } };
   }
@@ -121,7 +124,7 @@ export async function attachmentBlocks(db: Db, transcript: any[], now: Date): Pr
     const bytes = path ? await download(db, ATTACHMENTS_BUCKET, path) : null;
     const head = `Pièce jointe envoyée par le client (message_id ${m.id}, fichier « ${name} »)`;
     if (!bytes) { blocks.push({ type: 'text', text: `${head} : fichier introuvable dans le stockage, demande-lui de le renvoyer.` }); continue; }
-    const block = await blockFor(bytes, mime, name);
+    const block = await blockFor(bytes, mime, name, /\/object\/public\//.test(String(m.attachment_url)) ? String(m.attachment_url) : undefined);
     if ('raison' in block) { blocks.push({ type: 'text', text: `${head} : ${block.raison}.` }); continue; }
     blocks.push({ type: 'text', text: `${head} — regarde-la : si c'est un document du dossier, classe-le avec classer_document (message_id ci-dessus) ; si c'est une annonce ou une demande de location, traite-la.` });
     blocks.push(block);

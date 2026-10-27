@@ -57,7 +57,7 @@ export type ContentBlock =
   // PDF lu par le modèle (formulaire de demande de location).
   | { type: 'document'; source: { type: 'base64'; media_type: 'application/pdf'; data: string }; title?: string }
   // Photo d'une pièce (carte d'identité, fiche de salaire…) lue par le modèle.
-  | { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'; data: string } };
+  | { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'; data: string } | { type: 'url'; url: string } };
 
 export interface ModelMessage {
   role: 'user' | 'assistant';
