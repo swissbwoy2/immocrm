@@ -89,8 +89,7 @@ export async function blockFor(raw: Uint8Array, rawMime: string, title: string, 
   }
   if (Object.values(IMAGE_MIME).includes(rawMime as never)) {
     const { bytes, mime } = await shrinkImage(raw, rawMime);
-    // Image trop lourde mais publique et sous 5 Mo : le modèle la lit directement par son adresse.
-    if (bytes.length > MAX_IMAGE_BYTES && publicUrl && raw.length <= 5_000_000) return { type: 'image', source: { type: 'url', url: publicUrl } };
+    // Pas de lecture par adresse : si l'API ne peut pas télécharger le fichier, toute la conversation échoue (27.10, Phoebe).
     if (bytes.length > MAX_IMAGE_BYTES) return { raison: 'photo trop lourde : demander une capture d\'écran ou une photo moins lourde' };
     return { type: 'image', source: { type: 'base64', media_type: mime as 'image/jpeg', data: b64(bytes) } };
   }
