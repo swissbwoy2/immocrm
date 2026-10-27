@@ -7,7 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Bot, ClipboardList, Inbox, Lightbulb, Loader2, MessagesSquare, Power, Save, Search, ShieldCheck, Sparkles, UserMinus, UserPlus, Users, Wallet,
+  Bot, ClipboardList, Inbox, PhoneCall, Lightbulb, Loader2, MessagesSquare, Power, Save, Search, ShieldCheck, Sparkles, UserMinus, UserPlus, Users, Wallet,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -20,6 +20,7 @@ import { SteeveAuthServersCard } from '@/components/settings/SteeveAuthServersCa
 import { SteeveCopilotCard } from '@/components/admin/SteeveCopilotCard';
 import { SteeveProposalsCard } from '@/components/steeve/SteeveProposalsCard';
 import { SteeveOperatorCard } from '@/components/admin/SteeveOperatorCard';
+import { SteeveAppelsCard } from '@/components/admin/SteeveAppelsCard';
 
 type Settings = Record<string, string>;
 type Overview = {
@@ -92,7 +93,7 @@ const STATUS_TONE: Record<string, 'success' | 'danger' | 'warning' | 'muted' | '
   running: 'neutral',
 };
 
-type SectionKey = 'copilote' | 'propositions' | 'operateur' | 'activation' | 'clients' | 'budget' | 'journal' | 'boites';
+type SectionKey = 'copilote' | 'propositions' | 'appels' | 'operateur' | 'activation' | 'clients' | 'budget' | 'journal' | 'boites';
 const SECTION_KEY = 'admin-steeve-section';
 
 const usd = (n: number | string | null | undefined) => `${Number(n ?? 0).toFixed(2)} USD`;
@@ -111,8 +112,9 @@ export default function AdminSteeve() {
   const [journal, setJournal] = useState<JournalRow[]>([]);
   const [section, setSectionState] = useState<SectionKey>(() => {
     try {
-      const saved = localStorage.getItem(SECTION_KEY) as SectionKey | null;
-      const valid: SectionKey[] = ['copilote', 'propositions', 'operateur', 'activation', 'clients', 'budget', 'journal', 'boites'];
+      // Lien direct (notification du rapport de santé) : ?section=appels
+      const saved = (new URLSearchParams(window.location.search).get('section') ?? localStorage.getItem(SECTION_KEY)) as SectionKey | null;
+      const valid: SectionKey[] = ['copilote', 'propositions', 'appels', 'operateur', 'activation', 'clients', 'budget', 'journal', 'boites'];
       return saved && valid.includes(saved) ? saved : 'copilote';
     } catch {
       return 'copilote';
@@ -217,6 +219,7 @@ export default function AdminSteeve() {
   const sections: SettingsSection<SectionKey>[] = [
     { key: 'copilote', label: 'Copilote', sub: 'Poser une question', icon: Sparkles },
     { key: 'propositions', label: 'Propositions', sub: 'Actions à valider', icon: Lightbulb },
+    { key: 'appels', label: 'Appels du jour', sub: 'Régies à appeler', icon: PhoneCall },
     { key: 'operateur', label: 'Opérateur', sub: 'Mode et actions', icon: Bot },
     { key: 'activation', label: 'Activation', sub: 'Où Steeve répond', icon: Power },
     { key: 'clients', label: 'Clients', sub: 'Clients concernés', icon: Users, count: allClients ? undefined : pilot.length },
@@ -260,6 +263,8 @@ export default function AdminSteeve() {
               <SteeveProposalsCard basePath="/admin" />
             </GlassSlot>
           )}
+
+          {section === 'appels' && <SteeveAppelsCard />}
 
           {section === 'operateur' && <SteeveOperatorCard />}
 
