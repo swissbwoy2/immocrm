@@ -18,6 +18,8 @@ import { buildTextEmail, isEmail, latin1, messageId, prepareDraftForSend, SmtpUn
 import { processInbox } from './inbox.ts';
 import { INTERNAL_MARK, relireMail, stripSubjectMarkers } from './relecture.ts';
 import { searchAndSendOffers } from './offers.ts';
+import { inClientLanguage } from './fichiers.ts';
+import { findImmobilierContacts } from './contacts.ts';
 import { buildMailWithAttachments, evaluatePieces, isImage, MANUAL_PIECES, MAX_MAIL_BYTES, MAX_PIECE_BYTES, mimeOf, readPieces, REGIE_PIECES, type DocCandidate } from './pieces-regie.ts';
 
 export type Mode = 'off' | 'a_blanc' | 'autonome';
@@ -33,7 +35,7 @@ const MAX_PDF_BYTES = 6 * 1024 * 1024;
 /** Dossier complet (formulaire + pièces) lu en entier avant tout envoi. */
 const MAX_DOSSIER_BYTES = 15 * 1024 * 1024;
 
-export interface DraftMessage { uid: number; raw: Uint8Array }
+export interface DraftMessage { uid: number; raw: Uint8Array; /** Brouillon trop lourd pour être lu (octets) : signalé à l'équipe. */ tropLourd?: number }
 export interface MailPort {
   /** La boîte a ses identifiants enregistrés. */
   ready(box: string): Promise<boolean>;
@@ -56,6 +58,8 @@ export interface OperatorDeps {
   now?: () => Date;
   /** Exécuter seulement cette tâche du registre (demande de l'équipe, résultat rendu tout de suite). */
   taskId?: string | null;
+  /** Lecture des pages publiques (contacts des régies) ; fetch par défaut. */
+  fetchFn?: typeof fetch;
 }
 
 export interface OperatorReport {
@@ -66,6 +70,9 @@ export interface OperatorReport {
   relances: number;
   visites_lancees?: number;
   retours_visites?: number;
+  rappels_visites?: number;
+  pieces_jointes?: number;
+  contacts_trouves?: number;
   dossiers_envoyes: number;
   dossiers_a_blanc: number;
   bloques: number;
@@ -81,6 +88,30 @@ export interface OperatorReport {
 }
 
 // ---------- utilitaires ----------
+
+const piecesTxt = (p: unknown) => (p == null || p === '' ? '' : `${String(p).replace('.', ',').replace(/,0$/, '')} pièces`);
+const chf = (n: unknown) => (n == null || n === '' ? '' : `${Math.round(Number(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'")} CHF/mois`);
+
+/**
+ * Rappel avant visite (règle de l'admin du 27.10.2026) : le client n'apporte pas son dossier (sauf consigne stricte
+ * de l'annonceur) mais rapporte la demande de location, le QR code Flatfox ou le moyen de postuler.
+ */
+export function rappelVisitesMessage(vs: Array<{ prenom?: string | null; adresse?: string | null; pieces?: unknown; loyer?: unknown; quand?: string | null; flatfox?: boolean; dossier_exige?: boolean }>): string {
+  const prenom = String(vs[0]?.prenom ?? '').trim().split(/\s+/)[0] ?? '';
+  const desc = (v: typeof vs[number]) => {
+    const detail = [piecesTxt(v.pieces), chf(v.loyer)].filter(Boolean).join(', ');
+    return `${v.quand ?? ''} : ${v.adresse ?? 'le bien'}${detail ? ` (${detail})` : ''}`;
+  };
+  const tete = vs.length === 1
+    ? `Bonjour${prenom ? ` ${prenom}` : ''}, petit rappel pour ta visite ${desc(vs[0])}.`
+    : `Bonjour${prenom ? ` ${prenom}` : ''}, petit rappel pour tes visites :\n${vs.map((v) => `- ${desc(v)}`).join('\n')}`;
+  const exige = vs.filter((v) => v.dossier_exige);
+  const dossier = exige.length
+    ? `Pour ${exige.map((v) => v.adresse).join(' et ')}, l'annonceur demande que tu viennes avec ton dossier : prends-le avec toi.${exige.length < vs.length ? " Pour les autres, pas besoin de l'apporter, l'équipe l'a déjà." : ''}`
+    : "Pas besoin d'apporter ton dossier : l'équipe l'a déjà et s'en occupe.";
+  const qr = vs.some((v) => v.flatfox) ? ', QR code Flatfox' : ', QR code';
+  return `${tete}\n\n${dossier} En revanche, n'oublie surtout pas de récupérer sur place la demande de location (formulaire papier${qr}, lien ou tout autre moyen de postuler) et envoie-la-moi ici dès la sortie, en photo avec le trombone 📎 : l'équipe Immo-rama dépose ta candidature dans la foulée.\n\nEt dis-moi juste après la visite si le logement te plaît !`;
+}
 
 export function zurichParts(d: Date) {
   const f = new Intl.DateTimeFormat('fr-CH', { timeZone: 'Europe/Zurich', hour: '2-digit', hour12: false, weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -145,8 +176,21 @@ export function relanceEmail(o: { adresse: string; reference?: string | null }) 
 type ActionRow = Record<string, unknown> & { kind: string; statut: string };
 
 /** Ajoute une action au journal. Clé déjà présente → false (déjà faite ou déjà journalisée). */
+/** Limites des colonnes du registre (motif ≤ 500, corps ≤ 8000) : un motif long ne fait plus échouer le journal. */
+export function fitAction<T extends { motif?: string | null; note?: string | null; corps?: string | null }>(row: T): T {
+  const out = { ...row };
+  const motif = typeof out.motif === 'string' ? out.motif : null;
+  if (motif && motif.length > 500) {
+    out.motif = `${motif.slice(0, 497)}…`;
+    // Motif complet gardé dans la note (contrôle détaillé d'un dossier, ex. Evana / Bossons 1 le 27.10.2026).
+    out.note = `${out.note ? `${out.note}\n` : ''}Motif complet : ${motif}`.slice(0, 4000);
+  }
+  if (typeof out.corps === 'string' && out.corps.length > 8000) out.corps = out.corps.slice(0, 8000);
+  return out;
+}
+
 async function journal(db: any, row: ActionRow, key: string | null, taskId?: string | null): Promise<boolean> {
-  const payload = { ...row, updated_at: new Date().toISOString() };
+  const payload = { ...fitAction(row as any), updated_at: new Date().toISOString() };
   if (taskId) {
     const { error } = await db.from('steeve_actions').update({ ...payload, idempotency_key: key }).eq('id', taskId);
     if (error && error.code === '23505') {
@@ -187,13 +231,20 @@ async function alertAdmins(db: any, cle: string, title: string, message: string,
   }
 }
 
+/** Modèle de traduction du passage en cours (messages automatiques dans la langue du client). */
+let clientTranslator: CallModel | null = null;
+/** Texte d'un message automatique au client : dans sa langue s'il en a une autre que le français (version FR dessous). */
+async function toClient(db: any, conversationId: string, content: string): Promise<string> {
+  return (await inClientLanguage(db, clientTranslator, conversationId, content)).text;
+}
+
 async function messageClient(db: any, clientId: string, content: string, now: Date): Promise<boolean> {
   if (!inClientHours(now)) return false;
   const { data: conv } = await db.from('conversations').select('id').eq('client_id', clientId).eq('conversation_type', 'client-agent')
     .order('last_message_at', { ascending: false }).limit(1);
   const id = conv?.[0]?.id;
   if (!id) return false;
-  const { error } = await db.from('messages').insert({ conversation_id: id, sender_id: 'steeve', sender_type: 'assistant', content, payload: { steeve_operateur: true } });
+  const { error } = await db.from('messages').insert({ conversation_id: id, sender_id: 'steeve', sender_type: 'assistant', content: await toClient(db, id, content), payload: { steeve_operateur: true } });
   return !error;
 }
 
@@ -869,6 +920,11 @@ async function handleDrafts(deps: Required<OperatorDeps>, mode: Mode, ctx: { les
   let costToday = (spent ?? []).reduce((s: number, r: any) => s + (Number(r.controles?.cout_usd) || 0), 0);
   for (const d of drafts) {
     if (handled >= LIMITS.dossiersPerRun) break;
+    if (d.tropLourd) {
+      await alertAdmins(db, `steeve-brouillon-lourd-${d.uid}`, 'Dossier trop lourd pour être envoyé',
+        `Un brouillon de relocation@ fait ${(d.tropLourd / 1048576).toFixed(1)} Mo (25 Mo au plus) : il n'est pas lu ni envoyé. Allège les pièces jointes (PDF compressé, photos réduites) ; les autres dossiers continuent.`, '/admin/postulations');
+      continue;
+    }
     const dk = await draftKey(d.raw);
     if (await keyExists(db, `dossier:${dk}`) || await keyExists(db, `bloque:dossier:${dk}`) || await keyExists(db, `blanc:dossier:${dk}`)) continue;
     if (costToday >= 3 && callModel) { rep.erreurs.push('plafond de dépense des contrôles atteint (3 USD / 24 h)'); break; }
@@ -890,6 +946,10 @@ async function handleDrafts(deps: Required<OperatorDeps>, mode: Mode, ctx: { les
       destinataire: check.recipients.join(', '), objet: check.subject, pieces: check.attachments, controles: { ...check.controles, cout_usd: Number(check.cost.toFixed(4)) },
     };
     if (!check.ok) {
+      // Même dossier bloqué pour la même raison : une seule alerte par jour, même si la routine refait le brouillon
+      // (avant : une alerte à chaque passage, ex. Evana / Bossons 1 à 11:07 puis 11:12).
+      const motifKey = String(check.motif ?? '').toLowerCase().normalize('NFD').replace(/[^a-z]+/g, '').slice(0, 40);
+      const stable = offre ? `${offre.offre_id}:${motifKey}:${zurichParts(new Date()).date}` : check.messageKey;
       const k = `bloque:${key}`;
       if (await keyExists(db, k)) continue;
       await journal(db, { ...base, source: task ? 'admin' : 'auto', statut: 'bloque', motif: check.motif }, k, task?.id ?? null);
@@ -900,7 +960,7 @@ async function handleDrafts(deps: Required<OperatorDeps>, mode: Mode, ctx: { les
           pieces: check.attachments, source: 'steeve', statut: 'a_valider', motif_blocage: check.motif, controle_resultat: base.controles,
         });
       }
-      await alertAdmins(db, `steeve-dossier-${check.messageKey}`, 'Dossier à vérifier avant envoi',
+      await alertAdmins(db, `steeve-dossier-${stable}`, 'Dossier à vérifier avant envoi',
         `${offre ? `${offre.client_nom} — ${offre.adresse}` : check.subject} : ${check.motif} Le brouillon reste dans relocation@.`, '/admin/postulations');
       rep.bloques++;
       handled++;
@@ -1024,16 +1084,42 @@ async function handleRechercheOffres(deps: Required<OperatorDeps>, mode: Mode, t
       : r.ok
         ? (r.restant_jour <= 0
           ? `Tu as déjà reçu tes 12 offres du jour : la suite arrive demain. Dis-moi lesquelles t'intéressent et je demande les visites.`
-          : `J'ai lu ${r.lues} annonce${r.lues > 1 ? 's' : ''} (Flatfox, immobilier.ch, Homegate et nos offres en cours) : aucune n'est dans tes critères en ce moment${raisons(r.ecartees)}. Les recherches continuent plusieurs fois par jour. Pour recevoir plus d'offres tout de suite, tu peux élargir la zone, le budget ou le nombre de pièces : dis-moi ce que tu acceptes et je relance.`)
+          : aucuneOffreMessage(r, await criteresRecents(db, String(t.client_id), deps.now())))
         : `Je n'ai pas pu lancer la recherche : ${r.motif}`;
     const { data: conv } = await db.from('conversations').select('id').eq('client_id', String(t.client_id)).eq('conversation_type', 'client-agent').order('last_message_at', { ascending: false }).limit(1);
     if (conv?.[0]?.id) {
-      await db.from('messages').insert({ conversation_id: conv[0].id, sender_id: 'steeve', sender_type: 'assistant', content: text, payload: { steeve_operateur: true, steeve_cle: `recherche:${taskId}` } });
+      await db.from('messages').insert({ conversation_id: conv[0].id, sender_id: 'steeve', sender_type: 'assistant', content: await toClient(db, conv[0].id, text), payload: { steeve_operateur: true, steeve_cle: `recherche:${taskId}` } });
     }
   }
 }
 
 /** « (surtout : 51 hors zone, 12 au-dessus du budget) » : les deux principales raisons, en mots simples. */
+/** Critères enregistrés du client et dernier changement (pour ne pas lui redemander d'élargir juste après qu'il l'a fait). */
+async function criteresRecents(db: any, clientId: string, now: Date): Promise<{ pieces: number | null; budget: number | null; communes: number; changeIlYaMin: number | null }> {
+  const { data: c } = await db.from('clients').select('pieces, budget_max, region_recherche').eq('id', clientId).maybeSingle();
+  const { data: ch } = await db.from('steeve_actions').select('created_at').eq('client_id', clientId).eq('kind', 'changement_criteres')
+    .order('created_at', { ascending: false }).limit(1);
+  const last = ch?.[0]?.created_at ? Math.round((now.getTime() - new Date(ch[0].created_at).getTime()) / 60000) : null;
+  return {
+    pieces: Number(c?.pieces) > 0 ? Number(c.pieces) : null,
+    budget: Number(c?.budget_max) > 0 ? Number(c.budget_max) : null,
+    communes: String(c?.region_recherche ?? '').split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean).length,
+    changeIlYaMin: last,
+  };
+}
+
+/**
+ * Recherche sans résultat : ce qui a été cherché, sans jamais redemander d'élargir quand le client vient de le faire
+ * (Phoebe, 27.10.2026 : « tu peux élargir la zone » une minute après avoir ajouté 30 communes).
+ */
+export function aucuneOffreMessage(r: { lues: number; ecartees: { raison: string; n: number }[] }, c: { pieces: number | null; budget: number | null; communes: number; changeIlYaMin: number | null }): string {
+  const cherche = [c.pieces ? `${String(c.pieces).replace('.', ',')} pièces ou plus` : null, c.budget ? `jusqu'à ${c.budget} CHF` : null, c.communes ? `${c.communes} commune${c.communes > 1 ? 's' : ''}` : null].filter(Boolean).join(', ');
+  const recent = c.changeIlYaMin !== null && c.changeIlYaMin <= 24 * 60;
+  const tete = recent ? `J'ai relancé la recherche avec tes nouveaux critères${cherche ? ` (${cherche})` : ''}` : `J'ai refait la recherche${cherche ? ` (${cherche})` : ''}`;
+  return `${tete} : j'ai lu ${r.lues} annonce${r.lues > 1 ? 's' : ''} sur Flatfox, immobilier.ch, Homegate et dans nos offres en cours, et aucune nouvelle ne correspond pour l'instant${raisons(r.ecartees)}. Je continue de chercher plusieurs fois par jour et je t'envoie chaque nouvelle annonce dès qu'elle sort.` +
+    (recent ? '' : ` Si tu veux plus de choix, dis-moi ce que tu peux assouplir (zone, budget ou nombre de pièces).`);
+}
+
 function raisons(e: { raison: string; n: number }[]): string {
   const map: Record<string, string> = { 'hors zone': 'hors de tes communes', 'au-dessus du plafond': 'au-dessus de ton budget', 'pièces hors critères': 'avec un autre nombre de pièces',
     'déjà proposée': 'déjà proposées', 'type banni (temporaire, meublé ou échange)': 'meublées ou temporaires', 'type banni (texte)': 'en sous-location, colocation ou bail limité' };
@@ -1074,7 +1160,7 @@ async function handlePiecesRegie(deps: Required<OperatorDeps>, mode: Mode, taskI
       `${personne} — ${adresse} : la régie demande aussi ${manual.join(', ')} (Steeve ne peut pas les réunir seul).`, '/admin/steeve', 'urgent');
   }
   if (!auto.length) {
-    await db.from('steeve_actions').update({ ...free, statut: 'bloque', motif: `Pièces à réunir par l'équipe : ${manual.join(', ')}`, controles: { ...t.controles, equipe_prevenue: true } }).eq('id', taskId);
+    await db.from('steeve_actions').update({ ...free, statut: 'bloque', motif: `Pièces à réunir par l'équipe : ${manual.join(', ')}`.slice(0, 500), controles: { ...t.controles, equipe_prevenue: true } }).eq('id', taskId);
     return;
   }
 
@@ -1135,7 +1221,7 @@ async function handlePiecesRegie(deps: Required<OperatorDeps>, mode: Mode, taskI
     const { data: conv } = await db.from('conversations').select('id').eq('client_id', String(t.client_id)).eq('conversation_type', 'client-agent').order('last_message_at', { ascending: false }).limit(1);
     if (conv?.[0]?.id) {
       const { data: dup } = await db.from('messages').select('id').eq('conversation_id', conv[0].id).eq('payload->>steeve_cle', cle).limit(1);
-      if (!dup?.length) await db.from('messages').insert({ conversation_id: conv[0].id, sender_id: 'steeve', sender_type: 'assistant', content: `Bonjour ${pr?.prenom ?? ''}, ${text.charAt(0).toLowerCase()}${text.slice(1)}`.replace('Bonjour , ', 'Bonjour, '), payload: { steeve_operateur: true, steeve_cle: cle } });
+      if (!dup?.length) await db.from('messages').insert({ conversation_id: conv[0].id, sender_id: 'steeve', sender_type: 'assistant', content: await toClient(db, conv[0].id, `Bonjour ${pr?.prenom ?? ''}, ${text.charAt(0).toLowerCase()}${text.slice(1)}`.replace('Bonjour , ', 'Bonjour, ')), payload: { steeve_operateur: true, steeve_cle: cle } });
     }
     for (const x of missing) {
       const docType = REGIE_PIECES[x.code].types[0];
@@ -1243,6 +1329,7 @@ const INTERNAL_KINDS = ['demande_piece', 'recherche_offres'];
 export async function runOperator(input: OperatorDeps): Promise<OperatorReport> {
   const deps = { now: () => new Date(), taskId: null, ...input } as Required<OperatorDeps>;
   const { db, mail } = deps;
+  clientTranslator = deps.callModel ?? null;
   const now = deps.now();
   const rep: OperatorReport = { mode: 'off', heures_envoi: inSendingHours(now), remises_en_file: 0, qr: 0, relances: 0, dossiers_envoyes: 0, dossiers_a_blanc: 0, bloques: 0, taches: 0, erreurs: [], cout_usd: 0 };
   const ready = (await mail.ready(BOX_VISITES)) || (await mail.ready(BOX_RELOCATION));
@@ -1322,6 +1409,14 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
 
     // 6 ter. Toutes les offres « intéressé » sans visite : demande de visite (mode autonome), puis tâches automatiques
     // (demandes de visite, réponses de visite préparées par la lecture du courrier).
+    // 6 ter (avant). Demandes de visite bloquées faute d'adresse (annonces immobilier.ch) : adresse publiée de la régie
+    // trouvée sur sa page d'agence, toutes ses demandes reprises ; annonce disparue : demande annulée.
+    await step('contacts_regies', async () => {
+      if (rep.mode !== 'autonome') return;
+      const r = await findImmobilierContacts(db, input.fetchFn ?? fetch, now, 12);
+      rep.contacts_trouves = r.agences;
+    });
+
     await step('visites_a_fixer', async () => {
       if (rep.mode === 'autonome') {
         const { data: b } = await db.rpc('steeve_balayage_visites', { p_limit: 8 });
@@ -1340,14 +1435,41 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       let n = 0;
       for (const v of list ?? []) {
         const prenom = String(v.prenom ?? '').trim();
+        const detail = [piecesTxt(v.pieces), chf(v.loyer)].filter(Boolean).join(', ');
+        v.adresse = `${v.adresse}${detail ? `, ${detail}` : ''}`;
         const content = v.est_deleguee
           ? `Bonjour${prenom ? ` ${prenom}` : ''}, le compte rendu de la visite déléguée de ${v.adresse} (${v.le}) est dans ton espace. Le logement te plaît ? Si oui, dis-le-moi et je lance ta candidature tout de suite : un dossier qui part vite a plus de chances d'être retenu. Sinon, dis-moi ce qui ne va pas, j'affine ta recherche.`
           : `Bonjour${prenom ? ` ${prenom}` : ''}, comment s'est passée la visite de ${v.adresse} (${v.le}) ? Le logement te plaît ? Si oui, dis-le-moi et je lance ta candidature tout de suite : un dossier qui part vite a plus de chances d'être retenu. Sinon, dis-moi ce qui ne t'a pas plu, j'affine ta recherche.`;
-        const { error } = await db.from('messages').insert({ conversation_id: v.conversation_id, sender_id: 'steeve', sender_type: 'assistant', content,
+        const { error } = await db.from('messages').insert({ conversation_id: v.conversation_id, sender_id: 'steeve', sender_type: 'assistant', content: await toClient(db, v.conversation_id, content),
           payload: { steeve_operateur: true, steeve_cle: `retour_visite:${v.visite_id}`, offre_id: v.offre_id } });
         if (!error) n++;
       }
       rep.retours_visites = n;
+    });
+
+    // 6 quinquies. Rappel avant chaque visite que le client fait lui-même (2 h à 28 h avant, une fois par visite,
+    // un message par client) : pas besoin d'apporter le dossier, mais rapporter la demande de location / le QR Flatfox.
+    await step('rappels_visites', async () => {
+      if (rep.mode !== 'autonome' || !inClientHours(now)) return;
+      const { data: list } = await db.rpc('steeve_visites_a_rappeler', { p_limit: 40 });
+      const parConv = new Map<string, any[]>();
+      for (const v of list ?? []) parConv.set(v.conversation_id, [...(parConv.get(v.conversation_id) ?? []), v]);
+      let n = 0;
+      for (const [conv, vs] of parConv) {
+        const { error } = await db.from('messages').insert({ conversation_id: conv, sender_id: 'steeve', sender_type: 'assistant',
+          content: await toClient(db, conv, rappelVisitesMessage(vs)),
+          payload: { steeve_operateur: true, steeve_cle: `rappel_visite:${vs[0].visite_id}`, rappel_visites: vs.map((v) => String(v.visite_id)) } });
+        if (!error) n++;
+      }
+      rep.rappels_visites = n;
+    });
+
+    // 6 sexies. Fichiers envoyés dans la discussion et pas encore lus (ex. reçus avant que Steeve sache les lire) :
+    // Steeve reprend la conversation une fois pour les regarder et les ranger.
+    await step('pieces_jointes', async () => {
+      if (rep.mode !== 'autonome' || !inClientHours(now)) return;
+      const { data } = await db.rpc('steeve_relire_pieces_jointes', { p_limit: 5 });
+      rep.pieces_jointes = Number(data ?? 0);
     });
 
     // 2. Demandes de formulaire Flatfox (chat + e-mail).
@@ -1380,7 +1502,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       etapes: steps,
       contacts: rep.qr + rep.relances + rep.dossiers_envoyes + (rep.visites ?? 0),
       erreurs: rep.erreurs.map((e) => ({ erreur: e.slice(0, 300) })),
-      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
+      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · rappels de visite ${rep.rappels_visites ?? 0} · contacts de régies trouvés ${rep.contacts_trouves ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
     }).eq('id', run.id);
   }
   return rep;

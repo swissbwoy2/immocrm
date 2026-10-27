@@ -9,6 +9,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON de l'API Flatfox et de la base, validées champ par champ */
 import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { buildOffreMessage } from '../offre-message.ts';
+import { inClientLanguage } from './fichiers.ts';
 import { cantonKey, cantonOf, immobilierCommune, parseHomegate, parseImmobilierFiche, parseImmobilierList, urlsRecherche } from './portails.ts';
 
 export const OFFERS_AGENT_ID = 'ca53c5a5-6a41-4216-a93b-4d3238ad13a6'; // Administrateur : agent des offres automatiques
@@ -450,6 +451,13 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
     .order('date_envoi', { ascending: false }).limit(400);
   const prevLinks = new Set((prev ?? []).map((o: any) => String(o.lien_annonce ?? '').match(/(\d{6,})/)?.[1]).filter(Boolean));
   const prevAddr = new Set((prev ?? []).map((o: any) => norm(o.adresse)).filter((a: string) => /\d/.test(a)));
+  // Annonces que le client a déjà vues ou visitées ailleurs (outil deja_vu) : jamais proposées.
+  const { data: exclues } = await db.from('steeve_annonces_exclues').select('lien, adresse').eq('client_id', clientId).limit(500);
+  for (const x of exclues ?? []) {
+    const id = String(x.lien ?? '').match(/(\d{6,})/)?.[1];
+    if (id) prevLinks.add(id);
+    if (x.adresse && /\d/.test(String(x.adresse))) prevAddr.add(norm(x.adresse));
+  }
 
   const category = /maison|villa/i.test(String(c.type_bien ?? '')) ? 'HOUSE' : 'APARTMENT';
   const crit: Crit = { communes, cantons: zone.cantons, plafond, piecesMin: Number(c.pieces) > 0 ? Number(c.pieces) : null, typeBien: c.type_bien ?? null };
@@ -569,8 +577,11 @@ export async function searchAndSendOffers(deps: OffersDeps, clientId: string, op
       await db.from('visites').insert({ offre_id: row.id, client_id: clientId, agent_id: OFFERS_AGENT_ID, date_visite: visite.toISOString(), adresse: offer.adresse, statut: 'planifiee', source: b ? 'annonce' : l._source ?? 'flatfox', medias_coursier: [] });
     }
     if (convId) {
-      const content = buildOffreMessage({ ...offer, datesVisite: [visiteTxt ?? 'à fixer — si vous êtes intéressé, votre agent l’organise'] }, prof ?? null);
-      await db.from('messages').insert({ conversation_id: convId, sender_id: OFFERS_AGENT_ID, sender_type: 'agent', content, offre_id: row.id, read: false });
+      const fr = buildOffreMessage({ ...offer, datesVisite: [visiteTxt ?? 'à fixer — si vous êtes intéressé, votre agent l’organise'] }, prof ?? null);
+      // Client qui ne lit pas le français : l'offre dans sa langue, version française en dessous.
+      const tr = await inClientLanguage(db, callModel, convId, fr);
+      res.cout_usd += tr.cost;
+      await db.from('messages').insert({ conversation_id: convId, sender_id: OFFERS_AGENT_ID, sender_type: 'agent', content: tr.text, offre_id: row.id, read: false });
     }
     res.envoyees.push(sent);
   }

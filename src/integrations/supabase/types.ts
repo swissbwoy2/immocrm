@@ -15666,6 +15666,41 @@ export type Database = {
         }
         Relationships: []
       }
+      steeve_annonces_exclues: {
+        Row: {
+          adresse: string | null
+          client_id: string
+          created_at: string
+          id: string
+          lien: string | null
+          motif: string | null
+        }
+        Insert: {
+          adresse?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          lien?: string | null
+          motif?: string | null
+        }
+        Update: {
+          adresse?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          lien?: string | null
+          motif?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steeve_annonces_exclues_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       steeve_carnet_annonceurs: {
         Row: {
           cle: string
@@ -17601,6 +17636,10 @@ export type Database = {
       admin_copilot_agents: { Args: never; Returns: Json }
       admin_copilot_blocages: { Args: { p_days?: number }; Returns: Json }
       admin_copilot_client: { Args: { p_query: string }; Returns: Json }
+      admin_copilot_creneaux_libres: {
+        Args: { p_jours?: number }
+        Returns: Json
+      }
       admin_copilot_emails: {
         Args: {
           p_boite?: string
@@ -17720,6 +17759,15 @@ export type Database = {
       admin_set_steeve_autonomie: { Args: { p_mode: string }; Returns: Json }
       admin_set_steeve_settings: { Args: { p_settings: Json }; Returns: Json }
       admin_steeve_a_appeler: { Args: { p_limite?: number }; Returns: Json }
+      admin_steeve_classer_document: {
+        Args: {
+          p_candidate_id?: string
+          p_date_emission?: string
+          p_document_id: string
+          p_type_document: string
+        }
+        Returns: Json
+      }
       admin_steeve_clients: {
         Args: { p_query?: string }
         Returns: {
@@ -17806,6 +17854,19 @@ export type Database = {
       }
       admin_steeve_reponses_visite: {
         Args: { p_limite?: number }
+        Returns: Json
+      }
+      admin_steeve_retirer_visite: {
+        Args: { p_visite_id: string }
+        Returns: Json
+      }
+      admin_steeve_situation_personne: {
+        Args: {
+          p_candidate_id: string
+          p_client_id: string
+          p_precision?: string
+          p_situation: string
+        }
         Returns: Json
       }
       admin_steeve_tache_controle: {
@@ -18525,6 +18586,7 @@ export type Database = {
         Args: { p_token: string }
         Returns: boolean
       }
+      norm_adr: { Args: { a: string }; Returns: string }
       notification_est_relance_client: {
         Args: { p_type: string }
         Returns: boolean
@@ -18984,6 +19046,23 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: Json
       }
+      steeve_client_classer_document: {
+        Args: {
+          p_candidate_id: string
+          p_client_id: string
+          p_conversation_id: string
+          p_date_emission?: string
+          p_document_id: string
+          p_message_id: string
+          p_mime: string
+          p_nom: string
+          p_path: string
+          p_remarque?: string
+          p_taille: number
+          p_type_document: string
+        }
+        Returns: Json
+      }
       steeve_client_confirmer_visite: {
         Args: { p_client_id: string; p_date?: string; p_offre_id: string }
         Returns: Json
@@ -19205,6 +19284,10 @@ export type Database = {
         Args: { p_task_id: string }
         Returns: Json
       }
+      steeve_relire_pieces_jointes: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
       steeve_request_postulation: {
         Args: { p_client_id: string; p_offre_id: string }
         Returns: Json
@@ -19214,6 +19297,10 @@ export type Database = {
         Returns: string
       }
       steeve_requeue_postulations: { Args: never; Returns: number }
+      steeve_retirer_client_visites: {
+        Args: { p_client_id: string; p_note?: string; p_offre_id: string }
+        Returns: number
+      }
       steeve_reveiller: { Args: { p_task_id: string }; Returns: undefined }
       steeve_routine_signaler: {
         Args: {
@@ -19228,6 +19315,15 @@ export type Database = {
       steeve_set_note: {
         Args: { p_note: string; p_offre_id: string }
         Returns: undefined
+      }
+      steeve_situation_personne: {
+        Args: {
+          p_candidate_id: string
+          p_client_id: string
+          p_precision?: string
+          p_situation: string
+        }
+        Returns: Json
       }
       steeve_spend: { Args: { p_client_id: string }; Returns: Json }
       steeve_staff_can_handle: {
@@ -19282,6 +19378,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      steeve_visites_a_rappeler: { Args: { p_limit?: number }; Returns: Json }
       steeve_visites_sans_retour: { Args: { p_limit?: number }; Returns: Json }
       track_email_click: {
         Args: { _log_id: string; _url: string }
