@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight, ExternalLink, StickyNote } from "lucide-react";
+import { MapPin, Calendar, Square, Home, Eye, Heart, CheckCircle, Info, FileCheck, Check, X, Upload, User, Clock, FolderOpen, MessageSquare, Sparkles, Building2, Star, TrendingUp, Zap, ArrowRight, ExternalLink, StickyNote, Search } from "lucide-react";
 import { noteSuiviClient } from "@/lib/offreNote";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { canDecideOnOffre, visiteIndicatesDone } from '@/lib/visitDecision';
@@ -400,6 +400,7 @@ const OffresRecues = () => {
   const [delegateProposedSlots, setDelegateProposedSlots] = useState<any[]>([]);
   const [visitRequiredAlertOpen, setVisitRequiredAlertOpen] = useState(false);
   const [filtre, setFiltre] = useState<OffreFiltre>('toutes');
+  const [recherche, setRecherche] = useState('');
   
   const [clientData, setClientData] = useState<any>(null);
   const [visites, setVisites] = useState<any[]>([]);
@@ -1467,7 +1468,14 @@ const OffresRecues = () => {
     { key: 'en_cours', label: 'En cours', count: offres.filter((o) => EN_COURS.includes(o.statut)).length },
     { key: 'refusees', label: 'Refusées', count: offres.filter((o) => o.statut === 'refusee').length },
   ];
+  // Recherche par adresse (rue, numéro, localité) : sans accents ni majuscules, sur toutes les catégories.
+  const sansAccents = (t: string) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const termes = sansAccents(recherche.trim()).split(/[\s,]+/).filter(Boolean);
   const offresFiltrees = offres.filter((o) => {
+    if (termes.length) {
+      const texte = sansAccents([(o as any).adresse, (o as any).titre, (o as any).lien_annonce].filter(Boolean).join(' '));
+      return termes.every((m) => texte.includes(m));
+    }
     if (filtre === 'a_repondre') return A_REPONDRE.includes(o.statut);
     if (filtre === 'en_cours') return EN_COURS.includes(o.statut);
     if (filtre === 'refusees') return o.statut === 'refusee';
@@ -1502,6 +1510,19 @@ const OffresRecues = () => {
           </div>
         ) : (
           <>
+            {/* Recherche par adresse */}
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+              <Input
+                type="search"
+                value={recherche}
+                onChange={(e) => setRecherche(e.target.value)}
+                placeholder="Rechercher une adresse (rue, localité…)"
+                aria-label="Rechercher une offre par adresse"
+                className="h-11 rounded-full pl-9"
+              />
+            </div>
+
             {/* Pastilles de filtre */}
             <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="Filtrer les offres">
               {filtres.map((f) => {
@@ -1529,7 +1550,7 @@ const OffresRecues = () => {
 
             {offresFiltrees.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-border px-6 py-10 text-center text-sm text-muted-foreground">
-                Aucune offre dans cette catégorie.
+                {termes.length ? 'Aucune offre ne correspond à cette adresse.' : 'Aucune offre dans cette catégorie.'}
               </p>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
