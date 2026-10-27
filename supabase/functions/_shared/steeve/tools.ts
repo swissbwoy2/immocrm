@@ -2,10 +2,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- réponses JSON des fonctions de la base et de l’API, validées champ par champ */
 // L'identifiant du client vient toujours de la conversation, jamais des paramètres du modèle.
 // deno-lint-ignore-file no-explicit-any
-import type { ToolDefinition } from './anthropic.ts';
+import type { ContentBlock, ToolDefinition } from './anthropic.ts';
 import { zurichToUtc } from './dates.ts';
 import { applications, documentsStatus, mandate, offers, OFFER_STATUS_LABEL, visits, type Db, type Dossier } from './context.ts';
 import { facturesDuClient, type AbaNinjaPort } from './abaninja.ts';
+import { copyAttachmentToDocuments, documentBlock } from './fichiers.ts';
+import { OFFERS_AGENT_ID } from './offers.ts';
 
 export const STEEVE_TOOLS: ToolDefinition[] = [
   {
@@ -192,6 +194,70 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
+    name: 'classer_document',
+    description: "Range dans « Mes documents » du client un fichier qu'il a envoyé dans la discussion (message_id donné avec la pièce jointe) ou reclasse un document déjà déposé (document_id de get_documents, ex. rangé en « Autre »). Regarde d'abord le fichier : type exact, à qui il appartient (client ou personne liée : garant, codébiteur…), date d'émission pour un extrait des poursuites. Pas un document du dossier (annonce, capture d'écran, photo d'appartement) : type_document « pas_un_document » avec un résumé, rien n'est rangé. Ensuite dis au client ce qui est rangé et ce qui manque encore (get_documents) ; jamais « renvoie-le avec le trombone » pour un fichier que tu as reçu.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        message_id: { type: 'string', description: 'Pièce jointe de la discussion.' },
+        document_id: { type: 'string', description: 'Document déjà dans le dossier, à reclasser.' },
+        type_document: { type: 'string', enum: ['piece_identite', 'permis_sejour', 'fiche_salaire', 'contrat_travail', 'attestation_employeur', 'extrait_poursuites', 'attestation_domicile', 'rc_menage', 'certificat_salaire', 'formulaire_location', 'autre', 'pas_un_document'] },
+        personne: { type: 'string', description: "« client » (défaut) ou le nom d'une personne liée du dossier (ex. « Banaz Mohammad »)." },
+        date_emission: { type: 'string', description: 'AAAA-MM-JJ lue sur le document (extrait des poursuites, fiche de salaire…), sinon vide.' },
+        resume: { type: 'string', description: "Ce que montre le fichier en une phrase (ex. « extrait des poursuites vierge du 20.10.2026 », « capture d'une annonce à Bussigny »)." },
+      },
+      required: ['type_document', 'resume'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'lire_document',
+    description: "Ouvre et lit un document déjà déposé dans le dossier du client (document_id de get_documents) : pour vérifier ce qu'il contient vraiment (type, nom, date, validité) au lieu de le supposer d'après son nom.",
+    input_schema: { type: 'object', properties: { document_id: { type: 'string' } }, required: ['document_id'], additionalProperties: false },
+  },
+  {
+    name: 'noter_situation',
+    description: "Note la situation professionnelle d'une personne du dossier quand le client la donne (« j'ai été licenciée », « ma femme ne travaille pas », « je suis étudiant ») : les pièces qui ne s'appliquent plus (contrat de travail, fiches de salaire) ne sont plus réclamées. Ne la devine jamais.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        personne: { type: 'string', description: "« client » (défaut) ou le nom d'une personne liée." },
+        situation: { type: 'string', enum: ['salarie', 'cdd', 'interimaire', 'independant', 'sans_emploi', 'chomage', 'etudiant', 'retraite', 'au_foyer'] },
+        precision: { type: 'string', description: 'Ses mots, en bref (ex. « licenciée en octobre, inscrite au chômage »).' },
+      },
+      required: ['situation'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'ajouter_annonce',
+    description: "Le client a trouvé lui-même une annonce et la veut (lien Comparis, Homegate, immobilier.ch, Flatfox, Anibis… ou capture) : lis d'abord la page avec web_fetch, puis ajoute-la à ses offres en « intéressé » avec les données lues (jamais inventées). Ensuite demande la visite tout de suite avec demander_visite (identifiant d'offre rendu). Pas besoin de l'agent. Si la page est illisible, ajoute-la quand même avec ce que le client t'a dit (adresse, loyer) et précise-le.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        lien: { type: 'string' },
+        adresse: { type: 'string', description: 'Rue, numéro, NPA et localité tels que sur l’annonce (au moins la localité).' },
+        loyer: { type: 'number', description: 'Loyer mensuel charges comprises en CHF (sinon le loyer affiché).' },
+        pieces: { type: 'number' },
+        surface: { type: 'number' },
+        etage: { type: 'string' },
+        disponibilite: { type: 'string' },
+        description: { type: 'string', description: "Résumé de l'annonce en 2 ou 3 phrases (régie, points clés)." },
+      },
+      required: ['adresse', 'loyer'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'deja_vu',
+    description: "Le client a déjà vu ou visité une annonce (proposée par nous ou trouvée ailleurs) : elle ne lui sera plus jamais proposée. bien = une de ses offres (elle passe en « pas intéressé », retirée de la visite sans rien annuler chez l'annonceur), ou lien / adresse d'une annonce vue ailleurs.",
+    input_schema: {
+      type: 'object',
+      properties: { bien: { type: 'string' }, lien: { type: 'string' }, adresse: { type: 'string' }, motif: { type: 'string', description: 'Ex. « déjà visité en septembre », « déjà vu sur Homegate ».' } },
+      additionalProperties: false,
+    },
+  },
+  {
     name: 'noter_langue',
     description: "Note la langue dans laquelle le client veut qu'on lui écrive (il écrit dans cette langue, dit la parler ou dit mal comprendre le français et donne sa langue). Ensuite, toutes tes réponses sont dans cette langue. Ex. « kurde (sorani) », « arabe », « albanais », « anglais », « français ».",
     input_schema: { type: 'object', properties: { langue: { type: 'string' } }, required: ['langue'], additionalProperties: false },
@@ -261,6 +327,8 @@ export interface ToolContext {
 
 export interface ToolOutcome {
   content: string;
+  /** Fichier lu (image ou PDF) joint au résultat de l'outil. */
+  blocks?: ContentBlock[];
   isError?: boolean;
   transferred?: boolean;
 }
@@ -308,6 +376,16 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
       return await clientUndoCriteria(ctx);
     case 'noter_langue':
       return await noteLanguage(ctx, String(input?.langue ?? ''));
+    case 'classer_document':
+      return await classDocument(ctx, input ?? {});
+    case 'lire_document':
+      return await readDocument(ctx, String(input?.document_id ?? ''));
+    case 'noter_situation':
+      return await noteSituation(ctx, String(input?.personne ?? 'client'), String(input?.situation ?? ''), input?.precision ? String(input.precision).slice(0, 200) : null);
+    case 'ajouter_annonce':
+      return await addListing(ctx, input ?? {});
+    case 'deja_vu':
+      return await alreadySeen(ctx, input ?? {});
     case 'donner_disponibilites':
       return await clientAvailability(ctx, String(input?.bien ?? ''), String(input?.disponibilites ?? '').slice(0, 400));
     case 'facture':
@@ -879,4 +957,123 @@ export async function noteLanguage(ctx: ToolContext, langue: string): Promise<To
   const { error } = await ctx.db.from('conversations').update({ steeve_summary: summary }).eq('id', ctx.conversationId);
   if (error) return { content: "La langue n'a pas pu être notée.", isError: true };
   return { content: json({ notee: true, langue: summary.langue ?? 'français', suite: summary.langue ? `Écris-lui désormais en ${l}.` : 'Retour au français.' }) };
+}
+
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** Personne du dossier désignée par « client », son identifiant ou son nom (même partiel). null = client principal. */
+export function personOf(dossier: Dossier, personne: string): { id: string | null; label: string } | { erreur: string } {
+  const p = String(personne ?? '').trim();
+  if (!p || /^(client|moi|lui|elle|le client|la cliente|principal|client principal)$/i.test(p)) return { id: null, label: 'client principal' };
+  const byId = dossier.persons.find((x) => x.id === p);
+  if (byId) return { id: byId.id, label: byId.label };
+  const n = norm(p);
+  const found = dossier.persons.filter((x) => norm(x.label).includes(n) || n.split(' ').filter((w) => w.length > 2).every((w) => norm(x.label).includes(w)));
+  if (found.length === 1) return { id: found[0].id, label: found[0].label };
+  if (!dossier.persons.length) return { erreur: `Aucune personne liée dans le dossier (${p}) : vérifie avec le client à qui appartient le document.` };
+  return { erreur: `Personne « ${p} » ${found.length ? 'ambiguë' : 'introuvable'} : personnes du dossier = ${dossier.persons.map((x) => x.label).join(' ; ')}.` };
+}
+
+async function classDocument(ctx: ToolContext, input: Record<string, any>): Promise<ToolOutcome> {
+  const type = String(input.type_document ?? '');
+  const resume = String(input.resume ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  const messageId = UUID_RE.test(String(input.message_id ?? '')) ? String(input.message_id) : null;
+  const documentId = UUID_RE.test(String(input.document_id ?? '')) ? String(input.document_id) : null;
+  if (!messageId && !documentId) return { content: 'Donne message_id (pièce jointe de la discussion) ou document_id (document du dossier).', isError: true };
+  // Pas un document du dossier : noté sur le message (il n'est plus relu à chaque réponse).
+  if (type === 'pas_un_document') {
+    if (!messageId) return { content: 'pas_un_document : seulement pour une pièce jointe de la discussion.', isError: true };
+    const { data: m } = await ctx.db.from('messages').select('id, payload').eq('id', messageId).eq('conversation_id', ctx.conversationId).maybeSingle();
+    if (!m) return { content: 'Pièce jointe introuvable dans cette conversation.', isError: true };
+    await ctx.db.from('messages').update({ payload: { ...(m.payload ?? {}), fichier_lu: resume || 'vu' } }).eq('id', messageId);
+    return { content: json({ note: true, resume, suite: "Rien n'est rangé dans ses documents. Traite ce que montre le fichier (annonce : ajouter_annonce ; question : réponds)." }) };
+  }
+  const who = personOf(ctx.dossier, String(input.personne ?? 'client'));
+  if ('erreur' in who) return { content: who.erreur, isError: true };
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(input.date_emission ?? '')) ? String(input.date_emission) : null;
+  let copie: { path: string; mime: string; taille: number; nom: string } | null = null;
+  if (messageId) {
+    const { data: m } = await ctx.db.from('messages').select('id, sender_type, attachment_url, attachment_name, attachment_type, payload').eq('id', messageId).eq('conversation_id', ctx.conversationId).maybeSingle();
+    if (!m?.attachment_url || m.sender_type !== 'client') return { content: 'Pièce jointe du client introuvable dans cette conversation.', isError: true };
+    if (m.payload?.document_classe) return { content: json({ deja_classe: true, document_id: m.payload.document_classe }) };
+    if (!ctx.dossier.userId) return { content: 'Compte du client introuvable : impossible de ranger le fichier.', isError: true };
+    const c = await copyAttachmentToDocuments(ctx.db, ctx.dossier.userId, m);
+    if ('erreur' in c) return { content: c.erreur, isError: true };
+    copie = c;
+  }
+  const { data, error } = await ctx.db.rpc('steeve_client_classer_document', {
+    p_client_id: ctx.dossier.clientId, p_conversation_id: ctx.conversationId, p_message_id: messageId, p_document_id: documentId,
+    p_path: copie?.path ?? null, p_nom: copie?.nom ?? null, p_mime: copie?.mime ?? null, p_taille: copie?.taille ?? null,
+    p_type_document: type, p_candidate_id: who.id, p_date_emission: date, p_remarque: resume || null,
+  });
+  if (error || !data?.ok) {
+    if (copie) await ctx.db.storage.from('client-documents').remove([copie.path]).catch(() => {});
+    return { content: `Le document n'a pas pu être rangé${data?.motif ? ` : ${data.motif}` : ''}.`, isError: true };
+  }
+  const pieces = await documentsStatus(ctx.db, ctx.dossier);
+  const manque = pieces.par_personne.map((pp: any) => ({ personne: pp.personne, manquant: pp.pieces.filter((x: any) => x.statut === 'manquant').map((x: any) => x.piece) }))
+    .filter((x: any) => x.manquant.length);
+  return { content: json({ range: true, document: data.libelle, pour: who.label, deja: Boolean(data.deja), date_emission: date,
+    encore_manquant: manque, extrait_poursuites: pieces.extrait_poursuites,
+    suite: "Dis-lui ce qui est rangé (type et personne) et ce qui manque encore, sans lui redemander ce fichier. L'équipe valide ensuite le document." }) };
+}
+
+async function readDocument(ctx: ToolContext, documentId: string): Promise<ToolOutcome> {
+  if (!UUID_RE.test(documentId)) return { content: 'document_id invalide (voir get_documents).', isError: true };
+  const r = await documentBlock(ctx.db, ctx.dossier.clientId, documentId);
+  if (r.erreur || !r.block) return { content: r.erreur ?? 'Lecture impossible.', isError: true };
+  return { content: json({ ...r.info, suite: 'Le fichier est joint : lis-le. Mauvais type ou mauvaise personne : classer_document avec document_id.' }), blocks: [r.block] };
+}
+
+async function noteSituation(ctx: ToolContext, personne: string, situation: string, precision: string | null): Promise<ToolOutcome> {
+  const who = personOf(ctx.dossier, personne);
+  if ('erreur' in who) return { content: who.erreur, isError: true };
+  const { data, error } = await ctx.db.rpc('steeve_situation_personne', { p_client_id: ctx.dossier.clientId, p_candidate_id: who.id, p_situation: situation, p_precision: precision });
+  if (error || !data?.ok) return { content: data?.motif ?? "La situation n'a pas pu être notée.", isError: true };
+  await notifyTeam(ctx, 'Situation professionnelle notée (via Steeve)', `${who.label} : ${data.type_contrat}${precision ? ` — ${precision}` : ''}.`);
+  return { content: json({ notee: true, pour: who.label, situation: data.type_contrat, note: data.note ?? null }) };
+}
+
+async function addListing(ctx: ToolContext, input: Record<string, any>): Promise<ToolOutcome> {
+  const adresse = String(input.adresse ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
+  const loyer = Number(input.loyer);
+  if (adresse.length < 3 || !(loyer >= 200 && loyer <= 30000)) return { content: 'Adresse (au moins la localité) et loyer mensuel en CHF requis, lus sur l’annonce ou donnés par le client.', isError: true };
+  const lien = /^https?:\/\/[^\s]+$/i.test(String(input.lien ?? '').trim()) ? String(input.lien).trim().slice(0, 500) : null;
+  if (lien) {
+    const { data: ex } = await ctx.db.from('offres').select('id, statut').eq('client_id', ctx.dossier.clientId).eq('lien_annonce', lien).limit(1);
+    if (ex?.length) return { content: json({ deja_dans_ses_offres: true, offre_id: ex[0].id, statut: OFFER_STATUS_LABEL[ex[0].statut] ?? ex[0].statut, suite: 'Demande la visite avec demander_visite (bien = offre_id) si ce n’est pas fait.' }) };
+  }
+  const pieces = Number(input.pieces) > 0 ? Number(input.pieces) : null;
+  const offer = {
+    client_id: ctx.dossier.clientId, adresse, prix: Math.round(loyer), pieces, surface: Number(input.surface) > 0 ? Number(input.surface) : null,
+    etage: input.etage ? String(input.etage).slice(0, 30) : null, disponibilite: input.disponibilite ? String(input.disponibilite).slice(0, 60) : null,
+    description: input.description ? String(input.description).slice(0, 1500) : null, type_bien: 'Appartement', statut: 'interesse',
+    lien_annonce: lien, envoi_auto: true, agent_id: OFFERS_AGENT_ID, needs_agent_action: false, date_envoi: ctx.now.toISOString(),
+    commentaires: 'Annonce trouvée par le client, ajoutée par Steeve.',
+  };
+  const { data: row, error } = await ctx.db.from('offres').insert(offer).select('id').single();
+  if (error || !row?.id) return { content: "L'annonce n'a pas pu être ajoutée à ses offres.", isError: true };
+  await ctx.db.from('steeve_actions').insert({ kind: 'action_client', canal: 'app', source: 'client', client_id: ctx.dossier.clientId, offre_id: row.id, statut: 'fait', responsable: 'steeve',
+    note: `Annonce trouvée par le client ajoutée : ${adresse} (${Math.round(loyer)} CHF)`, executed_at: ctx.now.toISOString(), preuve: 'offres ' + row.id,
+    idempotency_key: `annonce_client:${row.id}`, etapes: [{ le: ctx.now.toISOString(), evt: 'fait' }] });
+  return { content: json({ ajoutee: true, offre_id: row.id, adresse, loyer: Math.round(loyer), pieces, statut: 'intéressé',
+    suite: "Demande la visite maintenant avec demander_visite (bien = offre_id), puis dis-lui que c'est lancé. Hors de sa zone ou au-dessus de son budget : propose aussi d'ajuster ses critères." }) };
+}
+
+async function alreadySeen(ctx: ToolContext, input: Record<string, any>): Promise<ToolOutcome> {
+  const motif = String(input.motif ?? 'déjà vu par le client').slice(0, 200);
+  if (input.bien && String(input.bien).trim().length >= 2) {
+    const m = await matchOffer(ctx, String(input.bien));
+    if ('content' in m) return m;
+    const { data: o } = await ctx.db.from('offres').select('lien_annonce, adresse').eq('id', m.id).maybeSingle();
+    await ctx.db.from('steeve_annonces_exclues').insert({ client_id: ctx.dossier.clientId, lien: o?.lien_annonce ?? null, adresse: o?.adresse ?? m.adresse, motif });
+    const r = await ctx.db.rpc('steeve_client_reponse_offre', { p_client_id: ctx.dossier.clientId, p_offre_id: m.id, p_reponse: 'refuse' });
+    return { content: json({ note: true, bien: m.adresse, statut: r.data?.statut ?? null, suite: 'Elle ne lui sera plus proposée.' }) };
+  }
+  const lien = String(input.lien ?? '').trim();
+  const adresse = String(input.adresse ?? '').trim();
+  if (!lien && adresse.length < 4) return { content: 'Donne bien (une de ses offres), un lien ou une adresse avec numéro.', isError: true };
+  await ctx.db.from('steeve_annonces_exclues').insert({ client_id: ctx.dossier.clientId, lien: lien || null, adresse: adresse || null, motif });
+  return { content: json({ note: true, lien: lien || null, adresse: adresse || null, suite: 'Cette annonce ne lui sera plus proposée.' }) };
 }

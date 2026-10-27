@@ -46,6 +46,7 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
 - Visites : « valide le créneau » = fixer_visite avec la date donnée (puis ecrire_a au client si message_requis) ; « inscris-le » / visite groupée sur inscription Flatfox = inscrire_visite (la routine Chrome s'en charge). Tu ne réponds jamais que tu ne peux pas : choisis l'outil, et si l'offre est ambiguë, liste les dossiers possibles en une ligne chacun et demande lequel.
 - Une offre citée par adresse, lien ou numéro : trouver_offre (toutes les offres) avant de dire qu'elle n'existe pas ou de demander l'offre_id. « Postule pour X » : postuler. Paiement de l'acompte confirmé par l'admin : paiement_recu. Critères d'un client à changer : criteres_client. Réponses de visite en attente : reponses_visite, puis valider_reponse si l'admin dit de les envoyer.
 - Courriels : Steeve ne répond seul qu'aux e-mails de visite (créneau proposé accepté, disponibilités du client transmises, créneaux publiés d'une annonce Immo-Rama). Toute autre réponse : seulement si l'admin le demande.
+- Consigne durable de l'admin sur un dossier (« X ne travaille pas », « c'est son ancien contrat ») : enregistre-la avec situation_personne ou classer_document — elle vaut alors pour tous (Steeve client, contrôles), pas seulement pour cette conversation. Ne réponds jamais qu'aucun outil ne permet de l'enregistrer.
 - Client pas intéressé par une visite / « supprime X de ce créneau » : retirer_visite (visite_id de l'outil visites) — le client est retiré, le créneau reste dans l'agenda pour les autres clients et l'annonceur n'est ni prévenu ni relancé ; jamais visite_statut annulee ni « annuler auprès de l'annonceur » dans ce cas. Créneaux restés libres à proposer à d'autres clients intéressés par le même logement : creneaux_libres puis fixer_visite.
 - Même adresse, logements différents (un 2,5 et un 4,5 pièces du même immeuble) : identifie toujours l'offre par pièces, loyer, surface, étage et offre_id (outils visites, offres, trouver_offre) ; ne mélange jamais deux offres d'une même adresse, et cite pièces et loyer dans ta réponse.
 - Visites : le client n'apporte PAS son dossier (l'équipe l'a), sauf consigne stricte de l'annonceur. Rappelle-lui de rapporter la demande de location, le QR code Flatfox ou le moyen de postuler, pour que l'équipe dépose la candidature dès la sortie de la visite.
@@ -71,7 +72,7 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
  * Rappel envoyé à chaque tour : les réponses déjà publiées dans la conversation peuvent dater d'avant l'ajout d'un
  * outil ; sans ce rappel, le modèle répète « je n'ai pas accès aux e-mails » au lieu d'appeler l'outil.
  */
-export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : objectifs (objectifs de l’année et écart), urls_portails puis web_fetch (annonces immobilier.ch et Homegate par codes de lieux), trouver_offre (toutes les offres par adresse, lien ou numéro), postuler, paiement_recu, criteres_client, reponses_visite, valider_reponse, emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites (avec pièces, loyer et visite_id), retirer_visite, creneaux_libres, visite_statut, a_appeler, contact_annonceur, mails_a_rattacher, rattacher_mail, preuve_envoi, factures (AbaNinja), traiter_demande_mandat, corriger_offre, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
+export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : objectifs (objectifs de l’année et écart), urls_portails puis web_fetch (annonces immobilier.ch et Homegate par codes de lieux), trouver_offre (toutes les offres par adresse, lien ou numéro), postuler, paiement_recu, criteres_client, reponses_visite, valider_reponse, emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites (avec pièces, loyer et visite_id), retirer_visite, creneaux_libres, situation_personne, classer_document, visite_statut, a_appeler, contact_annonceur, mails_a_rattacher, rattacher_mail, preuve_envoi, factures (AbaNinja), traiter_demande_mandat, corriger_offre, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
 
 export const ADMIN_TOOLS: ToolDefinition[] = [
   {
@@ -320,6 +321,34 @@ export const ADMIN_TOOLS: ToolDefinition[] = [
     },
   },
   {
+    name: 'situation_personne',
+    description: "Note la situation professionnelle d'une personne d'un dossier sur ordre de l'admin (« Manal ne travaille pas », « Phoebe est au chômage ») : contrat de travail et fiches de salaire ne sont plus réclamés pour elle (Steeve client, contrôles de pièces). client_id du dossier ; personne = « client » ou le nom d'une personne liée.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        client_id: { type: 'string' },
+        personne: { type: 'string' },
+        situation: { type: 'string', enum: ['salarie', 'cdd', 'interimaire', 'independant', 'sans_emploi', 'chomage', 'etudiant', 'retraite', 'au_foyer'] },
+        precision: { type: 'string' },
+      },
+      required: ['client_id', 'situation'],
+    },
+  },
+  {
+    name: 'classer_document',
+    description: "Reclasse un document d'un dossier (type et personne) sur ordre de l'admin, ex. « Contrat BG.pdf est son ancien contrat de travail ». document_id donné par etat_dossier ou client ; personne = « client » ou le nom d'une personne liée.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        document_id: { type: 'string' },
+        type_document: { type: 'string', enum: ['piece_identite', 'permis_sejour', 'fiche_salaire', 'contrat_travail', 'attestation_employeur', 'extrait_poursuites', 'attestation_domicile', 'rc_menage', 'certificat_salaire', 'formulaire_location', 'autre'] },
+        personne: { type: 'string' },
+        date_emission: { type: 'string', description: 'AAAA-MM-JJ si connue.' },
+      },
+      required: ['document_id', 'type_document'],
+    },
+  },
+  {
     name: 'retirer_visite',
     description: "Retire un client d'une visite (il n'est pas intéressé, « supprime X de ce créneau ») : sa visite passe annulée avec décision « pas intéressé », le créneau reste dans l'agenda pour les autres clients, l'annonceur n'est pas prévenu. visite_id donné par l'outil visites. Ensuite ecrire_a au client si l'admin le demande.",
     input_schema: { type: 'object', properties: { visite_id: { type: 'string' } }, required: ['visite_id'] },
@@ -517,6 +546,30 @@ export async function runAdminTool(userDb: any, name: string, input: any, ctx: A
     const date = input?.date ? zurichToUtc(String(input.date).slice(0, 16)) : null;
     if (input?.date && !date) return { content: 'Date invalide : AAAA-MM-JJTHH:MM (heure de Zurich).', isError: true };
     call = ['admin_steeve_visite_statut', { p_offre_id: input.offre_id, p_statut: statut, p_date: date ? date.toISOString() : null }];
+  } else if (name === 'situation_personne' || name === 'classer_document') {
+    // Personne liée désignée par son nom : résolue dans le dossier avec la session de l'admin.
+    let clientId = uuid(input?.client_id);
+    if (name === 'classer_document') {
+      if (!uuid(input?.document_id)) return { content: 'document_id invalide.', isError: true };
+      const { data: d } = await userDb.from('documents').select('client_id').eq('id', input.document_id).maybeSingle();
+      clientId = d?.client_id ?? null;
+      if (!clientId) return { content: 'Document introuvable.', isError: true };
+    }
+    if (!clientId) return { content: 'client_id invalide (outil personnes ou client).', isError: true };
+    const p = String(input?.personne ?? '').trim();
+    let candidateId: string | null = null;
+    if (p && !/^(client|principal|client principal|le client|la cliente)$/i.test(p)) {
+      const { data: cands } = await userDb.from('client_candidates').select('id, prenom, nom').eq('client_id', clientId);
+      const n = p.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const hit = (cands ?? []).filter((c: any) => `${c.prenom ?? ''} ${c.nom ?? ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(n)
+        || n.split(/\s+/).filter((w) => w.length > 2).every((w) => `${c.prenom ?? ''} ${c.nom ?? ''}`.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(w)));
+      if (hit.length !== 1) return { content: `Personne « ${p} » ${hit.length ? 'ambiguë' : 'introuvable'} dans ce dossier : ${(cands ?? []).map((c: any) => `${c.prenom} ${c.nom}`).join(', ') || 'aucune personne liée'}.`, isError: true };
+      candidateId = hit[0].id;
+    }
+    call = name === 'situation_personne'
+      ? ['admin_steeve_situation_personne', { p_client_id: clientId, p_candidate_id: candidateId, p_situation: String(input?.situation ?? ''), p_precision: input?.precision ? String(input.precision).slice(0, 200) : null }]
+      : ['admin_steeve_classer_document', { p_document_id: input.document_id, p_type_document: String(input?.type_document ?? ''), p_candidate_id: candidateId,
+          p_date_emission: /^\d{4}-\d{2}-\d{2}$/.test(String(input?.date_emission ?? '')) ? input.date_emission : null }];
   } else if (name === 'retirer_visite') {
     if (!uuid(input?.visite_id)) return { content: 'visite_id invalide (outil visites).', isError: true };
     call = ['admin_steeve_retirer_visite', { p_visite_id: input.visite_id }];

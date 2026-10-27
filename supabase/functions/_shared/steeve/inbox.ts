@@ -14,6 +14,7 @@
 import { ACTION_MODEL, costOf, type CallModel } from './anthropic.ts';
 import { inClientHours, normalize, streetKey, type Mode, type OperatorReport } from './operator.ts';
 import { zurichToUtc } from './dates.ts';
+import { inClientLanguage } from './fichiers.ts';
 
 const MODEL = ACTION_MODEL;
 const PER_RUN = 6; // Opus 5.5 (effort élevé) : quelques e-mails par passage, le reste au passage suivant (5 min)
@@ -160,6 +161,9 @@ async function alert(db: any, cle: string, title: string, message: string, link:
   }
 }
 
+/** Modèle du passage en cours : messages au client traduits dans sa langue (version française dessous). */
+let translator: CallModel | null = null;
+
 async function tellClient(db: any, clientId: string, key: string, content: string, now: Date): Promise<boolean> {
   if (!inClientHours(now)) return false;
   const { data: conv } = await db.from('conversations').select('id').eq('client_id', clientId).eq('conversation_type', 'client-agent')
@@ -168,13 +172,15 @@ async function tellClient(db: any, clientId: string, key: string, content: strin
   if (!id) return false;
   const { data: dup } = await db.from('messages').select('id').eq('conversation_id', id).eq('payload->>steeve_cle', key).limit(1);
   if (dup?.length) return false;
-  const { error } = await db.from('messages').insert({ conversation_id: id, sender_id: 'steeve', sender_type: 'assistant', content, payload: { steeve_operateur: true, steeve_cle: key } });
+  const text = (await inClientLanguage(db, translator, id, content)).text;
+  const { error } = await db.from('messages').insert({ conversation_id: id, sender_id: 'steeve', sender_type: 'assistant', content: text, payload: { steeve_operateur: true, steeve_cle: key } });
   return !error;
 }
 
 /** Lecture des e-mails reçus (pas de lecture la nuit : les messages aux clients partent entre 8h et 20h). */
 export async function processInbox(deps: { db: any; callModel: CallModel | null; now: () => Date; deadline?: number }, mode: Mode, rep: OperatorReport & { mails?: number }) {
   const { db, callModel } = deps;
+  translator = callModel;
   const now = deps.now();
   // Lecture entre 8h et 20h seulement : un e-mail reçu la nuit est traité le matin, avec son message au client.
   if (!callModel || !inClientHours(now)) return;

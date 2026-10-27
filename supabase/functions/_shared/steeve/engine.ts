@@ -2,6 +2,7 @@
 // Le code décide (droits, plafonds, publication) ; le modèle comprend, choisit les outils et rédige.
 // deno-lint-ignore-file no-explicit-any
 import { CLIENT_WEB_FETCH_TOOL, costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type Usage } from './anthropic.ts';
+import { attachmentBlocks } from './fichiers.ts';
 import { accountPhase, depositAmount, loadDossier, overview, type Db } from './context.ts';
 import { staticWelcome, STEEVE_SYSTEM_PROMPT, welcomeInstructions } from './prompt.ts';
 import { runTool, STEEVE_TOOLS, transferToAgent } from './tools.ts';
@@ -70,8 +71,10 @@ function describeMessage(m: any): string {
   const parts: string[] = [];
   if (m.content) parts.push(String(m.content).slice(0, 1500));
   if (m.attachment_url && m.payload?.kind !== 'dossier_document') {
-    if (m.attachment_type === 'audio') parts.push('[message vocal : Steeve ne peut pas encore l’écouter]');
-    else parts.push(`[pièce jointe ${m.attachment_type || 'fichier'} : ${m.attachment_name || 'sans nom'}]`);
+    if (m.attachment_type === 'audio') parts.push('[message vocal : demande-lui de l’écrire en quelques mots]');
+    else if (m.payload?.document_classe) parts.push(`[pièce jointe ${m.attachment_name || 'sans nom'} : déjà classée dans ses documents (${m.payload?.document_type ?? 'document'})]`);
+    else if (m.payload?.fichier_lu) parts.push(`[pièce jointe ${m.attachment_name || 'sans nom'} : déjà lue — ${String(m.payload.fichier_lu).slice(0, 200)}]`);
+    else parts.push(`[pièce jointe ${m.attachment_type || 'fichier'} : ${m.attachment_name || 'sans nom'} — message_id ${m.id} ; son contenu est joint à la fin si elle date de moins de 72 h]`);
   }
   return `[${formatZurich(m.created_at)}] ${who} : ${parts.join(' ') || '(vide)'}`;
 }
@@ -382,14 +385,13 @@ export async function runTurn(opts: {
       const langueNote = langue
         ? `Langue du client : ${langue}. Réponds-lui entièrement en ${langue} (phrases courtes), en gardant en français, entre guillemets ou parenthèses, les adresses, montants, dates, noms des boutons de l'application et des documents (ex. « trombone 📎 », « extrait des poursuites »).\n\n`
         : '';
-      const messages: ModelMessage[] = [{
-        role: 'user',
-        content:
-          langueNote +
-          `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
-          `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
-          ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart(),
-      }];
+      const contexte = langueNote +
+        `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
+        `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
+        ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart();
+      // Photos, captures et PDF envoyés par le client et pas encore classés : Steeve les voit vraiment.
+      const pieces = await attachmentBlocks(db, transcript, now());
+      const messages: ModelMessage[] = [{ role: 'user', content: pieces.length ? [{ type: 'text', text: contexte }, ...pieces] : contexte }];
 
       let finalText = '';
       let transferred = false;
@@ -457,7 +459,7 @@ export async function runTurn(opts: {
             outcome = { content: `Erreur de lecture : ${err instanceof Error ? err.message : String(err)}`, isError: true };
           }
           if (outcome.transferred) transferred = true;
-          results.push({ type: 'tool_result', tool_use_id: use.id, content: outcome.content, ...(outcome.isError ? { is_error: true } : {}) });
+          results.push({ type: 'tool_result', tool_use_id: use.id, content: outcome.blocks?.length ? [{ type: 'text', text: outcome.content }, ...outcome.blocks] : outcome.content, ...(outcome.isError ? { is_error: true } : {}) });
         }
         messages.push({ role: 'user', content: results });
       }
