@@ -280,19 +280,21 @@ function zurich(dateIso: string | null | undefined): string | null {
   }).format(new Date(dateIso));
 }
 
-export async function visits(db: Db, clientId: string, scope: 'a_venir' | 'passees' | 'toutes', now: Date) {
+// inclureAnnulees : l'outil de Steeve voit aussi les visites annulées (le client peut encore les voir dans son agenda),
+// le résumé « prochaines visites » ne les compte jamais.
+export async function visits(db: Db, clientId: string, scope: 'a_venir' | 'passees' | 'toutes', now: Date, inclureAnnulees = false) {
   let q = db
     .from('visites')
-    .select('id, adresse, date_visite, statut, est_deleguee, client_decision, offre_id, offres(pieces, prix, surface, etage)')
+    .select('id, adresse, date_visite, statut, est_deleguee, client_decision, offre_id, updated_at, offres(pieces, prix, surface, etage, statut)')
     .eq('client_id', clientId)
-    .or('statut.is.null,statut.neq.annulee')
-    .limit(10);
+    .limit(inclureAnnulees ? 15 : 10);
+  if (!inclureAnnulees) q = q.or('statut.is.null,statut.neq.annulee');
   if (scope === 'a_venir') q = q.gte('date_visite', now.toISOString()).order('date_visite', { ascending: true });
   else if (scope === 'passees') q = q.lt('date_visite', now.toISOString()).order('date_visite', { ascending: false });
   else q = q.order('date_visite', { ascending: false });
   const { data } = await q;
   // Deux logements du même immeuble (ex. 2,5 et 4,5 pièces) : la visite porte l'offre exacte (pièces, loyer, id).
-  return (data || []).map((v: any) => ({
+  const liste = (data || []).map((v: any) => ({
     adresse: v.adresse,
     offre_id: v.offre_id ?? null,
     pieces: v.offres?.pieces ?? null,
@@ -300,9 +302,23 @@ export async function visits(db: Db, clientId: string, scope: 'a_venir' | 'passe
     etage: v.offres?.etage ?? null,
     date: zurich(v.date_visite),
     statut: VISIT_STATUS_LABEL[v.statut] || v.statut,
+    ...(v.statut === 'annulee'
+      ? { annulee_le: zurich(v.updated_at), remarque: 'visite ANNULÉE : plus de rendez-vous à cette adresse' + (v.offres?.statut === 'refusee' ? ' (offre refusée)' : '') }
+      : {}),
     visite_deleguee: !!v.est_deleguee,
     ta_decision: v.client_decision === 'interesse' ? 'intéressé(e)' : v.client_decision === 'refuse' ? 'pas intéressé(e)' : null,
   }));
+  if (!inclureAnnulees) return liste;
+  // Rendez-vous de l'agenda du client (bureau, signature, état des lieux, rappels) : ce que le client voit aussi dans son calendrier.
+  let e = db.from('calendar_events').select('title, event_type, event_date, status').eq('client_id', clientId).is('visite_id', null).limit(10);
+  if (scope === 'a_venir') e = e.gte('event_date', now.toISOString()).order('event_date', { ascending: true });
+  else if (scope === 'passees') e = e.lt('event_date', now.toISOString()).order('event_date', { ascending: false });
+  else e = e.order('event_date', { ascending: false });
+  const { data: evs } = await e;
+  const rdv = (evs || []).map((x: any) => ({
+    type: 'rendez-vous de l’agenda', titre: x.title, genre: x.event_type, date: zurich(x.event_date), statut: x.status,
+  }));
+  return [...liste, ...rdv];
 }
 
 const APPLICATION_STATUS_LABEL: Record<string, string> = {
