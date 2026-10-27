@@ -273,6 +273,9 @@ export default function AdminOffresEnvoyees() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [agentFilter, setAgentFilter] = useState("all");
+  // Affichage par tranches : des centaines de cartes d'un coup bloquent la page sur mobile.
+  const PAR_TRANCHE = 30;
+  const [visibleCount, setVisibleCount] = useState(PAR_TRANCHE);
   // Filtre par adresse : cherché dans TOUTES les offres en base (pas seulement celles déjà chargées).
   const [addressFilter, setAddressFilter] = useState("");
   const [addressResults, setAddressResults] = useState<Offre[] | null>(null);
@@ -967,7 +970,7 @@ export default function AdminOffresEnvoyees() {
               description="Modifiez vos filtres ou attendez que les agents envoient des offres"
             />
           ) : (
-            groupedFilteredOffres.map((group, index) => {
+            groupedFilteredOffres.slice(0, visibleCount).map((group, index) => {
               const offre = group.representative;
               const isMulti = group.count > 1;
               const statusConfig = STATUS_CONFIG[offre.statut || 'envoyee'] || STATUS_CONFIG.envoyee;
@@ -1128,6 +1131,16 @@ export default function AdminOffresEnvoyees() {
             })
           )}
         </div>
+        {groupedFilteredOffres.length > visibleCount && (
+          <div className="flex flex-col items-center gap-1 py-4">
+            <Button variant="outline" onClick={() => setVisibleCount((c) => c + PAR_TRANCHE)}>
+              Afficher {Math.min(PAR_TRANCHE, groupedFilteredOffres.length - visibleCount)} offres de plus
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              {visibleCount} sur {groupedFilteredOffres.length} affichées
+            </span>
+          </div>
+        )}
     </DashPage>
 
       {/* Dialog détail offre */}
