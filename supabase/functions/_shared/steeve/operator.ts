@@ -483,8 +483,20 @@ async function handlePiece(deps: Required<OperatorDeps>, mode: Mode, taskId: str
   const { data: t } = await db.from('steeve_actions').select('id, offre_id, client_id, idempotency_key').eq('id', taskId).single();
   const { data: job } = await db.from('postulation_jobs').select('status, ai_result').eq('offre_id', t.offre_id).eq('client_id', t.client_id).maybeSingle();
   // L'attestation RC ménage n'est jamais bloquante : elle n'est pas réclamée comme une pièce manquante.
-  const missing: string[] = (job?.ai_result?.ai?.missing_items ?? job?.ai_result?.missing_items ?? []).map((x: any) => String(x).slice(0, 80)).filter((x: string) => !isRc('', x)).slice(0, 8);
+  const brut: string[] = (job?.ai_result?.ai?.missing_items ?? job?.ai_result?.missing_items ?? []).map((x: any) => String(x).slice(0, 80)).filter((x: string) => !isRc('', x));
+  // Les contrôles internes (champ vide de l'offre ou du dossier : « (offre.type_bien) », « revenus_mensuels = 0 », « non renseigné »)
+  // ne sont jamais demandés au client : ils vont à l'équipe.
+  const interne = (x: string) => /non renseign|\(\w+\.\w+\)|\w+_\w+\s*=/i.test(x);
+  const missing = brut.filter((x) => !interne(x)).slice(0, 8);
+  const internes = brut.filter(interne).slice(0, 8);
   const done = { verrou_par: null, verrou_jeton: null, verrou_jusqu: null, updated_at: now.toISOString() };
+  if (job && job.status === 'blocked' && !missing.length && internes.length) {
+    await db.from('steeve_actions').update({
+      ...done, statut: 'bloque', responsable: 'humain',
+      motif: ('Dossier à compléter par l’équipe (rien à demander au client) : ' + internes.join(' ; ')).slice(0, 500),
+    }).eq('id', taskId);
+    return;
+  }
   if (!job || job.status !== 'blocked' || !missing.length) {
     await db.from('steeve_actions').update({ ...done, statut: 'fait', note: 'Plus aucune pièce manquante d\'après le dernier triage.' }).eq('id', taskId);
     return;
