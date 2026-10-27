@@ -15701,6 +15701,41 @@ export type Database = {
           },
         ]
       }
+      steeve_appels_rappel: {
+        Row: {
+          action_id: string
+          created_at: string
+          note: string | null
+          par: string | null
+          rappeler_le: string
+          updated_at: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          note?: string | null
+          par?: string | null
+          rappeler_le: string
+          updated_at?: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          note?: string | null
+          par?: string | null
+          rappeler_le?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "steeve_appels_rappel_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: true
+            referencedRelation: "steeve_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       steeve_carnet_annonceurs: {
         Row: {
           cle: string
@@ -17632,6 +17667,16 @@ export type Database = {
       activate_candidat_searches: { Args: never; Returns: undefined }
       activate_closeur_on_login: { Args: never; Returns: undefined }
       activate_coursier_on_login: { Args: never; Returns: undefined }
+      admin_appel_resultat: {
+        Args: {
+          p_action_id: string
+          p_date?: string
+          p_note?: string
+          p_resultat: string
+        }
+        Returns: Json
+      }
+      admin_appels_du_jour: { Args: { p_limite?: number }; Returns: Json }
       admin_copilot_activations: { Args: { p_limit?: number }; Returns: Json }
       admin_copilot_agents: { Args: never; Returns: Json }
       admin_copilot_blocages: { Args: { p_days?: number }; Returns: Json }
@@ -19167,6 +19212,7 @@ export type Database = {
         Returns: Json
       }
       steeve_executant_autorise: { Args: never; Returns: boolean }
+      steeve_extraire_telephone: { Args: { p_texte: string }; Returns: string }
       steeve_flag_offre: {
         Args: { p_note: string; p_offre_id: string }
         Returns: undefined
@@ -19267,6 +19313,7 @@ export type Database = {
         Args: { p_limit?: number; p_offre_id?: string }
         Returns: Json
       }
+      steeve_rapport_sante: { Args: { p_forcer?: boolean }; Returns: Json }
       steeve_rattraper_messages: { Args: never; Returns: number }
       steeve_record_dossier_envoye: {
         Args: {
