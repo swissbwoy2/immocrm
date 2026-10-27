@@ -9,6 +9,15 @@ export interface CoursierTimeEntry {
   started_at: string;
   ended_at: string | null;
   duration_minutes: number | null;
+  paye?: boolean | null;
+  paye_at?: string | null;
+  tarif_paye?: number | null;
+  exclue?: boolean | null;
+  original_started_at?: string | null;
+  original_ended_at?: string | null;
+  corrige_at?: string | null;
+  motif_correction?: string | null;
+  ajoute_par_admin?: boolean | null;
 }
 
 export const DEFAULT_TARIF_HORAIRE = 20;
@@ -61,7 +70,7 @@ export function useCoursierTime() {
 
       const { data } = await supabase
         .from('coursier_time_entries')
-        .select('id, coursier_id, started_at, ended_at, duration_minutes')
+        .select('*')
         .eq('coursier_id', coursier.id)
         .order('started_at', { ascending: false })
         .limit(1000);
@@ -127,7 +136,8 @@ export function useCoursierTime() {
     }
   };
 
-  const closed = entries.filter((e) => e.ended_at);
+  // Les sessions exclues par l'administration ne comptent pas dans la paie.
+  const closed = entries.filter((e) => e.ended_at && !e.exclue);
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -136,8 +146,18 @@ export function useCoursierTime() {
     .filter((e) => new Date(e.started_at) >= startOfMonth)
     .reduce((s, e) => s + (e.duration_minutes || 0), 0);
 
+  const montantDe = (e: CoursierTimeEntry) =>
+    ((e.duration_minutes || 0) / 60) * (e.paye && e.tarif_paye != null ? Number(e.tarif_paye) : tarifHoraire);
+  const minutesAPayer = closed.filter((e) => !e.paye).reduce((s, e) => s + (e.duration_minutes || 0), 0);
+  const earningsAPayer = closed.filter((e) => !e.paye).reduce((s, e) => s + montantDe(e), 0);
+  const earningsPaid = closed.filter((e) => e.paye).reduce((s, e) => s + montantDe(e), 0);
+
   return {
     coursierId,
+    allEntries: entries,
+    minutesAPayer,
+    earningsAPayer,
+    earningsPaid,
     tarifHoraire,
     entries,
     closedEntries: closed,
@@ -150,7 +170,9 @@ export function useCoursierTime() {
     reload: load,
     minutesTotal,
     minutesThisMonth,
-    earningsTotal: (minutesTotal / 60) * tarifHoraire,
-    earningsThisMonth: (minutesThisMonth / 60) * tarifHoraire,
+    earningsTotal: closed.reduce((s, e) => s + montantDe(e), 0),
+    earningsThisMonth: closed
+      .filter((e) => new Date(e.started_at) >= startOfMonth)
+      .reduce((s, e) => s + montantDe(e), 0),
   };
 }

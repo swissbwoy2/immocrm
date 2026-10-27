@@ -19,7 +19,7 @@ import { AddressLink } from '@/components/AddressLink';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DashBadge, DashEmptyState, DashFilterPills, DashPage, DashPageHeader } from '@/components/client/dashboard/DashPrimitives';
 import { CoursierMissionCard } from '@/components/coursier/CoursierMissionCard';
-import { A_RENDRE_JOURS, etapeCoursier, finVisite, lienItineraire, type EtapeCoursier } from '@/components/coursier/coursierModel';
+import { A_RENDRE_JOURS, etapeCoursier, finVisite, lienItineraire, formatChf, type EtapeCoursier } from '@/components/coursier/coursierModel';
 import { cn } from '@/lib/utils';
 import { VISIT_DIALOG_CLASS, VisitActionBar, VisitBody, VisitHero, VisitInfoTiles, VisitNote, VisitPersonRow, VisitSection, formatCHF, offrePhotoUrl } from '@/components/visites/VisitDetailParts';
 
@@ -38,6 +38,7 @@ export default function CoursierMissions() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [coursierId, setCoursierId] = useState<string | null>(null);
+  const [tarifHoraire, setTarifHoraire] = useState<number>(20);
   const [missions, setMissions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMission, setSelectedMission] = useState<any>(null);
@@ -64,12 +65,13 @@ export default function CoursierMissions() {
     try {
       const { data: coursierData } = await supabase
         .from('coursiers')
-        .select('id')
+        .select('id, tarif_horaire')
         .eq('user_id', user.id)
         .single();
 
       if (!coursierData) { setLoading(false); return; }
       setCoursierId(coursierData.id);
+      setTarifHoraire(Number((coursierData as any).tarif_horaire) || 20);
 
       const { data: allMissions } = await supabase
         .from('visites')
@@ -585,7 +587,7 @@ export default function CoursierMissions() {
 
             <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/50 p-3">
               <span className="text-sm">Rémunération : au temps travaillé (pointage)</span>
-              <span className="shrink-0 font-semibold text-foreground">CHF 20/h</span>
+              <span className="shrink-0 font-semibold text-foreground">{formatChf(tarifHoraire)}/h</span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2 border-t border-border/60 bg-background px-4 pt-3 pb-[max(env(safe-area-inset-bottom),1rem)] sm:flex sm:justify-end">

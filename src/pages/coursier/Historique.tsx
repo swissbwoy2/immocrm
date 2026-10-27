@@ -1,29 +1,32 @@
 import { useMemo, useState } from 'react';
-import { History, Wallet, Clock, TrendingUp, Timer, ChevronDown } from 'lucide-react';
+import { History, Wallet, Clock, TrendingUp, Timer, ChevronDown, CheckCircle } from 'lucide-react';
 import { useCoursierTime, formatDuration } from '@/hooks/useCoursierTime';
 import { CoursierClockCard } from '@/components/coursier/CoursierClockCard';
 import { cleMois, formatChf, libelleMois } from '@/components/coursier/coursierModel';
 import { formatZurichDay, formatZurichTime } from '@/lib/dateZurich';
-import { DASH_CARD, DashEmptyState, DashPage, DashPageHeader, DashSection } from '@/components/client/dashboard/DashPrimitives';
+import { DASH_CARD, DashBadge, DashEmptyState, DashPage, DashPageHeader, DashSection } from '@/components/client/dashboard/DashPrimitives';
 import { cn } from '@/lib/utils';
 
 export default function CoursierHistorique() {
   const time = useCoursierTime();
-  const { closedEntries, loading, tarifHoraire, minutesThisMonth, minutesTotal, earningsThisMonth, earningsTotal } = time;
+  const { allEntries, loading, tarifHoraire, minutesThisMonth, minutesTotal, earningsThisMonth, earningsTotal, earningsAPayer, earningsPaid, minutesAPayer } = time;
   const [ouverts, setOuverts] = useState<Record<string, boolean>>({});
 
   /** Sessions de pointage regroupées par mois (le plus récent d'abord). */
   const mois = useMemo(() => {
-    const map = new Map<string, { cle: string; minutes: number; entries: typeof closedEntries }>();
-    for (const e of closedEntries) {
+    const map = new Map<string, { cle: string; minutes: number; montant: number; entries: typeof allEntries }>();
+    for (const e of allEntries.filter((x) => x.ended_at)) {
       const cle = cleMois(e.started_at);
-      const cur = map.get(cle) ?? { cle, minutes: 0, entries: [] };
-      cur.minutes += e.duration_minutes || 0;
+      const cur = map.get(cle) ?? { cle, minutes: 0, montant: 0, entries: [] };
+      if (!e.exclue) {
+        cur.minutes += e.duration_minutes || 0;
+        cur.montant += ((e.duration_minutes || 0) / 60) * (e.paye && e.tarif_paye != null ? Number(e.tarif_paye) : tarifHoraire);
+      }
       cur.entries.push(e);
       map.set(cle, cur);
     }
     return Array.from(map.values()).sort((a, b) => b.cle.localeCompare(a.cle));
-  }, [closedEntries]);
+  }, [allEntries, tarifHoraire]);
 
   if (loading) {
     return (
@@ -37,6 +40,8 @@ export default function CoursierHistorique() {
   }
 
   const kpis = [
+    { icon: Wallet, label: 'À recevoir', value: formatChf(earningsAPayer, 2), sub: `${formatDuration(minutesAPayer)} pas encore payées` },
+    { icon: CheckCircle, label: 'Déjà payé', value: formatChf(earningsPaid, 2) },
     { icon: Clock, label: 'Temps total', value: formatDuration(minutesTotal) },
     { icon: TrendingUp, label: 'Gains totaux', value: formatChf(earningsTotal, 2) },
   ];
@@ -65,6 +70,7 @@ export default function CoursierHistorique() {
             <div key={k.label} className="min-w-0">
               <dt className="flex items-center gap-1.5 text-sm text-muted-foreground"><k.icon className="h-4 w-4 shrink-0" />{k.label}</dt>
               <dd className="mt-0.5 text-lg font-semibold tabular-nums text-foreground">{k.value}</dd>
+              {'sub' in k && k.sub && <dd className="text-xs text-muted-foreground">{k.sub}</dd>}
             </div>
           ))}
         </dl>
@@ -79,7 +85,7 @@ export default function CoursierHistorique() {
           <div className="space-y-3">
             {mois.map((m, idx) => {
               const ouvert = ouverts[m.cle] ?? idx === 0;
-              const montantMois = (m.minutes / 60) * tarifHoraire;
+              const montantMois = m.montant;
               return (
                 <section key={m.cle} className={cn(DASH_CARD, 'overflow-hidden')}>
                   <button
@@ -101,20 +107,31 @@ export default function CoursierHistorique() {
                     <ul className="divide-y divide-border/60 border-t border-border/60">
                       {m.entries.map((entry) => {
                         const minutes = entry.duration_minutes || 0;
-                        const montant = (minutes / 60) * tarifHoraire;
+                        const montant = (minutes / 60) * (entry.paye && entry.tarif_paye != null ? Number(entry.tarif_paye) : tarifHoraire);
+                        const corrige = !!entry.corrige_at && (entry.original_started_at || entry.original_ended_at);
                         return (
-                          <li key={entry.id} className="flex min-h-[56px] items-center justify-between gap-3 px-4 py-3 md:px-5">
+                          <li key={entry.id} className={cn('flex min-h-[56px] items-start justify-between gap-3 px-4 py-3 md:px-5', entry.exclue && 'opacity-60')}>
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-foreground">
-                                {formatZurichDay(entry.started_at)}
-                              </p>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <p className="truncate text-sm font-medium text-foreground">{formatZurichDay(entry.started_at)}</p>
+                                {entry.paye ? <DashBadge tone="success">Payé</DashBadge> : !entry.exclue && <DashBadge tone="warning">À recevoir</DashBadge>}
+                                {entry.exclue && <DashBadge tone="muted">Non compté</DashBadge>}
+                                {corrige && <DashBadge tone="primary">Corrigé</DashBadge>}
+                                {entry.ajoute_par_admin && <DashBadge tone="primary">Ajouté par l'équipe</DashBadge>}
+                              </div>
                               <p className="text-sm tabular-nums text-muted-foreground">
                                 {formatZurichTime(entry.started_at)}
                                 {entry.ended_at && ` → ${formatZurichTime(entry.ended_at)}`}
                                 {' · '}{formatDuration(minutes)}
                               </p>
+                              {corrige && (
+                                <p className="text-xs text-muted-foreground">
+                                  Vous aviez pointé {entry.original_started_at ? formatZurichTime(entry.original_started_at) : '—'} → {entry.original_ended_at ? formatZurichTime(entry.original_ended_at) : 'sans départ'}
+                                </p>
+                              )}
+                              {entry.motif_correction && <p className="text-xs text-muted-foreground">Motif : {entry.motif_correction}</p>}
                             </div>
-                            <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">{formatChf(montant, 2)}</span>
+                            <span className={cn('shrink-0 text-sm font-semibold tabular-nums', entry.exclue ? 'text-muted-foreground line-through' : 'text-foreground')}>{formatChf(montant, 2)}</span>
                           </li>
                         );
                       })}

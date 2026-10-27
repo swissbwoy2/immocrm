@@ -87,6 +87,7 @@ const AnnonceurParametres = lazyWithRetry(() => import("./pages/annonceur/Parame
 const AdminDashboard = lazyWithRetry(() => import("./pages/admin/Dashboard"));
 const AdminAgents = lazyWithRetry(() => import("./pages/admin/Agents"));
 const AdminAgentDetail = lazyWithRetry(() => import("./pages/admin/AgentDetail"));
+const AdminCoursierDetail = lazyWithRetry(() => import("./pages/admin/CoursierDetail"));
 const AdminClients = lazyWithRetry(() => import("./pages/admin/Clients"));
 const AdminInscriptionsEchouees = lazyWithRetry(() => import("./pages/admin/InscriptionsEchouees"));
 const AdminClientDetail = lazyWithRetry(() => import("./pages/admin/ClientDetail"));
@@ -579,6 +580,7 @@ const App = () => (
 
               {/* Admin Coursiers Routes */}
               <Route path="/admin/coursiers" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCoursiers /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/coursiers/:coursierId" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminCoursierDetail /></AppLayout></ProtectedRoute>} />
 
               {/* Coursier Routes */}
               <Route path="/coursier" element={<ProtectedRoute allowedRoles={['coursier']}><AppLayout><CoursierDashboard /></AppLayout></ProtectedRoute>} />
