@@ -69,9 +69,9 @@ export class LeanImap {
 
   constructor(private readonly transport: ImapTransport, private readonly maxResponseBytes = 8 * 1024 * 1024) {}
 
-  static async connect(host: string, port: number): Promise<LeanImap> {
+  static async connect(host: string, port: number, maxResponseBytes?: number): Promise<LeanImap> {
     const conn = await withTimeout(Deno.connectTls({ hostname: host, port }), READ_TIMEOUT_MS, 'Connexion IMAP');
-    const client = new LeanImap(conn);
+    const client = new LeanImap(conn, maxResponseBytes);
     const greeting = await client.readLine();
     if (!greeting.startsWith('* OK') && !greeting.startsWith('* PREAUTH')) {
       client.close();
@@ -229,6 +229,19 @@ export class LeanImap {
       }
     }
     return [...new Set(uids)].sort((a, b) => a - b);
+  }
+
+  /** Taille de chaque message (octets), sans le télécharger. */
+  async uidFetchSizes(uids: number[]): Promise<Map<number, number>> {
+    const out = new Map<number, number>();
+    if (uids.length === 0) return out;
+    const res = await this.command(`UID FETCH ${uids.join(',')} (UID RFC822.SIZE)`);
+    for (const r of res) {
+      const uid = r.text.match(/\bUID (\d+)/i);
+      const size = r.text.match(/RFC822\.SIZE (\d+)/i);
+      if (uid && size) out.set(Number(uid[1]), Number(size[1]));
+    }
+    return out;
   }
 
   async uidFetchRaw(uids: number[], maxBytes: number): Promise<FetchedMessage[]> {

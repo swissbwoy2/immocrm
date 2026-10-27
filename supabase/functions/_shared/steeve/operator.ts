@@ -35,7 +35,7 @@ const MAX_PDF_BYTES = 6 * 1024 * 1024;
 /** Dossier complet (formulaire + pièces) lu en entier avant tout envoi. */
 const MAX_DOSSIER_BYTES = 15 * 1024 * 1024;
 
-export interface DraftMessage { uid: number; raw: Uint8Array }
+export interface DraftMessage { uid: number; raw: Uint8Array; /** Brouillon trop lourd pour être lu (octets) : signalé à l'équipe. */ tropLourd?: number }
 export interface MailPort {
   /** La boîte a ses identifiants enregistrés. */
   ready(box: string): Promise<boolean>;
@@ -907,6 +907,11 @@ async function handleDrafts(deps: Required<OperatorDeps>, mode: Mode, ctx: { les
   let costToday = (spent ?? []).reduce((s: number, r: any) => s + (Number(r.controles?.cout_usd) || 0), 0);
   for (const d of drafts) {
     if (handled >= LIMITS.dossiersPerRun) break;
+    if (d.tropLourd) {
+      await alertAdmins(db, `steeve-brouillon-lourd-${d.uid}`, 'Dossier trop lourd pour être envoyé',
+        `Un brouillon de relocation@ fait ${(d.tropLourd / 1048576).toFixed(1)} Mo (25 Mo au plus) : il n'est pas lu ni envoyé. Allège les pièces jointes (PDF compressé, photos réduites) ; les autres dossiers continuent.`, '/admin/postulations');
+      continue;
+    }
     const dk = await draftKey(d.raw);
     if (await keyExists(db, `dossier:${dk}`) || await keyExists(db, `bloque:dossier:${dk}`) || await keyExists(db, `blanc:dossier:${dk}`)) continue;
     if (costToday >= 3 && callModel) { rep.erreurs.push('plafond de dépense des contrôles atteint (3 USD / 24 h)'); break; }

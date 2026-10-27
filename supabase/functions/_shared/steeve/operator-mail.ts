@@ -30,10 +30,10 @@ export function realMailPort(db: any): MailPort {
     return found;
   }
 
-  async function withImap<T>(address: string, fn: (imap: LeanImap, folders: { name: string; flags: string[] }[]) => Promise<T>): Promise<T> {
+  async function withImap<T>(address: string, fn: (imap: LeanImap, folders: { name: string; flags: string[] }[]) => Promise<T>, maxResponseBytes?: number): Promise<T> {
     const b = await box(address);
     if (!b) throw new Error(`boîte ${address} non branchée`);
-    const imap = await LeanImap.connect(b.imap_host, b.imap_port);
+    const imap = await LeanImap.connect(b.imap_host, b.imap_port, maxResponseBytes);
     try {
       await imap.login(b.address, b.password);
       const folders = await imap.listFolders();
@@ -71,14 +71,18 @@ export function realMailPort(db: any): MailPort {
         if (!drafts) return [];
         await imap.select(drafts);
         const uids = (await imap.uidSearch('UNDELETED')).slice(-limit);
+        const sizes = await imap.uidFetchSizes(uids);
         const out: DraftMessage[] = [];
-        // Un par un : un brouillon avec de grosses pièces jointes ne fait pas déborder la mémoire.
+        // Un par un : un brouillon avec de grosses pièces jointes ne fait pas déborder la mémoire. Trop lourd : signalé
+        // (taille), jamais téléchargé — avant le 27.10.2026, un seul gros brouillon bloquait tous les dossiers.
         for (const uid of uids.reverse()) {
+          const taille = sizes.get(uid) ?? 0;
+          if (taille > MAX_DRAFT_BYTES) { out.push({ uid, raw: new Uint8Array(0), tropLourd: taille }); continue; }
           const [m] = await imap.uidFetchRaw([uid], MAX_DRAFT_BYTES);
           if (m?.raw?.length) out.push({ uid, raw: m.raw });
         }
         return out;
-      });
+      }, MAX_DRAFT_BYTES + 1024 * 1024);
     },
 
     async saveSent(address, raw) {
