@@ -102,7 +102,8 @@ export default function ClientCalendrier() {
       ]);
 
       setEvents(eventsRes.data || []);
-      setVisites(visitesRes.data || []);
+      // Une visite annulée n'est plus un rendez-vous : elle ne s'affiche pas dans l'agenda du client.
+      setVisites((visitesRes.data || []).filter((v: any) => v.statut !== 'annulee'));
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
