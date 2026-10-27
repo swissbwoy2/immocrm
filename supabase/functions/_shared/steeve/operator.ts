@@ -176,8 +176,21 @@ export function relanceEmail(o: { adresse: string; reference?: string | null }) 
 type ActionRow = Record<string, unknown> & { kind: string; statut: string };
 
 /** Ajoute une action au journal. Clé déjà présente → false (déjà faite ou déjà journalisée). */
+/** Limites des colonnes du registre (motif ≤ 500, corps ≤ 8000) : un motif long ne fait plus échouer le journal. */
+export function fitAction<T extends { motif?: string | null; note?: string | null; corps?: string | null }>(row: T): T {
+  const out = { ...row };
+  const motif = typeof out.motif === 'string' ? out.motif : null;
+  if (motif && motif.length > 500) {
+    out.motif = `${motif.slice(0, 497)}…`;
+    // Motif complet gardé dans la note (contrôle détaillé d'un dossier, ex. Evana / Bossons 1 le 27.10.2026).
+    out.note = `${out.note ? `${out.note}\n` : ''}Motif complet : ${motif}`.slice(0, 4000);
+  }
+  if (typeof out.corps === 'string' && out.corps.length > 8000) out.corps = out.corps.slice(0, 8000);
+  return out;
+}
+
 async function journal(db: any, row: ActionRow, key: string | null, taskId?: string | null): Promise<boolean> {
-  const payload = { ...row, updated_at: new Date().toISOString() };
+  const payload = { ...fitAction(row as any), updated_at: new Date().toISOString() };
   if (taskId) {
     const { error } = await db.from('steeve_actions').update({ ...payload, idempotency_key: key }).eq('id', taskId);
     if (error && error.code === '23505') {
@@ -1147,7 +1160,7 @@ async function handlePiecesRegie(deps: Required<OperatorDeps>, mode: Mode, taskI
       `${personne} — ${adresse} : la régie demande aussi ${manual.join(', ')} (Steeve ne peut pas les réunir seul).`, '/admin/steeve', 'urgent');
   }
   if (!auto.length) {
-    await db.from('steeve_actions').update({ ...free, statut: 'bloque', motif: `Pièces à réunir par l'équipe : ${manual.join(', ')}`, controles: { ...t.controles, equipe_prevenue: true } }).eq('id', taskId);
+    await db.from('steeve_actions').update({ ...free, statut: 'bloque', motif: `Pièces à réunir par l'équipe : ${manual.join(', ')}`.slice(0, 500), controles: { ...t.controles, equipe_prevenue: true } }).eq('id', taskId);
     return;
   }
 
