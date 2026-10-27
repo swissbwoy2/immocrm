@@ -72,6 +72,7 @@ export interface OperatorReport {
   retours_visites?: number;
   rappels_visites?: number;
   pieces_jointes?: number;
+  depots_controles?: number;
   contacts_trouves?: number;
   dossiers_envoyes: number;
   dossiers_a_blanc: number;
@@ -1459,6 +1460,14 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       rep.pieces_jointes = Number(data ?? 0);
     });
 
+    // 6 septies. Pièces déposées avec le trombone : 10 min après le dernier dépôt, Steeve contrôle type et personne
+    // (ex. fiches de salaire de la conjointe rangées chez le client), reclasse et envoie un seul message au client.
+    await step('controle_depots', async () => {
+      if (rep.mode !== 'autonome' || !inClientHours(now)) return;
+      const { data } = await db.rpc('steeve_controler_depots', { p_limit: 5 });
+      rep.depots_controles = Number(data ?? 0);
+    });
+
     // 2. Demandes de formulaire Flatfox (chat + e-mail).
     await step('qr', async () => {
       const { data: list } = await db.rpc('steeve_qr_candidates', { p_limit: LIMITS.qrPerRun, p_offre_id: null });
@@ -1489,7 +1498,7 @@ export async function runOperator(input: OperatorDeps): Promise<OperatorReport> 
       etapes: steps,
       contacts: rep.qr + rep.relances + rep.dossiers_envoyes + (rep.visites ?? 0),
       erreurs: rep.erreurs.map((e) => ({ erreur: e.slice(0, 300) })),
-      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · rappels de visite ${rep.rappels_visites ?? 0} · contacts de régies trouvés ${rep.contacts_trouves ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
+      notes: `Mode ${rep.mode} · formulaires ${rep.qr} · visites ${rep.visites ?? 0} · relances ${rep.relances} · dossiers envoyés ${rep.dossiers_envoyes} (à blanc ${rep.dossiers_a_blanc}) · pièces demandées ${rep.pieces ?? 0} · offres envoyées ${rep.offres ?? 0} · rappels de visite ${rep.rappels_visites ?? 0} · dépôts contrôlés ${rep.depots_controles ?? 0} · contacts de régies trouvés ${rep.contacts_trouves ?? 0} · vérifiés ${rep.verifies ?? 0} · bloqués ${rep.bloques} · tâches ${rep.taches} · e-mails lus ${rep.mails ?? 0} · file ${rep.remises_en_file} · leçons ${learned} · ${rep.cout_usd.toFixed(3)} USD`,
     }).eq('id', run.id);
   }
   return rep;

@@ -18058,6 +18058,10 @@ export type Database = {
         Args: { agent_uuid: string }
         Returns: undefined
       }
+      document_changer_personne: {
+        Args: { p_candidate_id: string | null; p_document_id: string }
+        Returns: Json
+      }
       decrement_mandat_coins_daily: { Args: never; Returns: number }
       ensure_annonceur_profile: { Args: never; Returns: string }
       est_conseiller_projet_achat: {

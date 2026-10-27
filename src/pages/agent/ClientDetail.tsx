@@ -201,6 +201,7 @@ export default function ClientDetail() {
   const [sendDossierDialogOpen, setSendDossierDialogOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
+  const [newDocumentPerson, setNewDocumentPerson] = useState<string>('client');
   const [newDocumentName, setNewDocumentName] = useState('');
   const [newDocumentType, setNewDocumentType] = useState<string>('autre');
   const [documentToDelete, setDocumentToDelete] = useState<any>(null);
@@ -459,9 +460,18 @@ export default function ClientDetail() {
 
       if (error) throw error;
 
+      // Document rattaché à une autre personne du dossier (ex. fiche de salaire de la conjointe).
+      const nextPerson = newDocumentPerson === 'client' ? null : newDocumentPerson;
+      if ((documentToRename.candidate_id ?? null) !== nextPerson) {
+        const { data: moved, error: moveError } = await supabase.rpc('document_changer_personne', {
+          p_document_id: documentToRename.id, p_candidate_id: nextPerson,
+        });
+        if (moveError || !(moved as { ok?: boolean; motif?: string } | null)?.ok) throw moveError ?? new Error((moved as { ok?: boolean; motif?: string } | null)?.motif ?? 'Personne non modifiée');
+      }
+
       // Update local state
       setDocuments(documents.map(d => 
-        d.id === documentToRename.id ? { ...d, nom: newDocumentName.trim(), type_document: newDocumentType } : d
+        d.id === documentToRename.id ? { ...d, nom: newDocumentName.trim(), type_document: newDocumentType, candidate_id: nextPerson } : d
       ));
 
       toast({
@@ -488,6 +498,7 @@ export default function ClientDetail() {
     setDocumentToRename(doc);
     setNewDocumentName(doc.nom);
     setNewDocumentType(doc.type_document || 'autre');
+    setNewDocumentPerson(doc.candidate_id || 'client');
     setRenameDialogOpen(true);
   };
 
@@ -2034,6 +2045,22 @@ export default function ClientDetail() {
                     <option value="autre">📄 Autre</option>
                   </select>
                 </div>
+                {candidates.length > 0 && (
+                  <div className="space-y-2">
+                    <Label htmlFor="new-doc-person">Ce document concerne</Label>
+                    <select
+                      id="new-doc-person"
+                      value={newDocumentPerson}
+                      onChange={(e) => setNewDocumentPerson(e.target.value)}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <option value="client">Client principal</option>
+                      {candidates.map((c) => (
+                        <option key={c.id} value={c.id}>{`${c.prenom ?? ''} ${c.nom ?? ''}`.trim() || 'Personne liée'}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div className="flex justify-end gap-2">
                   <Button
                     variant="outline"

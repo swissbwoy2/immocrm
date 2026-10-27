@@ -129,6 +129,47 @@ export async function attachmentBlocks(db: Db, transcript: any[], now: Date): Pr
   return blocks;
 }
 
+/** Pièces déposées avec le trombone et contrôlées par Steeve à chaque série (au plus 6, les plus récentes). */
+export const MAX_DEPOSITS = 6;
+
+/** Pièce déposée avec le trombone et pas encore contrôlée par Steeve (type et personne choisis par le client). */
+export function isUncheckedDeposit(m: any, now: Date): boolean {
+  return m?.sender_type === 'client' && m.payload?.kind === 'dossier_document' && m.payload?.verification === 'a_verifier'
+    && Boolean(m.payload?.document_id) && now.getTime() - new Date(m.created_at).getTime() <= ATTACHMENT_WINDOW_MS;
+}
+
+/**
+ * Pièces déposées avec le trombone, pas encore contrôlées : fichiers joints au contexte du modèle avec le type et la
+ * personne choisis par le client, pour vérifier (bon type ? bonne personne : nom sur le document ? date ?) et
+ * reclasser avec classer_document (document_id). Rend aussi les messages concernés, notés contrôlés ensuite.
+ */
+export async function depositBlocks(db: Db, clientId: string, persons: { id: string; label: string }[], transcript: any[], now: Date):
+  Promise<{ blocks: ContentBlock[]; messageIds: string[] }> {
+  const deposits = transcript.filter((m) => isUncheckedDeposit(m, now)).slice(-MAX_DEPOSITS);
+  const blocks: ContentBlock[] = [];
+  for (const m of deposits) {
+    const documentId = String(m.payload.document_id);
+    const type = String(m.payload.type_document ?? 'autre');
+    const personne = m.payload.candidate_id ? persons.find((p) => p.id === m.payload.candidate_id)?.label ?? 'personne liée' : 'client principal';
+    const head = `Pièce déposée par le client avec le trombone (document_id ${documentId}, fichier « ${m.attachment_name ?? 'document'} »), `
+      + `rangée comme « ${DOC_TYPES[type] ?? type} » pour ${personne}`;
+    const r = await documentBlock(db, clientId, documentId);
+    if (r.erreur || !r.block) { blocks.push({ type: 'text', text: `${head} : ${r.erreur ?? 'lecture impossible'}.` }); continue; }
+    blocks.push({ type: 'text', text: `${head} — contrôle-la : bon type ? bonne personne (nom écrit sur le document, nom du fichier) ? date d'émission ? `
+      + `Si le type ou la personne est faux : classer_document avec ce document_id, le bon type et la bonne personne. Si c'est juste : rien à faire.` });
+    blocks.push(r.block);
+  }
+  return { blocks, messageIds: deposits.map((m) => String(m.id)) };
+}
+
+/** Pièces déposées contrôlées par Steeve : plus relues aux réponses suivantes. */
+export async function markDepositsChecked(db: Db, messages: any[], ids: string[], now: Date): Promise<void> {
+  for (const id of ids) {
+    const m = messages.find((x) => String(x.id) === id);
+    await db.from('messages').update({ payload: { ...(m?.payload ?? {}), verification: 'controle_steeve', controle_le: now.toISOString() } }).eq('id', id);
+  }
+}
+
 /** Document déjà dans « Mes documents » du client, lu par le modèle (outil lire_document). */
 export async function documentBlock(db: Db, clientId: string, documentId: string): Promise<{ block?: ContentBlock; info?: any; erreur?: string }> {
   const { data: d } = await db.from('documents').select('id, nom, type, url, type_document, candidate_id, date_upload, statut')

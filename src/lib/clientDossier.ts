@@ -21,6 +21,8 @@ export interface ClientDossierContext {
   journey: DossierJourney;
   purchaseProjectId: string | null;
   persons: DossierPerson[];
+  /** Libellé du client lui-même dans le choix de la personne, ex. « Moi (Shakhawan) ». */
+  selfLabel?: string;
 }
 
 const PERSON_TYPE_LABELS: Record<string, string> = {
@@ -65,11 +67,15 @@ export async function loadClientDossierContext(userId: string): Promise<ClientDo
     .eq('client_id', client.id)
     .order('created_at', { ascending: true });
 
+  const { data: profile } = await supabase.from('profiles').select('prenom').eq('id', userId).maybeSingle();
+  const firstName = String(profile?.prenom ?? '').trim().split(/\s+/)[0];
+
   return {
     userId,
     clientId: client.id,
     journey: buyer ? 'achat' : 'location',
     purchaseProjectId: buyer ? project?.id ?? null : null,
+    selfLabel: firstName ? `Moi (${firstName})` : 'Moi',
     persons: (people || []).map((p) => {
       const name = `${p.prenom || ''} ${p.nom || ''}`.trim();
       const role = PERSON_TYPE_LABELS[p.type] || p.type;
