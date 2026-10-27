@@ -5321,17 +5321,6 @@ export type Database = {
       }
       coursier_time_entries: {
         Row: {
-          ajoute_par_admin: boolean
-          corrige_at: string | null
-          corrige_par: string | null
-          exclue: boolean
-          motif_correction: string | null
-          original_ended_at: string | null
-          original_started_at: string | null
-          paye: boolean
-          paye_at: string | null
-          paye_par: string | null
-          tarif_paye: number | null
           coursier_id: string
           created_at: string
           duration_minutes: number | null
@@ -5342,17 +5331,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          ajoute_par_admin?: boolean
-          corrige_at?: string | null
-          corrige_par?: string | null
-          exclue?: boolean
-          motif_correction?: string | null
-          original_ended_at?: string | null
-          original_started_at?: string | null
-          paye?: boolean
-          paye_at?: string | null
-          paye_par?: string | null
-          tarif_paye?: number | null
           coursier_id: string
           created_at?: string
           duration_minutes?: number | null
@@ -5363,17 +5341,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          ajoute_par_admin?: boolean
-          corrige_at?: string | null
-          corrige_par?: string | null
-          exclue?: boolean
-          motif_correction?: string | null
-          original_ended_at?: string | null
-          original_started_at?: string | null
-          paye?: boolean
-          paye_at?: string | null
-          paye_par?: string | null
-          tarif_paye?: number | null
           coursier_id?: string
           created_at?: string
           duration_minutes?: number | null
@@ -18090,10 +18057,6 @@ export type Database = {
       decrement_agent_clients: {
         Args: { agent_uuid: string }
         Returns: undefined
-      }
-      document_changer_personne: {
-        Args: { p_candidate_id: string | null; p_document_id: string }
-        Returns: Json
       }
       decrement_mandat_coins_daily: { Args: never; Returns: number }
       document_changer_personne: {
