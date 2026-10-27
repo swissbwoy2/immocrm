@@ -18096,6 +18096,10 @@ export type Database = {
         Returns: Json
       }
       decrement_mandat_coins_daily: { Args: never; Returns: number }
+      document_changer_personne: {
+        Args: { p_candidate_id: string; p_document_id: string }
+        Returns: Json
+      }
       ensure_annonceur_profile: { Args: never; Returns: string }
       est_conseiller_projet_achat: {
         Args: { p_project_id: string }
@@ -19145,6 +19149,7 @@ export type Database = {
         Args: { p_offre_id: string; p_portail: string; p_preuve: string }
         Returns: Json
       }
+      steeve_controler_depots: { Args: { p_limit?: number }; Returns: number }
       steeve_demande_recherche_offres: {
         Args: { p_client_id: string; p_note?: string; p_source: string }
         Returns: Json
