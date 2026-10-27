@@ -37,7 +37,11 @@ interface Props {
 export function DossierDocumentPicker({ dossier, onFiled, pickFile, onBusyChange, onDone }: Props) {
   const { toast } = useToast();
   const [selected, setSelected] = useState<DossierDocumentOption | null>(null);
-  const [candidateId, setCandidateId] = useState<string | null>(null);
+  // undefined = personne pas encore choisie. Avec un garant, un conjoint… le choix est obligatoire :
+  // « Moi » n'est plus pris d'office (pièces de Banaz rangées chez Shakhawan, 27.10.2026).
+  const hasOthers = dossier.persons.length > 0;
+  const [candidateId, setCandidateId] = useState<string | null | undefined>(hasOthers ? undefined : null);
+  const personMissing = candidateId === undefined;
   const [busy, setBusyState] = useState(false);
   const setBusy = (value: boolean) => { setBusyState(value); onBusyChange?.(value); };
 
@@ -70,12 +74,12 @@ export function DossierDocumentPicker({ dossier, onFiled, pickFile, onBusyChange
       ? { title: 'Ajouté à ton dossier', description: `${what}. Il n'a pas pu être annoncé dans la conversation.` }
       : { title: 'Ajouté à ton dossier', description: what });
     setSelected(null);
-    setCandidateId(null);
+    setCandidateId(hasOthers ? undefined : null);
     onDone();
   };
 
   const choose = async (camera: boolean) => {
-    if (!selected || busy) return;
+    if (!selected || busy || candidateId === undefined) return;
     const option = selected;
     const personId = candidateId;
     // Pas d'état « occupé » pendant le choix : si la personne annule, rien ne reste bloqué.
@@ -126,11 +130,13 @@ export function DossierDocumentPicker({ dossier, onFiled, pickFile, onBusyChange
       </div>
       {selected.hint && <p className="text-xs text-muted-foreground px-1">{selected.hint}</p>}
 
-      {dossier.persons.length > 0 && (
+      {hasOthers && (
         <div className="px-1">
-          <p className="text-xs text-muted-foreground mb-1">Ce document concerne :</p>
+          <p className={cn('text-xs mb-1', personMissing ? 'font-medium text-foreground' : 'text-muted-foreground')}>
+            À qui appartient ce document ?
+          </p>
           <div className="flex flex-wrap gap-1">
-            {[{ id: null as string | null, label: 'Moi' }, ...dossier.persons].map((p) => (
+            {[{ id: null as string | null, label: dossier.selfLabel || 'Moi' }, ...dossier.persons].map((p) => (
               <button
                 key={p.id ?? 'moi'}
                 type="button"
@@ -138,7 +144,7 @@ export function DossierDocumentPicker({ dossier, onFiled, pickFile, onBusyChange
                 onClick={() => setCandidateId(p.id)}
                 aria-pressed={candidateId === p.id}
                 className={cn(
-                  'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                  'rounded-full border px-3 py-1.5 text-sm transition-colors',
                   candidateId === p.id ? 'border-primary bg-primary/10 text-foreground' : 'border-border text-muted-foreground hover:bg-muted',
                 )}
               >
@@ -146,15 +152,18 @@ export function DossierDocumentPicker({ dossier, onFiled, pickFile, onBusyChange
               </button>
             ))}
           </div>
+          {personMissing && (
+            <p className="text-xs text-muted-foreground mt-1">Choisis d'abord la personne, puis envoie le document.</p>
+          )}
         </div>
       )}
 
       <div className="flex flex-col gap-1 pt-1">
-        <Button type="button" size="sm" variant="secondary" className="justify-start" disabled={busy} onClick={() => void choose(true)}>
+        <Button type="button" size="sm" variant="secondary" className="justify-start" disabled={busy || personMissing} onClick={() => void choose(true)}>
           {busy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Camera className="h-4 w-4 mr-2" />}
           Prendre une photo
         </Button>
-        <Button type="button" size="sm" variant="secondary" className="justify-start" disabled={busy} onClick={() => void choose(false)}>
+        <Button type="button" size="sm" variant="secondary" className="justify-start" disabled={busy || personMissing} onClick={() => void choose(false)}>
           <FolderUp className="h-4 w-4 mr-2" />
           Choisir un fichier
         </Button>

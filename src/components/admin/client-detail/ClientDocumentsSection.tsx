@@ -17,9 +17,17 @@ const getFileIcon = (type: string) => {
   return File;
 };
 
+/** Personne du dossier à qui un document peut être rattaché (conjoint, garant, colocataire…). */
+export interface DocumentPerson {
+  id: string;
+  label: string;
+}
+
 /** Documents du client : liste, aperçu, renommer / reclasser, télécharger, supprimer, dossier complet. */
-export function DocumentsCard({ documents, onUpload, onMerge, onPreview, onRename, onDownload, onDelete }: {
+export function DocumentsCard({ documents, persons = [], onUpload, onMerge, onPreview, onRename, onDownload, onDelete }: {
   documents: any[];
+  /** Personnes liées : le document d'une personne liée affiche son nom. */
+  persons?: DocumentPerson[];
   onUpload: () => void;
   onMerge: () => void;
   onPreview: (doc: any) => void;
@@ -61,6 +69,9 @@ export function DocumentsCard({ documents, onUpload, onMerge, onPreview, onRenam
                     <p className="break-words text-[15px] font-medium text-foreground">{doc.nom}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                       <DashBadge tone="muted">{getDocTypeLabel(doc.type_document)}</DashBadge>
+                      {doc.candidate_id && (
+                        <DashBadge tone="muted">{persons.find((p) => p.id === doc.candidate_id)?.label ?? 'Personne liée'}</DashBadge>
+                      )}
                       {doc.taille ? <span>{formatFileSize(doc.taille)}</span> : null}
                       <span>•</span>
                       <span>{formatZurichShortDate(doc.date_upload)}</span>
@@ -73,7 +84,7 @@ export function DocumentsCard({ documents, onUpload, onMerge, onPreview, onRenam
                       <Eye className="h-4 w-4" />
                     </Button>
                   )}
-                  <Button variant="ghost" size="icon" onClick={() => onRename(doc)} aria-label={`Renommer ${doc.nom}`} title="Renommer / reclasser">
+                  <Button variant="ghost" size="icon" onClick={() => onRename(doc)} aria-label={`Renommer ${doc.nom}`} title="Renommer / reclasser / changer de personne">
                     <Pencil className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => onDownload(doc)} aria-label={`Télécharger ${doc.nom}`} title="Télécharger">
@@ -271,14 +282,20 @@ export function PreviewDocumentDialog({ open, onOpenChange, previewDocument, pre
   );
 }
 
-/** Renommer / reclasser un document. */
-export function RenameDocumentDialog({ open, onOpenChange, name, setName, type, setType, onSubmit }: {
+/** Renommer / reclasser un document, et le rattacher à la bonne personne du dossier. */
+export function RenameDocumentDialog({ open, onOpenChange, name, setName, type, setType, persons = [], selfLabel = 'Client principal', person = 'client', setPerson, onSubmit }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   name: string;
   setName: (v: string) => void;
   type: string;
   setType: (v: string) => void;
+  /** Personnes liées du dossier ; sans personne liée, le choix n'est pas affiché. */
+  persons?: DocumentPerson[];
+  selfLabel?: string;
+  /** 'client' = client principal, sinon client_candidates.id */
+  person?: string;
+  setPerson?: (v: string) => void;
   onSubmit: () => void;
 }) {
   return (
@@ -321,6 +338,22 @@ export function RenameDocumentDialog({ open, onOpenChange, name, setName, type, 
               </SelectContent>
             </Select>
           </div>
+          {persons.length > 0 && setPerson && (
+            <div className="space-y-2">
+              <Label>Ce document concerne</Label>
+              <Select value={person} onValueChange={setPerson}>
+                <SelectTrigger className="bg-card border-border/70">
+                  <SelectValue placeholder="Choisir la personne" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="client">{selfLabel}</SelectItem>
+                  {persons.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

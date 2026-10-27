@@ -89,6 +89,9 @@ export default function Documents() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
   const [newDocumentName, setNewDocumentName] = useState('');
+  // Personnes liées du dossier (conjoint, garant…) : chaque fichier peut leur être rattaché.
+  const [persons, setPersons] = useState<{ id: string; label: string }[]>([]);
+  const [selfLabel, setSelfLabel] = useState('Moi');
 
   useEffect(() => {
     loadDocuments();
@@ -128,9 +131,11 @@ export default function Documents() {
       // 1. Récupérer le profil pour l'email
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('email')
+        .select('email, prenom')
         .eq('id', user.id)
         .single();
+      const firstName = String(profileData?.prenom ?? '').trim().split(/\s+/)[0];
+      setSelfLabel(firstName ? `Moi (${firstName})` : 'Moi');
 
       // 2. Récupérer le client (avec champs buyer detection)
       const { data: clientData } = await supabase
@@ -143,6 +148,12 @@ export default function Documents() {
       let pp: any = null;
       if (clientData) {
         setClientId(clientData.id);
+        const { data: people } = await supabase
+          .from('client_candidates')
+          .select('id, prenom, nom')
+          .eq('client_id', clientData.id)
+          .order('created_at', { ascending: true });
+        setPersons((people || []).map((p) => ({ id: p.id, label: `${p.prenom || ''} ${p.nom || ''}`.trim() || 'Personne liée' })));
         // Charger le projet achat pour détecter acheteur
         const { data: byUser } = await supabase
           .from('purchase_projects')
@@ -485,6 +496,19 @@ export default function Documents() {
     }
   };
 
+  /** Rattache un fichier à la bonne personne du dossier (« client » = moi). */
+  const handleChangePerson = async (doc: { id: string; candidate_id?: string | null }, value: string) => {
+    const next = value === 'client' ? null : value;
+    if ((doc.candidate_id ?? null) === next) return;
+    const { data, error } = await supabase.rpc('document_changer_personne', { p_document_id: doc.id, p_candidate_id: next });
+    if (error || !(data as { ok?: boolean; motif?: string } | null)?.ok) {
+      toast({ title: 'Erreur', description: (data as { ok?: boolean; motif?: string } | null)?.motif || 'Impossible de changer la personne du document', variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Document déplacé', description: next ? `Rangé pour ${persons.find((p) => p.id === next)?.label ?? 'la personne choisie'}` : 'Rangé dans tes documents' });
+    loadDocuments();
+  };
+
   const handleDownload = async (doc: any) => {
     if (doc.url.startsWith('data:')) {
       const link = document.createElement('a');
@@ -714,7 +738,8 @@ export default function Documents() {
     },
   ];
   const checklist = isClientBuyer ? PURCHASE_CHECKLIST : RENTAL_CHECKLIST;
-  const countFor = (item: CheckItem) => documents.filter((d) => item.types.includes(d.type_document)).length;
+  // Pièces du client lui-même : celles d'un conjoint ou d'un garant ne comptent pas pour lui.
+  const countFor = (item: CheckItem) => documents.filter((d) => !d.candidate_id && item.types.includes(d.type_document)).length;
   const requiredItems = checklist.flatMap((g) => g.items).filter((i) => !i.optional);
   const requiredDone = requiredItems.filter((i) => countFor(i) >= (i.min ?? 1)).length;
   const openUpload = (type: string) => { setSelectedType(type); setUploadDialogOpen(true); };
@@ -830,7 +855,24 @@ export default function Documents() {
                           {getTypeLabel(doc.type_document)} · {new Date(doc.date_upload).toLocaleDateString('fr-CH')}
                           {doc.taille ? ` · ${formatFileSize(doc.taille)}` : ''}
                           {doc.offre_id ? ' · Candidature' : ''}
+                          {doc.candidate_id ? ` · ${persons.find((p) => p.id === doc.candidate_id)?.label ?? 'Personne liée'}` : ''}
                         </p>
+                        {persons.length > 0 && !String(doc.id).startsWith('mandat-') && (
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Concerne :</span>
+                            <Select value={doc.candidate_id || 'client'} onValueChange={(v) => handleChangePerson(doc, v)}>
+                              <SelectTrigger className="h-8 w-auto min-w-[9rem] rounded-full text-xs" aria-label="Personne concernée par ce document">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="client">{selfLabel}</SelectItem>
+                                {persons.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">

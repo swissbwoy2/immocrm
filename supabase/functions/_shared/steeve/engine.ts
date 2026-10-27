@@ -2,7 +2,7 @@
 // Le code décide (droits, plafonds, publication) ; le modèle comprend, choisit les outils et rédige.
 // deno-lint-ignore-file no-explicit-any
 import { CLIENT_WEB_FETCH_TOOL, costOf, textOf, WEB_SEARCH_TOOL, type CallModel, type ContentBlock, type ModelMessage, type Usage } from './anthropic.ts';
-import { attachmentBlocks } from './fichiers.ts';
+import { attachmentBlocks, depositBlocks, markDepositsChecked } from './fichiers.ts';
 import { accountPhase, depositAmount, loadDossier, overview, type Db } from './context.ts';
 import { staticWelcome, STEEVE_SYSTEM_PROMPT, welcomeInstructions } from './prompt.ts';
 import { runTool, STEEVE_TOOLS, transferToAgent } from './tools.ts';
@@ -70,6 +70,12 @@ function describeMessage(m: any): string {
     : 'Agent';
   const parts: string[] = [];
   if (m.content) parts.push(String(m.content).slice(0, 1500));
+  if (m.payload?.kind === 'dossier_document' && m.payload?.document_id) {
+    // Après contrôle, la personne a pu changer : get_documents fait foi.
+    parts.push(m.payload?.verification === 'a_verifier'
+      ? `[pièce déposée avec le trombone : document_id ${m.payload.document_id}, rangée par le client pour ${m.payload?.candidate_id ? 'une personne liée' : 'lui-même'} — à contrôler, le fichier est joint à la fin]`
+      : `[pièce déposée avec le trombone : document_id ${m.payload.document_id}, déjà contrôlée — voir get_documents]`);
+  }
   if (m.attachment_url && m.payload?.kind !== 'dossier_document') {
     if (m.attachment_type === 'audio') parts.push('[message vocal : demande-lui de l’écrire en quelques mots]');
     else if (m.payload?.document_classe) parts.push(`[pièce jointe ${m.attachment_name || 'sans nom'} : déjà classée dans ses documents (${m.payload?.document_type ?? 'document'})]`);
@@ -310,6 +316,8 @@ export async function runTurn(opts: {
   const conversationId: string = run.conversation_id;
   // Relance : message arrivé pendant la rédaction du passage précédent, auquel la réponse publiée n'a pas répondu.
   const isRelance = run.reason === 'relance';
+  // Contrôle des pièces déposées avec le trombone (steeve_controler_depots, 10 min après le dernier dépôt).
+  const isControle = run.reason === 'controle_documents';
 
   const { data: conv } = await db
     .from('conversations')
@@ -375,6 +383,18 @@ export async function runTurn(opts: {
             'Réponds maintenant à ce message-là, sans répéter ce que tu as déjà dit.';
         }
       }
+      if (isControle) {
+        const trigger = transcript.find((m: any) => m.id === run.trigger_message_id);
+        // Le client a écrit depuis : sa réponse normale contrôle aussi les pièces.
+        if (!trigger || transcript.some((m: any) => m.sender_type === 'client' && m.created_at > trigger.created_at)) {
+          return finish({ status: 'skipped', reason: 'controle_par_reponse' });
+        }
+        last = trigger;
+        note = "\n\nLe client vient de déposer des pièces avec le trombone (fichiers joints ci-dessous). Contrôle chacune : bon type, bonne personne " +
+          "(nom écrit sur le document : client principal ou personne liée du dossier), date d'émission. Reclasse avec classer_document (document_id) " +
+          "celles qui sont mal rangées. Puis écris-lui UN seul message court : ce qui est bien rangé et pour qui, ce que tu as corrigé, " +
+          'ce qui manque encore pour chaque personne (get_documents). Pas de remerciement long, pas de question inutile.';
+      }
       // Quelqu'un a déjà répondu au client (agent ou passage précédent) : rien à ajouter.
       if (!last || last.sender_type !== 'client') return finish({ status: 'skipped', reason: 'deja_repondu' });
 
@@ -390,7 +410,10 @@ export async function runTurn(opts: {
         `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
         ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart();
       // Photos, captures et PDF envoyés par le client et pas encore classés : Steeve les voit vraiment.
-      const pieces = await attachmentBlocks(db, transcript, now());
+      // Pièces déposées avec le trombone et pas encore contrôlées : Steeve vérifie type et personne (Banaz / Shakhawan).
+      const depots = await depositBlocks(db, dossier.clientId, dossier.persons, transcript, now());
+      if (isControle && !depots.messageIds.length) return finish({ status: 'skipped', reason: 'deja_controle' });
+      const pieces = [...(await attachmentBlocks(db, transcript, now())), ...depots.blocks];
       const messages: ModelMessage[] = [{ role: 'user', content: pieces.length ? [{ type: 'text', text: contexte }, ...pieces] : contexte }];
 
       let finalText = '';
@@ -486,6 +509,8 @@ export async function runTurn(opts: {
       }
 
       const replyId = await postReply(db, conversationId, runId, toPlainReply(finalText));
+      // Pièces vues et contrôlées dans cette réponse : plus relues ensuite.
+      if (depots.messageIds.length) await markDepositsChecked(db, transcript, depots.messageIds, now());
       const done = await finish({ status: 'done', reason: transferred ? 'transfere_agent' : undefined, replyMessageId: replyId });
       if (!transferred) {
         // Un message du client arrivé pendant la rédaction a été écarté (« passage_en_cours ») : on le relance.

@@ -88,6 +88,10 @@ export default function ClientDetail() {
 
   // Hook pour les candidats supplémentaires et solvabilité
   const { candidates, refresh: refreshCandidates } = useClientCandidates(id);
+  const documentPersons = candidates.map((c) => ({
+    id: c.id,
+    label: `${c.prenom ?? ''} ${c.nom ?? ''}`.trim() || 'Personne liée',
+  }));
   const solvabilityResult = useSolvabilityCheck(client, candidates);
   const [documentsRefreshKey, setDocumentsRefreshKey] = useState(0);
   
@@ -105,6 +109,7 @@ export default function ClientDetail() {
   const [previewDocument, setPreviewDocument] = useState<any>(null);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [documentToRename, setDocumentToRename] = useState<any>(null);
+  const [newDocumentPerson, setNewDocumentPerson] = useState<string>('client');
   const [newDocumentName, setNewDocumentName] = useState('');
   const [newDocumentType, setNewDocumentType] = useState<string>('autre');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -550,6 +555,15 @@ export default function ClientDetail() {
         .eq('id', documentToRename.id);
 
       if (error) throw error;
+
+      // Document rattaché à une autre personne du dossier (ex. fiche de salaire de la conjointe).
+      const nextPerson = newDocumentPerson === 'client' ? null : newDocumentPerson;
+      if ((documentToRename.candidate_id ?? null) !== nextPerson) {
+        const { data: moved, error: moveError } = await supabase.rpc('document_changer_personne', {
+          p_document_id: documentToRename.id, p_candidate_id: nextPerson,
+        });
+        if (moveError || !(moved as { ok?: boolean; motif?: string } | null)?.ok) throw moveError ?? new Error((moved as { ok?: boolean; motif?: string } | null)?.motif ?? 'Personne non modifiée');
+      }
 
       toast({
         title: 'Document mis à jour',
@@ -1416,6 +1430,7 @@ export default function ClientDetail() {
           <TabPanel tab="documents" active={activeTab === 'documents'} keepMounted>
             <DocumentsCard
               documents={documents}
+              persons={documentPersons}
               onUpload={() => setUploadDialogOpen(true)}
               onMerge={() => setMergeDialogOpen(true)}
               onPreview={handlePreviewDocument}
@@ -1423,6 +1438,7 @@ export default function ClientDetail() {
                 setDocumentToRename(doc);
                 setNewDocumentName(doc.nom);
                 setNewDocumentType(doc.type_document || 'autre');
+                setNewDocumentPerson(doc.candidate_id || 'client');
                 setRenameDialogOpen(true);
               }}
               onDownload={handleDownloadDocument}
@@ -1575,6 +1591,10 @@ export default function ClientDetail() {
         setName={setNewDocumentName}
         type={newDocumentType}
         setType={setNewDocumentType}
+        persons={documentPersons}
+        selfLabel={profile ? `${profile.prenom ?? ''} ${profile.nom ?? ''}`.trim() || 'Client principal' : 'Client principal'}
+        person={newDocumentPerson}
+        setPerson={setNewDocumentPerson}
         onSubmit={handleRenameDocument}
       />
 
