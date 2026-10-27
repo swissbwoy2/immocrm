@@ -34,7 +34,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'get_visits',
-    description: 'Visites du client (date et heure de Zurich, adresse, statut, décision).',
+    description: 'Visites du client (date et heure de Zurich, adresse, statut, décision), y compris les visites ANNULÉES (avec la date d’annulation) et les autres rendez-vous de son agenda (bureau, signature, état des lieux). Une visite annulée n’est plus un rendez-vous : dis-le clairement au client si elle apparaît encore chez lui.',
     input_schema: {
       type: 'object',
       properties: { scope: { type: 'string', enum: ['a_venir', 'passees', 'toutes'] } },
@@ -354,7 +354,7 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
     }
     case 'get_visits': {
       const scope = ['a_venir', 'passees', 'toutes'].includes(input?.scope) ? input.scope : 'a_venir';
-      return { content: json(await visits(db, dossier.clientId, scope, now)) };
+      return { content: json(await visits(db, dossier.clientId, scope, now, true)) };
     }
     case 'get_applications':
       return { content: json(await applications(db, dossier.clientId)) };
