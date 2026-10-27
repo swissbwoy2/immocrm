@@ -376,9 +376,16 @@ export async function runTurn(opts: {
       if (!last || last.sender_type !== 'client') return finish({ status: 'skipped', reason: 'deja_repondu' });
 
       const facts = await overview(db, dossier, now());
+      // Langue d'écriture notée pour ce client (outil noter_langue, ou l'équipe) : toutes les réponses dans cette langue.
+      const { data: convLang } = await db.from('conversations').select('steeve_summary').eq('id', conversationId).single();
+      const langue = String((convLang?.steeve_summary as any)?.langue ?? '').trim();
+      const langueNote = langue
+        ? `Langue du client : ${langue}. Réponds-lui entièrement en ${langue} (phrases courtes), en gardant en français, entre guillemets ou parenthèses, les adresses, montants, dates, noms des boutons de l'application et des documents (ex. « trombone 📎 », « extrait des poursuites »).\n\n`
+        : '';
       const messages: ModelMessage[] = [{
         role: 'user',
         content:
+          langueNote +
           `Dossier du client (données de l'application) :\n${JSON.stringify(facts)}\n\n` +
           `Conversation récente, la plus ancienne en premier :\n${transcript.map(describeMessage).join('\n')}\n\n` +
           ((note || '\n\nRéponds maintenant au dernier message du client.') + sensitiveNote(String(last.content || ''))).trimStart(),

@@ -192,6 +192,11 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
     input_schema: { type: 'object', properties: {}, additionalProperties: false },
   },
   {
+    name: 'noter_langue',
+    description: "Note la langue dans laquelle le client veut qu'on lui écrive (il écrit dans cette langue, dit la parler ou dit mal comprendre le français et donne sa langue). Ensuite, toutes tes réponses sont dans cette langue. Ex. « kurde (sorani) », « arabe », « albanais », « anglais », « français ».",
+    input_schema: { type: 'object', properties: { langue: { type: 'string' } }, required: ['langue'], additionalProperties: false },
+  },
+  {
     name: 'facture',
     description: "Factures du client dans la comptabilité de l'agence (AbaNinja) : etat = numéro, date, montant, montant encore ouvert, payée ou non, et l'état de l'activation du compte ; renvoyer = AbaNinja renvoie par e-mail la facture ouverte la plus récente, à l'adresse enregistrée sur la facture (une fois par jour au plus). Sans facture trouvée, l'équipe est prévenue pour l'émettre. Un paiement Twint ou un virement récent peut ne pas encore apparaître : propose alors d'envoyer la preuve de paiement (trombone).",
     input_schema: {
@@ -301,6 +306,8 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
       return await clientVisitDone(ctx, String(input?.bien ?? ''), input?.date ? String(input.date).trim() : '');
     case 'annuler_criteres':
       return await clientUndoCriteria(ctx);
+    case 'noter_langue':
+      return await noteLanguage(ctx, String(input?.langue ?? ''));
     case 'donner_disponibilites':
       return await clientAvailability(ctx, String(input?.bien ?? ''), String(input?.disponibilites ?? '').slice(0, 400));
     case 'facture':
@@ -860,4 +867,16 @@ async function clientOfferSearch(ctx: ToolContext, precision: string): Promise<T
   if (error || !data?.ok) return { content: "La recherche n'a pas pu être lancée.", isError: true };
   return { content: json({ recherche_lancee: true, deja_en_cours: Boolean(data.existante),
     suite: "Recherche en cours avec ses critères enregistrés : les offres conformes arrivent dans sa messagerie et dans « Offres reçues » dans quelques minutes, et Steeve lui écrit le résultat. Ne promets aucun nombre." }) };
+}
+
+
+/** Langue d'écriture du client, gardée dans la conversation (steeve_summary.langue) et rappelée à chaque réponse. */
+export async function noteLanguage(ctx: ToolContext, langue: string): Promise<ToolOutcome> {
+  const l = langue.replace(/[^\p{L}\p{M}() ,'-]/gu, '').trim().slice(0, 40);
+  if (l.length < 2) return { content: 'Langue illisible.', isError: true };
+  const { data: conv } = await ctx.db.from('conversations').select('steeve_summary').eq('id', ctx.conversationId).single();
+  const summary = { ...((conv?.steeve_summary as Record<string, unknown>) || {}), langue: /^fran/i.test(l) ? null : l };
+  const { error } = await ctx.db.from('conversations').update({ steeve_summary: summary }).eq('id', ctx.conversationId);
+  if (error) return { content: "La langue n'a pas pu être notée.", isError: true };
+  return { content: json({ notee: true, langue: summary.langue ?? 'français', suite: summary.langue ? `Écris-lui désormais en ${l}.` : 'Retour au français.' }) };
 }

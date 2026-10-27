@@ -29,7 +29,7 @@ lancer_tache reste disponible pour une tâche simple ciblée (QR, relance, envoi
 Dans ta conversation de la messagerie, tu as posté des demandes qui attendent la décision de l'admin (proposition d'un client, transfert, demande d'un propriétaire, annonceur, apporteur, candidat ou coursier, alerte de l'opérateur). Chaque demande porte une « réf. » (identifiants). Quand l'admin répond (« oui, vas-y », « non », une consigne) :
 1. Retrouve la demande concernée (la plus récente si ce n'est pas précisé ; s'il y a un doute entre plusieurs, demande laquelle).
 2. Fais l'action avec tes outils : postuler / reprendre un dossier (etat_dossier puis reprendre_dossier), chercher et envoyer des offres (chercher_offres), clore la proposition (decider_demande : traitee si c'est fait ou accepté, rejetee si l'admin refuse).
-3. Réponds TOI-MÊME à la personne avec ecrire_a (client : dans sa conversation ; autre rôle : notification), en français, tutoiement pour un client, vouvoiement sinon, court et concret : ce qui est fait, ce qui suit (ex. « J'ai envoyé ton dossier à la régie, je te fais un retour dès qu'elle répond. »). N'annonce jamais un envoi ou un résultat que l'outil n'a pas confirmé.
+3. Réponds TOI-MÊME à la personne avec ecrire_a (client : dans sa conversation ; autre rôle : notification), en français — ou dans la langue de la personne si elle écrit dans une autre langue, dit mal comprendre le français ou si l'admin le demande (kurde sorani ou kurmandji, arabe, albanais, tigrinya, portugais, espagnol, anglais, turc, persan… : tu sais les écrire, ne dis jamais le contraire et ne demande pas d'interprète ; adresses, montants, dates, boutons de l'application et noms des documents restent en français entre guillemets, puis une courte version française à la fin) —, tutoiement pour un client, vouvoiement sinon, court et concret : ce qui est fait, ce qui suit (ex. « J'ai envoyé ton dossier à la régie, je te fais un retour dès qu'elle répond. »). N'annonce jamais un envoi ou un résultat que l'outil n'a pas confirmé.
 4. Confirme à l'admin en une ou deux lignes ce qui est fait (vérifié) et ce que tu as écrit à la personne.
 Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec personnes (nom), puis ecrire_a.
 
@@ -672,6 +672,15 @@ export function historyFromConversation(rows: { sender_type: string; content: st
 }
 
 export const ADMIN_BUSY_MESSAGE = "Le plafond quotidien du copilote est atteint. Tu peux le relever dans le pilotage de Steeve, ou réessayer demain.";
+/** La réponse à l'admin affirme qu'un message a été envoyé / écrit à quelqu'un. */
+export function claimsMessageSent(text: string): boolean {
+  const t = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, "'");
+  return /\b(le |ton |mon )?message (est|a ete|a bien ete) (bien )?(envoye|publie|poste|parti)\b/.test(t)
+    || /\bj'ai (bien )?(ecrit|envoye un message|repondu) a [a-z]/.test(t)
+    || /\bje lui ai (bien )?(ecrit|envoye|repondu)\b/.test(t)
+    || /\bmessage envoye a\b/.test(t);
+}
+
 export const ADMIN_ERROR_MESSAGE = "Je n'arrive pas à répondre pour le moment. Réessaie dans un instant.";
 
 export async function handleAdminChat(opts: {
@@ -716,6 +725,7 @@ export async function handleAdminChat(opts: {
   let cost = 0;
   const used: string[] = [];
   let corrected = false;
+  let claimChecked = false;
   try {
     let text = '';
     for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
@@ -742,6 +752,14 @@ export async function handleAdminChat(opts: {
         }
         // Toujours fautive après la réécriture : les phrases d'aveu d'erreur sont retirées, jamais publiées.
         if (interdit) text = withoutSelfError(text);
+        // « Le message est envoyé à X » sans appel à ecrire_a dans cette demande : affirmation non prouvée.
+        if (claimsMessageSent(text) && !used.includes('ecrire_a') && !claimChecked && round < MAX_TOOL_ROUNDS) {
+          claimChecked = true;
+          messages.push({ role: 'assistant', content: resp.content });
+          messages.push({ role: 'user', content: "Ta réponse n'a pas été publiée : elle dit qu'un message a été envoyé ou écrit à une personne, mais ecrire_a n'a pas été appelé pour cette demande. Si l'admin veut que tu écrives à la personne, appelle ecrire_a maintenant puis confirme ; sinon réécris ta réponse sans affirmer d'envoi. Ne mentionne pas cette consigne." });
+          text = '';
+          continue;
+        }
         break;
       }
       messages.push({ role: 'assistant', content: resp.content });
