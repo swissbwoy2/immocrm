@@ -69,6 +69,38 @@ export function useSteeveAdminThread(enabled: boolean) {
     return () => { active = false; };
   }, [enabled, user?.id, load]);
 
+  // Retour dans l'application (ex. passage par l'app Mail sur iPhone) : le temps réel a pu être coupé pendant
+  // que l'app était en arrière-plan, on relit le fil pour afficher la réponse de Steeve arrivée entre-temps.
+  useEffect(() => {
+    if (!conversationId) return;
+    const refresh = () => { if (document.visibilityState === 'visible') void load(conversationId); };
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [conversationId, load]);
+
+  /**
+   * Appel à Steeve interrompu côté téléphone (app en arrière-plan, réseau coupé) alors que Steeve continue son
+   * travail sur le serveur : on attend sa réponse dans le fil (jusqu'à 2 min) au lieu d'afficher une erreur.
+   */
+  const waitForReply = useCallback(async (convId: string, after: string) => {
+    for (let i = 0; i < 40 && mounted.current; i++) {
+      const { data } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('conversation_id', convId)
+        .eq('sender_type', 'assistant')
+        .gt('created_at', after)
+        .limit(1);
+      if (data && data.length) { await load(convId); return true; }
+      await new Promise((r) => setTimeout(r, 3000));
+    }
+    return false;
+  }, [load]);
+
   // Temps réel : messages écrits ailleurs (messagerie, autre appareil) et réponses de Steeve.
   useEffect(() => {
     if (!conversationId) return;
@@ -104,12 +136,16 @@ export function useSteeveAdminThread(enabled: boolean) {
       // Filet de sécurité si le temps réel a manqué la réponse.
       await load(conversationId);
     } catch {
-      if (mounted.current) setError("Je n'arrive pas à répondre pour le moment. Réessaie dans un instant.");
+      // La demande a pu partir quand même : Steeve répond dans le fil, on attend sa réponse avant de parler d'erreur.
+      const answered = mine?.created_at ? await waitForReply(conversationId, mine.created_at) : false;
+      if (!answered && mounted.current) {
+        setError("Steeve n'a pas encore répondu. Sa réponse s'affichera ici dès qu'elle est prête ; sinon, renvoie ton message.");
+      }
     } finally {
       if (mounted.current) setBusy(false);
     }
     return true;
-  }, [conversationId, user?.id, busy, load]);
+  }, [conversationId, user?.id, busy, load, waitForReply]);
 
   return { conversationId, messages, loading, busy, error, send };
 }
