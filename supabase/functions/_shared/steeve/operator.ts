@@ -133,7 +133,11 @@ export function normalize(s: string | null | undefined): string {
 export function streetKey(adresse: string | null | undefined): string | null {
   const first = (adresse ?? '').split(',')[0];
   const n = normalize(first);
-  return /\d/.test(n) && n.length >= 6 ? n : null;
+  // Adresse sans rue (« 1004 Lausanne ») : ne désigne aucun bien. Avant le 28.10.2026, elle rattachait à l'offre de
+  // Mustafa (« 1004 Lausanne ») tous les e-mails des régies citant ce code postal. Le NPA et la localité collés à la
+  // rue sans virgule (« Avenue de France 36 1004 Lausanne ») sont retirés : seule la rue et son numéro comptent.
+  const rue = n.replace(/\s*\b\d{4}\b.*$/, '').trim();
+  return /\d/.test(rue) && /[a-z]{3,}/.test(rue) && rue.length >= 6 ? rue : null;
 }
 const domainOf = (email: string) => email.toLowerCase().split('@')[1] ?? '';
 const digits = (s: string | null | undefined) => (s ?? '').replace(/\D/g, '');
