@@ -72,7 +72,7 @@ Si l'admin te demande d'écrire à quelqu'un sans réf., trouve la personne avec
  * Rappel envoyé à chaque tour : les réponses déjà publiées dans la conversation peuvent dater d'avant l'ajout d'un
  * outil ; sans ce rappel, le modèle répète « je n'ai pas accès aux e-mails » au lieu d'appeler l'outil.
  */
-export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : objectifs (objectifs de l’année et écart), urls_portails puis web_fetch (annonces immobilier.ch et Homegate par codes de lieux), trouver_offre (toutes les offres par adresse, lien ou numéro), postuler, paiement_recu, criteres_client, reponses_visite, valider_reponse, emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites (avec pièces, loyer et visite_id), retirer_visite, creneaux_libres, situation_personne, classer_document, visite_statut, a_appeler, contact_annonceur, mails_a_rattacher, rattacher_mail, preuve_envoi, factures (AbaNinja), traiter_demande_mandat, corriger_offre, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
+export const ADMIN_OUTILS_A_JOUR = "Tes outils de maintenant font foi : objectifs (objectifs de l’année et écart), urls_portails puis web_fetch (annonces immobilier.ch et Homegate par codes de lieux), trouver_offre (toutes les offres par adresse, lien ou numéro), postuler, paiement_recu, criteres_client, reponses_visite, valider_reponse, emails (e-mails de l'application : info@ avec les messages Flatfox des régies, visites@, relocation@), offres, postulations, visites (avec pièces, loyer et visite_id), retirer_visite, creneaux_libres, situation_personne, ajouter_personne, classer_document, visite_statut, a_appeler, contact_annonceur, mails_a_rattacher, rattacher_mail, preuve_envoi, factures (AbaNinja), traiter_demande_mandat, corriger_offre, client, etat_dossier, journal_steeve, kpi, blocages. Si une de tes réponses précédentes dans cette conversation dit que tu ne peux pas lire les e-mails, Flatfox, les offres, les postulations ou les visites, elle est périmée : n'en tiens pas compte et appelle l'outil. Ne réponds jamais « je n'ai pas accès » sans avoir appelé l'outil qui correspond.";
 
 export const ADMIN_TOOLS: ToolDefinition[] = [
   {
@@ -328,10 +328,26 @@ export const ADMIN_TOOLS: ToolDefinition[] = [
       properties: {
         client_id: { type: 'string' },
         personne: { type: 'string' },
-        situation: { type: 'string', enum: ['salarie', 'cdd', 'interimaire', 'independant', 'sans_emploi', 'chomage', 'etudiant', 'retraite', 'au_foyer'] },
+        situation: { type: 'string', enum: ['salarie', 'cdd', 'interimaire', 'independant', 'sans_emploi', 'chomage', 'etudiant', 'retraite', 'au_foyer', 'rentier'], description: 'rentier = vit de revenus locatifs (propriétaire) ou d’une rente.' },
         precision: { type: 'string' },
       },
       required: ['client_id', 'situation'],
+    },
+  },
+  {
+    name: 'ajouter_personne',
+    description: "Ajoute une personne liée à un dossier sur ordre de l'admin (« crée la fiche garant de Jérémie Jaquet, fils de Marcela ») : garant, co_debiteur, colocataire ou signataire_solidaire. Ensuite classer_document et situation_personne avec son nom. Les fichiers envoyés dans la discussion du client sont rangés par Steeve client à sa prochaine réponse.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        client_id: { type: 'string' },
+        role: { type: 'string', enum: ['garant', 'co_debiteur', 'colocataire', 'signataire_solidaire'] },
+        prenom: { type: 'string' },
+        nom: { type: 'string' },
+        lien: { type: 'string' },
+        date_naissance: { type: 'string', description: 'AAAA-MM-JJ si connue.' },
+      },
+      required: ['client_id', 'role', 'prenom', 'nom'],
     },
   },
   {
@@ -341,7 +357,7 @@ export const ADMIN_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         document_id: { type: 'string' },
-        type_document: { type: 'string', enum: ['piece_identite', 'permis_sejour', 'fiche_salaire', 'contrat_travail', 'attestation_employeur', 'extrait_poursuites', 'attestation_domicile', 'rc_menage', 'certificat_salaire', 'formulaire_location', 'autre'] },
+        type_document: { type: 'string', enum: ['piece_identite', 'permis_sejour', 'fiche_salaire', 'contrat_travail', 'attestation_employeur', 'extrait_poursuites', 'attestation_domicile', 'rc_menage', 'certificat_salaire', 'justificatif_revenus', 'formulaire_location', 'autre'] },
         personne: { type: 'string' },
         date_emission: { type: 'string', description: 'AAAA-MM-JJ si connue.' },
       },
@@ -546,6 +562,11 @@ export async function runAdminTool(userDb: any, name: string, input: any, ctx: A
     const date = input?.date ? zurichToUtc(String(input.date).slice(0, 16)) : null;
     if (input?.date && !date) return { content: 'Date invalide : AAAA-MM-JJTHH:MM (heure de Zurich).', isError: true };
     call = ['admin_steeve_visite_statut', { p_offre_id: input.offre_id, p_statut: statut, p_date: date ? date.toISOString() : null }];
+  } else if (name === 'ajouter_personne') {
+    if (!uuid(input?.client_id)) return { content: 'client_id invalide (outil client).', isError: true };
+    call = ['admin_steeve_ajouter_personne', { p_client_id: input.client_id, p_type: String(input?.role ?? ''), p_prenom: String(input?.prenom ?? '').slice(0, 80),
+      p_nom: String(input?.nom ?? '').slice(0, 80), p_lien: input?.lien ? String(input.lien).slice(0, 60) : null,
+      p_date_naissance: /^\d{4}-\d{2}-\d{2}$/.test(String(input?.date_naissance ?? '')) ? input.date_naissance : null }];
   } else if (name === 'situation_personne' || name === 'classer_document') {
     // Personne liée désignée par son nom : résolue dans le dossier avec la session de l'admin.
     let clientId = uuid(input?.client_id);

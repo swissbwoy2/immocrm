@@ -201,7 +201,7 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
       properties: {
         message_id: { type: 'string', description: 'Pièce jointe de la discussion.' },
         document_id: { type: 'string', description: 'Document déjà dans le dossier, à reclasser.' },
-        type_document: { type: 'string', enum: ['piece_identite', 'permis_sejour', 'fiche_salaire', 'contrat_travail', 'attestation_employeur', 'extrait_poursuites', 'attestation_domicile', 'rc_menage', 'certificat_salaire', 'formulaire_location', 'autre', 'pas_un_document'] },
+        type_document: { type: 'string', enum: ['piece_identite', 'permis_sejour', 'fiche_salaire', 'contrat_travail', 'attestation_employeur', 'extrait_poursuites', 'attestation_domicile', 'rc_menage', 'certificat_salaire', 'justificatif_revenus', 'formulaire_location', 'autre', 'pas_un_document'], description: 'justificatif_revenus = baux et décomptes de loyers encaissés, attestation de rente, dernière taxation (personne qui vit de revenus locatifs ou d’une rente).' },
         personne: { type: 'string', description: "« client » (défaut) ou le nom d'une personne liée du dossier (ex. « Banaz Mohammad »)." },
         date_emission: { type: 'string', description: 'AAAA-MM-JJ lue sur le document (extrait des poursuites, fiche de salaire…), sinon vide.' },
         resume: { type: 'string', description: "Ce que montre le fichier en une phrase (ex. « extrait des poursuites vierge du 20.10.2026 », « capture d'une annonce à Bussigny »)." },
@@ -222,10 +222,29 @@ export const STEEVE_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         personne: { type: 'string', description: "« client » (défaut) ou le nom d'une personne liée." },
-        situation: { type: 'string', enum: ['salarie', 'cdd', 'interimaire', 'independant', 'sans_emploi', 'chomage', 'etudiant', 'retraite', 'au_foyer'] },
+        situation: { type: 'string', enum: ['salarie', 'cdd', 'interimaire', 'independant', 'sans_emploi', 'chomage', 'etudiant', 'retraite', 'au_foyer', 'rentier'], description: 'rentier = vit de revenus locatifs (propriétaire) ou d’une rente, sans salaire.' },
         precision: { type: 'string', description: 'Ses mots, en bref (ex. « licenciée en octobre, inscrite au chômage »).' },
       },
       required: ['situation'],
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'ajouter_personne',
+    description: "Ajoute une personne à son dossier quand le client la nomme (« mon fils Jérémie Jaquet se porte garant », « ma femme signe avec moi ») : garant, co_debiteur (conjoint ou partenaire qui signe), colocataire ou signataire_solidaire. Ensuite range ses pièces à son nom avec classer_document (personne = son nom) et note sa situation avec noter_situation. Ne l'invente jamais : prénom et nom donnés par le client ou lus sur ses documents.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        role: { type: 'string', enum: ['garant', 'co_debiteur', 'colocataire', 'signataire_solidaire'] },
+        prenom: { type: 'string' },
+        nom: { type: 'string' },
+        lien: { type: 'string', description: 'Lien avec le client (ex. « Fils », « Épouse », « Ami »).' },
+        date_naissance: { type: 'string', description: 'AAAA-MM-JJ si connue (pièce d’identité).' },
+        nationalite: { type: 'string' },
+        adresse: { type: 'string' },
+        employeur: { type: 'string' },
+      },
+      required: ['role', 'prenom', 'nom'],
       additionalProperties: false,
     },
   },
@@ -384,6 +403,8 @@ export async function runTool(name: string, input: Record<string, any>, ctx: Too
       return await noteSituation(ctx, String(input?.personne ?? 'client'), String(input?.situation ?? ''), input?.precision ? String(input.precision).slice(0, 200) : null);
     case 'ajouter_annonce':
       return await addListing(ctx, input ?? {});
+    case 'ajouter_personne':
+      return await addPerson(ctx, input ?? {});
     case 'deja_vu':
       return await alreadySeen(ctx, input ?? {});
     case 'donner_disponibilites':
@@ -1033,6 +1054,25 @@ async function noteSituation(ctx: ToolContext, personne: string, situation: stri
   if (error || !data?.ok) return { content: data?.motif ?? "La situation n'a pas pu être notée.", isError: true };
   await notifyTeam(ctx, 'Situation professionnelle notée (via Steeve)', `${who.label} : ${data.type_contrat}${precision ? ` — ${precision}` : ''}.`);
   return { content: json({ notee: true, pour: who.label, situation: data.type_contrat, note: data.note ?? null }) };
+}
+
+const ROLE_LABEL: Record<string, string> = { garant: 'garant', co_debiteur: 'codébiteur', colocataire: 'colocataire', signataire_solidaire: 'signataire solidaire' };
+
+async function addPerson(ctx: ToolContext, input: Record<string, any>): Promise<ToolOutcome> {
+  const role = String(input.role ?? '');
+  const txt = (v: unknown, n: number) => (v ? String(v).replace(/\s+/g, ' ').trim().slice(0, n) : null);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(input.date_naissance ?? '')) ? String(input.date_naissance) : null;
+  const { data, error } = await ctx.db.rpc('steeve_ajouter_personne', {
+    p_client_id: ctx.dossier.clientId, p_type: role, p_prenom: txt(input.prenom, 80), p_nom: txt(input.nom, 80), p_lien: txt(input.lien, 60),
+    p_date_naissance: date, p_nationalite: txt(input.nationalite, 60), p_adresse: txt(input.adresse, 200), p_employeur: txt(input.employeur, 150), p_source: 'client',
+  });
+  if (error || !data?.ok) return { content: data?.motif ?? "La personne n'a pas pu être ajoutée au dossier.", isError: true };
+  // La personne est utilisable tout de suite dans ce passage (classer_document, noter_situation).
+  const label = `${data.personne} (${ROLE_LABEL[role] ?? role})`;
+  if (!ctx.dossier.persons.some((p) => p.id === data.id)) ctx.dossier.persons.push({ id: data.id, type: role, label, typeContrat: null });
+  if (!data.deja) await notifyTeam(ctx, 'Personne ajoutée au dossier (via Steeve)', `${label}${input.lien ? `, ${txt(input.lien, 60)}` : ''}.`);
+  return { content: json({ ajoutee: !data.deja, deja_dans_le_dossier: Boolean(data.deja), personne: label,
+    suite: 'Range maintenant ses pièces à son nom avec classer_document (personne = son nom), note sa situation (noter_situation), puis dis au client ce qui est rangé et ce qui manque encore pour elle (get_documents).' }) };
 }
 
 async function addListing(ctx: ToolContext, input: Record<string, any>): Promise<ToolOutcome> {

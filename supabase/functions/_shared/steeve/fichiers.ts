@@ -34,6 +34,7 @@ export const DOC_TYPES: Record<string, string> = {
   attestation_domicile: 'Attestation de domicile',
   rc_menage: 'Assurance RC ménage',
   certificat_salaire: 'Certificat de salaire',
+  justificatif_revenus: 'Justificatif de revenus',
   formulaire_location: 'Demande de location (formulaire)',
   autre: 'Autre document',
 };
