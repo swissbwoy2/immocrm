@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -125,6 +125,14 @@ export default function AdminSteeve() {
     setSectionState(key);
     try { localStorage.setItem(SECTION_KEY, key); } catch { /* stockage indisponible */ }
   };
+
+  // Lien du menu (« Appels du jour ») : suit ?section= même si la page Steeve est déjà ouverte.
+  const lieu = useLocation();
+  useEffect(() => {
+    const demandee = new URLSearchParams(lieu.search).get('section') as SectionKey | null;
+    const valides: SectionKey[] = ['copilote', 'propositions', 'appels', 'operateur', 'activation', 'clients', 'budget', 'journal', 'boites'];
+    if (demandee && valides.includes(demandee)) setSectionState(demandee);
+  }, [lieu.search]);
 
   const loadOverview = useCallback(async () => {
     const { data, error } = await supabase.rpc('admin_steeve_overview');
