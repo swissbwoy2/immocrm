@@ -335,6 +335,8 @@ export default function AdminCalendrier() {
       if (filterAgent !== 'all' && visite.agent_id !== filterAgent) return false;
       if (filterClient !== 'all' && visite.client_id !== filterClient) return false;
       if (filterStatus !== 'all' && visite.statut !== filterStatus) return false;
+      // Visites annulées masquées par défaut (on les retrouve avec le filtre de statut « annulée »).
+      if (filterStatus === 'all' && visite.statut === 'annulee') return false;
       if (confirmedOnly) {
         const isConfirmed = isVisiteConfirmedByClient(offreStatutOf(visite));
         const isDelegated = ['confirmee', 'deleguee', 'a_deleguer'].includes(visite.statut);
