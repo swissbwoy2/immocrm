@@ -4,6 +4,7 @@ import { ArrowLeft, User, Clock, CheckCircle2, AlertCircle, CalendarDays, FileCh
 import { StaffCancellationDialog } from '@/components/mandat/StaffCancellationDialog';
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
 import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
+import { InfosPostulationCard } from '@/components/infos-postulation/InfosPostulationCard';
 import { AdminCreditsCard } from '@/components/credits/AdminCreditsCard';
 import { DownloadClientPDFButton } from '@/components/DownloadClientPDFButton';
 import { ClientActivityStats } from '@/components/admin/ClientActivityStats';
@@ -1415,6 +1416,7 @@ export default function ClientDetail() {
                 <SolvabilityAlert result={solvabilityResult} className="relative z-10" />
               </div>
             )}
+            {!isReletter && <InfosPostulationCard clientId={client.id} />}
             {(client as any)?.candidat_garant && <CandidatGarantCard garant={(client as any).candidat_garant} />}
             <FicheCard icon={Users} title={isReletter ? 'Candidats intéressés' : 'Co-candidats du dossier'}>
               <ClientCandidatesManager
