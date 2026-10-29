@@ -490,6 +490,8 @@ export default function AgentCalendrier() {
   // Filter visites
   const filteredVisites = useMemo(() => {
     return visites.filter((visite) => {
+      // Visites annulées : plus de rendez-vous, elles ne s'affichent pas dans l'agenda.
+      if (visite.statut === 'annulee') return false;
       if (filterClient !== 'all' && visite.client_id !== filterClient) return false;
       if (confirmedOnly) {
         const isConfirmed = isVisiteConfirmedByClient(offreStatutOf(visite));
