@@ -19,7 +19,7 @@ interface Offre {
  */
 export function countUniqueVisites(visites: Visite[]): number {
   const uniqueVisites = new Set(
-    visites.map(v => `${v.date_visite?.split('T')[0]}-${v.adresse}`)
+    visites.map(v => `${v.date_visite?.split('T')[0]}-${cleAdresse(v.adresse)}`)
   );
   return uniqueVisites.size;
 }
@@ -44,7 +44,7 @@ export function countUniqueVisitesInRange(
 export function getUniqueVisites<T extends Visite>(visites: T[]): T[] {
   const seen = new Set<string>();
   return visites.filter(v => {
-    const key = `${v.date_visite?.split('T')[0]}-${v.adresse}`;
+    const key = `${v.date_visite?.split('T')[0]}-${cleAdresse(v.adresse)}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
@@ -132,9 +132,31 @@ export function buildStableOffreUID(agentId: string | null | undefined, adresse:
   return `offre-${dayPart}-${slugify(adresse)}-${(agentId || 'na').slice(0, 8)}@logisorama.ch`;
 }
 
+/**
+ * Clé d'adresse pour regrouper les visites : la même adresse écrite autrement par deux portails
+ * (« Ch. de Renens 56 D » / « Chemin de Renens 56D », « Champ du Bois » / « Champ-du-Bois », « Renens » / « Renens VD »)
+ * donne la même clé. Sert uniquement à l'affichage et aux comptages, jamais aux identifiants d'agenda (UID).
+ */
+const ABREVIATIONS_RUE: [RegExp, string][] = [
+  [/\bch\b/g, 'chemin'], [/\bav\b/g, 'avenue'], [/\bave\b/g, 'avenue'], [/\brte\b/g, 'route'],
+  [/\bbd\b/g, 'boulevard'], [/\bbvd\b/g, 'boulevard'], [/\bpl\b/g, 'place'], [/\bst\b/g, 'saint'],
+  [/\bste\b/g, 'sainte'], [/\bimp\b/g, 'impasse'],
+];
+const MOTS_VIDES_RUE = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'au', 'aux']);
+
+export function cleAdresse(adresse: string | null | undefined): string {
+  let s = (adresse || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\b[dl]['\u2019]/g, '');
+  // On garde le NPA et on retire la localité qui suit (« 1020 Renens VD » = « 1020 Renens »).
+  const npa = s.match(/\b(\d{4})\b(?=\s+[a-z])/);
+  if (npa && npa.index !== undefined) s = s.slice(0, npa.index) + ' ' + npa[1];
+  s = s.replace(/[^a-z0-9]+/g, ' ');
+  for (const [re, mot] of ABREVIATIONS_RUE) s = s.replace(re, mot);
+  return s.split(' ').filter((m) => m && !MOTS_VIDES_RUE.has(m)).join('');
+}
+
 export function buildVisiteGroupKey(adresse: string, dateVisite: string): string {
-  // Group by exact ISO timestamp + adresse (same batch = same instant)
-  return `${(dateVisite || '').slice(0, 16)}__${(adresse || '').trim().toLowerCase()}`;
+  // Même minute + même adresse (normalisée) = une seule visite physique, quel que soit le nombre de clients.
+  return `${(dateVisite || '').slice(0, 16)}__${cleAdresse(adresse)}`;
 }
 
 export function buildOffreGroupKey(
