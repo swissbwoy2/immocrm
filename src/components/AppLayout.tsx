@@ -13,6 +13,7 @@ import { FloatingMessenger } from '@/components/messaging/floating/FloatingMesse
 import { DemoModeBanner } from '@/components/DemoModeBanner';
 import { DemoWriteGuard } from '@/components/DemoWriteGuard'; import { ClientVisitDecisionGate } from '@/components/client/ClientVisitDecisionGate'; import { AppUpdateAnnounceGate } from '@/components/client/AppUpdateAnnounceGate';
 import { OpenInBrowserBanner } from '@/components/client/OpenInBrowserBanner';
+import { InfosPostulationGate } from '@/components/client/InfosPostulationGate';
 import { ClientParcoursRedirect } from '@/components/client/ClientParcoursRedirect';
 import { MobileAppShell } from '@/components/mobile/MobileAppShell';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -62,7 +63,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     return (
       <>
         <OfflineIndicator />
-        <DemoWriteGuard /><ClientParcoursRedirect /><ClientVisitDecisionGate /><AppUpdateAnnounceGate />
+        <DemoWriteGuard /><ClientParcoursRedirect /><ClientVisitDecisionGate /><AppUpdateAnnounceGate />{userRole === 'client' && <InfosPostulationGate />}
         <AppSidebar />
         <MobileAppShell>
           <DemoModeBanner />
@@ -77,7 +78,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   return (
     <div className="min-h-screen flex w-full bg-background">
       <OfflineIndicator />
-      <DemoWriteGuard /><ClientParcoursRedirect /><ClientVisitDecisionGate /><AppUpdateAnnounceGate />
+      <DemoWriteGuard /><ClientParcoursRedirect /><ClientVisitDecisionGate /><AppUpdateAnnounceGate />{userRole === 'client' && <InfosPostulationGate />}
       <AppSidebar />
       <div className="flex-1 flex flex-col w-full min-w-0">
         <DemoModeBanner />
