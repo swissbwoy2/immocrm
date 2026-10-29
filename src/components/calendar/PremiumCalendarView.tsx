@@ -1,4 +1,5 @@
 import { useState, useMemo, memo } from 'react';
+import { buildVisiteGroupKey } from '@/utils/visitesCalculator';
 import { startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday } from 'date-fns';
 import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -143,8 +144,9 @@ export function PremiumCalendarView({ events, visites, selectedDate, onDateSelec
       if (!map.has(dateKey)) map.set(dateKey, []);
       
       const existing = map.get(dateKey)!;
-      const key = `${visite.adresse}-${visite.date_visite}`;
-      const existingVisite = existing.find(e => e.isVisite && `${e.event.adresse}-${e.event.date_visite}` === key);
+      // Même bien (adresse normalisée) + même minute = une seule entrée.
+      const key = buildVisiteGroupKey(visite.adresse || '', visite.date_visite || '');
+      const existingVisite = existing.find(e => e.isVisite && buildVisiteGroupKey(e.event.adresse || '', e.event.date_visite || '') === key);
       
       // Déterminer le type de visite selon le statut
       let visiteType = 'visite';
