@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { AddToCalendarButton } from './AddToCalendarButton';
 import { downloadMultiEventICSFile, buildVisiteICSDescription, type ICSEventData } from '@/utils/generateICS';
-import { buildStableVisiteUID, groupVisitesByPhysique } from '@/utils/visitesCalculator';
+import { buildStableVisiteUID, cleAdresse, groupVisitesByPhysique } from '@/utils/visitesCalculator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { VisitLiveButton } from '@/components/calls/VisitLiveButton';
@@ -109,7 +109,8 @@ export function PremiumAgentDayEvents({
     
     visites.forEach(visite => {
       const timeKey = formatZurichTime(visite.date_visite);
-      const key = `${visite.adresse}-${timeKey}`;
+      // Même bien (adresse normalisée) + même heure = une seule carte.
+      const key = `${cleAdresse(visite.adresse)}-${timeKey}`;
       
       if (!groups.has(key)) {
         groups.set(key, []);
