@@ -1,3 +1,5 @@
+import type { InfosPostulation } from '@/lib/infosPostulation';
+
 export type JourneyChoice = 'rental' | 'purchase' | null;
 
 export interface MandatFormData {
@@ -33,6 +35,9 @@ export interface MandatFormData {
   revenus_mensuels: number;
   date_engagement: string;
   utilisation_logement: string;
+
+  // Infos exigées par les demandes de location des gérances (recopiées dans la fiche client)
+  infos_postulation?: InfosPostulation;
 
   // Autres infos
   animaux: boolean;

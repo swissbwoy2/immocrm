@@ -3,6 +3,8 @@ import { LandingInput } from '@/components/forms-premium/LandingInput';
 import { LuxuryIconBadge } from '@/components/forms-premium/LuxuryIconBadge';
 import { IconHome, IconBuilding, IconPhone, IconWallet, IconCalendar } from '@/components/forms-premium/icons/LuxuryIcons';
 import { Grid, MessageSquare } from 'lucide-react';
+import { InfosPostulationFields } from '@/components/infos-postulation/InfosPostulationFields';
+import { INFOS_POSTULATION_VIDES } from '@/lib/infosPostulation';
 
 interface Props {
   data: MandatFormData;
@@ -91,6 +93,21 @@ export default function MandatFormStep2({ data, onChange }: Props) {
             className="w-full bg-muted/40 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary transition-all duration-300"
           />
         </div>
+      </div>
+
+      {/* Demandées par les gérances dans chaque demande de location */}
+      <div className="space-y-4 border-t border-border pt-6">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Pour vos dossiers de candidature</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Les gérances demandent ces informations dans chaque demande de location. Sans elles, nous ne pouvons pas déposer votre dossier.
+          </p>
+        </div>
+        <InfosPostulationFields
+          idPrefix="mandat-ip"
+          value={data.infos_postulation ?? INFOS_POSTULATION_VIDES}
+          onChange={(patch) => onChange({ infos_postulation: { ...(data.infos_postulation ?? INFOS_POSTULATION_VIDES), ...patch } })}
+        />
       </div>
     </div>
   );
