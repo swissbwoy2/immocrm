@@ -4,6 +4,7 @@ import { useUTMParams } from '@/hooks/useUTMParams';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { MandatFormData, initialFormData } from '@/components/mandat/types';
+import { INFOS_POSTULATION_VIDES, infosManquantes, infosVersColonnes } from '@/lib/infosPostulation';
 import { rowToFormData } from '@/hooks/useCandidatCriteres';
 import MandatFormStep0Journey from '@/components/mandat/MandatFormStep0Journey';
 import MandatFormStep1 from '@/components/mandat/MandatFormStep1';
@@ -145,7 +146,8 @@ export default function NouveauMandat() {
       case 'situation':
         return !!(formData.gerance_actuelle && formData.contact_gerance &&
           formData.loyer_actuel >= 0 && formData.depuis_le && formData.pieces_actuel > 0 &&
-          formData.motif_changement);
+          formData.motif_changement &&
+          infosManquantes(formData.infos_postulation ?? INFOS_POSTULATION_VIDES).length === 0);
       case 'finance':
         return true;
       case 'candidats':
@@ -358,9 +360,15 @@ export default function NouveauMandat() {
         utm_term: utmParams.utm_term,
       };
 
-      const { error: insertError } = await supabase
+      // Infos de postulation (colonnes de la migration 20261029150000) : si la base ne les connaît pas
+      // encore, on réessaie sans elles pour ne jamais bloquer l'inscription.
+      const infosPostulation = isPurchase ? {} : infosVersColonnes(formData.infos_postulation ?? INFOS_POSTULATION_VIDES);
+      let { error: insertError } = await supabase
         .from('demandes_mandat')
-        .insert(insertData as any);
+        .insert({ ...insertData, ...infosPostulation } as any);
+      if (insertError && !isPurchase && /column|schema cache/i.test(insertError.message ?? '')) {
+        ({ error: insertError } = await supabase.from('demandes_mandat').insert(insertData as any));
+      }
 
       if (insertError) {
         // 🛡️ FILET DE SÉCURITÉ : on n'oublie JAMAIS un client, même si l'insert RLS casse
