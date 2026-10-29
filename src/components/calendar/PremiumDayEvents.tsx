@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { CalendarEvent, eventTypeLabels, eventTypeColors, priorityColors } from './types';
-import { getUniqueVisitesByClient } from '@/utils/visitesCalculator';
+import { buildVisiteGroupKey, getUniqueVisitesByClient } from '@/utils/visitesCalculator';
 import { DASH_CARD } from '@/components/client/dashboard/DashPrimitives';
 
 interface PremiumDayEventsProps {
@@ -50,7 +50,8 @@ export function PremiumDayEvents({
   const allItems = useMemo(() => {
     const groups = new Map<string, any[]>();
     visites.forEach(visite => {
-      const key = `${visite.adresse}-${visite.date_visite}`;
+      // Même bien (adresse normalisée) + même minute = une seule carte, quel que soit le nombre de clients.
+      const key = buildVisiteGroupKey(visite.adresse || '', visite.date_visite || '');
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(visite);
     });
