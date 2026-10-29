@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { CalendarEvent, eventTypeCalendarColors, eventTypeLabels } from '../types';
 import { getSwissDateString } from '@/lib/dateUtils';
+import { buildVisiteGroupKey } from '@/utils/visitesCalculator';
 
 export interface NormalizedEvent {
   id: string;
@@ -59,7 +60,8 @@ export function useNormalizedEvents(
     const visiteGroups = new Map<string, any[]>();
     visites.forEach((v) => {
       if (!v.date_visite) return;
-      const key = `${v.adresse || ''}__${v.date_visite}`;
+      // Même bien (adresse normalisée) + même minute = une seule entrée, quel que soit le nombre de clients.
+      const key = buildVisiteGroupKey(v.adresse || '', v.date_visite);
       if (!visiteGroups.has(key)) visiteGroups.set(key, []);
       visiteGroups.get(key)!.push(v);
     });
