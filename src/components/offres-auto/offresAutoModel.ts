@@ -55,11 +55,42 @@ export const ONGLETS: { key: TabKey; label: string }[] = [
 /** Statuts pour lesquels l'offre auto n'attend plus rien (mêmes valeurs que GererOffreDialog). */
 const STATUTS_CLOS = ['refusee', 'refuse', 'candidature', 'candidature_deposee', 'acceptee', 'signature_effectuee', 'bail_conclu'];
 
-/** Même clé que la fonction SQL offre_groupe_cle : lien sans paramètres, sinon adresse normalisée. */
-export function groupeCle(r: Row): string {
+/** Ancienne clé (fonction SQL offre_groupe_cle) : lien sans paramètres, sinon adresse brute. */
+function cleLien(r: Row): string {
   const lien = (r.lien_annonce ?? '').trim().toLowerCase().replace(/[?#].*$/, '');
   if (lien) return lien;
   return 'adr:' + (r.adresse ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+const ABREV_RUE: [RegExp, string][] = [
+  [/\bch\b/g, 'chemin'], [/\bave?\b/g, 'avenue'], [/\brte\b/g, 'route'], [/\bbv?d\b/g, 'boulevard'],
+  [/\bpl\b/g, 'place'], [/\bst\b/g, 'saint'], [/\bste\b/g, 'sainte'], [/\bimp\b/g, 'impasse'],
+];
+
+/** Même calcul que la fonction SQL offre_rue_normalisee : rue + numéro, sans NPA ni ville. */
+export function rueNormalisee(adresse: string | null | undefined): string {
+  let s = (adresse ?? '').toLowerCase().split(',')[0].normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/’/g, "'");
+  s = s.replace(/\b[dl]'/g, '').replace(/\b\d{4}\s+[a-z].*$/, '').replace(/[^a-z0-9]+/g, ' ');
+  for (const [re, mot] of ABREV_RUE) s = s.replace(re, mot);
+  return s.replace(/\b(de|du|des|la|le|les|au|aux)\b/g, '').replace(/\s+/g, '');
+}
+
+/**
+ * Même clé que la fonction SQL offre_groupe_cle_bien : un bien = rue + numéro + pièces + loyer arrondi,
+ * quel que soit le portail (Flatfox, immobilier.ch et Homegate publient souvent la même annonce).
+ * Sans adresse exploitable : ancienne clé par lien.
+ */
+export function groupeCle(r: Row): string {
+  const rue = rueNormalisee(r.adresse);
+  if (!rue) return cleLien(r);
+  const pieces = r.pieces == null || Number.isNaN(Number(r.pieces)) ? '' : String(Number(r.pieces));
+  const prix = r.prix == null || Number.isNaN(Number(r.prix)) ? '' : String(Math.round(Number(r.prix)));
+  return 'bien:' + rue + '|' + pieces + '|' + prix;
+}
+
+/** Nombre de clients distincts d'une annonce (un client peut l'avoir reçue depuis deux portails). */
+export function nbClients(g: Groupe): number {
+  return new Set(g.offres.map((o) => o.client_id)).size;
 }
 
 export function grouper(rows: Row[]): Groupe[] {

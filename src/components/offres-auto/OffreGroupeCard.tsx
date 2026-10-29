@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { DASH_CARD, DashBadge } from '@/components/client/dashboard/DashPrimitives';
 import { cn } from '@/lib/utils';
 import {
-  STATUT_BADGE, depuisLabel, nomClient, offrePrioritaire, prochaineAction, sourceDe, sourceLabel, visiteLabel,
+  STATUT_BADGE, depuisLabel, nbClients, nomClient, offrePrioritaire, prochaineAction, sourceDe, sourceLabel, visiteLabel,
   type Groupe, type Row, type Ton,
 } from './offresAutoModel';
 
@@ -37,6 +37,9 @@ export function OffreGroupeCard({ g, onEdit }: { g: Groupe; onEdit: (groupe: Row
   const source = sourceDe(ref.lien_annonce);
   const missing = g.offres.find((o) => o.needs_agent_action && o.missing_info)?.missing_info;
   const avecCommentaires = g.offres.filter((o) => o.commentaires);
+  const nb = nbClients(g);
+  const sources = Array.from(new Set(g.offres.map((o) => sourceDe(o.lien_annonce))));
+  const plusieursSources = sources.length > 1;
 
   return (
     <article className={cn(DASH_CARD, 'overflow-hidden', next.enRetard && 'ring-1 ring-amber-500/40')}>
@@ -84,7 +87,8 @@ export function OffreGroupeCard({ g, onEdit }: { g: Groupe; onEdit: (groupe: Row
           )}
           <div>
             <p className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
-              <Users className="h-3.5 w-3.5" /> {g.offres.length} client{g.offres.length > 1 ? 's' : ''} concerné{g.offres.length > 1 ? 's' : ''}
+              <Users className="h-3.5 w-3.5" /> {nb} client{nb > 1 ? 's' : ''} concerné{nb > 1 ? 's' : ''}
+              {plusieursSources && <span> · publié sur {sources.length} portails</span>}
             </p>
             <ul className="space-y-2">
               {g.offres.map((o) => {
@@ -101,6 +105,7 @@ export function OffreGroupeCard({ g, onEdit }: { g: Groupe; onEdit: (groupe: Row
                         {nomClient(o._client)}
                       </button>
                       <StatutBadge s={o.statut} />
+                      {plusieursSources && <span className="text-xs text-muted-foreground">via {sourceLabel(sourceDe(o.lien_annonce))}</span>}
                     </div>
                     {o._client?.email && <p className="truncate text-xs text-muted-foreground">{o._client.email}</p>}
                     <p className="mt-0.5 text-xs text-muted-foreground">{visiteLabel(o)}</p>

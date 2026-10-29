@@ -14,6 +14,7 @@ import { ExternalLink, Loader2, Save, CalendarPlus, User, MessageSquare, FileChe
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { AdresseMap } from '@/components/maps/AdresseMap';
+import { sourceDe, sourceLabel } from './offresAutoModel';
 
 type OffreRow = {
   id: string;
@@ -146,7 +147,16 @@ export function GererOffreDialog({
         const dateISO = new Date(`${visitDate}T${visitTime}:00`).toISOString();
         const endISO = visitEndTime ? new Date(`${visitDate}T${visitEndTime}:00`).toISOString() : null;
         // La visite vaut pour tous les clients de l'annonce qui ne l'ont pas refusée
-        const cibles = [offre, ...autres.filter(o => !STATUTS_FERMES.includes(statutsGroupe[o.id] ?? o.statut ?? ""))];
+        const ouvertes: OffreRow[] = [offre, ...autres.filter(o => !STATUTS_FERMES.includes(statutsGroupe[o.id] ?? o.statut ?? ""))];
+        // Un client peut avoir reçu le même bien depuis plusieurs portails : une seule visite par client
+        // (on garde l'offre qui a déjà une visite, sinon la première).
+        const parClient = new Map<string, OffreRow>();
+        for (const o of ouvertes) {
+          const k = o.client_id || o.id;
+          const deja = parClient.get(k);
+          if (!deja || (!deja.visites?.[0]?.id && o.visites?.[0]?.id)) parClient.set(k, o);
+        }
+        const cibles = Array.from(parClient.values());
         for (const o of cibles) {
           const ev = o.visites?.[0];
           if (ev?.id) {
@@ -306,7 +316,7 @@ export function GererOffreDialog({
               <div className="mt-2 divide-y divide-border/50">
                 {autres.map(o => (
                   <div key={o.id} className="flex min-h-[52px] items-center justify-between gap-2 py-2">
-                    <span className="min-w-0 truncate text-[15px]">{`${o._client?.prenom ?? ""} ${o._client?.nom ?? ""}`.trim() || o._client?.email || "Client"}</span>
+                    <span className="min-w-0 truncate text-[15px]">{`${o._client?.prenom ?? ""} ${o._client?.nom ?? ""}`.trim() || o._client?.email || "Client"}<span className="text-xs text-muted-foreground"> · {sourceLabel(sourceDe(o.lien_annonce))}</span></span>
                     <Select value={statutsGroupe[o.id] ?? o.statut ?? "envoyee"} onValueChange={v => setStatutsGroupe(prev => ({ ...prev, [o.id]: v }))}>
                       <SelectTrigger className="h-10 w-[160px] shrink-0 sm:w-[180px]"><SelectValue /></SelectTrigger>
                       <SelectContent>

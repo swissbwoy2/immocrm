@@ -54,10 +54,18 @@ function useAdminOffresAuto(p: {
       if (data) {
         const [e] = await enrich([data as unknown as Row]);
         // Toute l'annonce : les autres clients qui ont reçu le même bien
-        let sib: any = supabase.from('offres').select(SELECT).eq('envoi_auto', true);
-        sib = e.lien_annonce ? sib.eq('lien_annonce', e.lien_annonce) : sib.eq('adresse', e.adresse ?? '');
-        const { data: sibs } = await sib.limit(100);
-        const groupe = await enrich(((sibs ?? []) as unknown as Row[]));
+        // Même bien sur tous les portails : même lien, ou même rue + pièces + loyer (filtré par groupeCle)
+        const requetes: any[] = [];
+        if (e.lien_annonce) requetes.push(supabase.from('offres').select(SELECT).eq('envoi_auto', true).eq('lien_annonce', e.lien_annonce).limit(100));
+        if (e.pieces != null && e.prix != null) requetes.push(supabase.from('offres').select(SELECT).eq('envoi_auto', true).eq('pieces', e.pieces).eq('prix', e.prix).limit(300));
+        if (requetes.length === 0) requetes.push(supabase.from('offres').select(SELECT).eq('envoi_auto', true).eq('adresse', e.adresse ?? '').limit(100));
+        const resultats = await Promise.all(requetes);
+        const cle = groupeCle(e);
+        const vus = new Set<string>();
+        const sibs = resultats
+          .flatMap((x: any) => (x.data ?? []) as Row[])
+          .filter((o) => { if (vus.has(o.id)) return false; vus.add(o.id); return groupeCle(o) === cle; });
+        const groupe = await enrich(sibs);
         ouvrir(groupe.length ? groupe : [e], e);
       }
       const next = new URLSearchParams(searchParams);
@@ -139,10 +147,15 @@ function useAdminOffresAuto(p: {
         p_offset: from,
         p_limit: pageSize,
       };
-      // Une ligne = une annonce, avec tous les clients qui l'ont reçue
+      // Une ligne = un bien (tous portails confondus), avec tous les clients qui l'ont reçu.
+      // offres_auto_groupes_v2 (migration 20261029120000) ; repli sur l'ancienne fonction tant qu'elle n'est pas en base.
+      const appel = async (a: Record<string, unknown>) => {
+        const r = await (supabase as any).rpc('offres_auto_groupes_v2', a);
+        return r.error ? (supabase as any).rpc('offres_auto_groupes', a) : r;
+      };
       const [main, other] = await Promise.all([
-        (supabase as any).rpc('offres_auto_groupes', { ...args, p_manual: manual }),
-        (supabase as any).rpc('offres_auto_groupes', { ...args, p_manual: !manual, p_offset: 0, p_limit: 1 }),
+        appel({ ...args, p_manual: manual }),
+        appel({ ...args, p_manual: !manual, p_offset: 0, p_limit: 1 }),
       ]);
       if (main.error) { console.error('[OffresAuto] load groupes', main.error); setGroupes([]); return; }
       const data = (main.data ?? []) as any[];
