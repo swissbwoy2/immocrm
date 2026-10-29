@@ -111,7 +111,10 @@ const PURCHASE_REQUIRED: RequiredItem[] = [
   { label: 'Attestation employeur (si nécessaire)', types: ['attestation_employeur'], min: 1, optional: true },
 ];
 
-const SANS_SALAIRE = /sans emploi|retrait|[ée]tudiant|ch[ôo]mage|au foyer/i;
+const SANS_SALAIRE = /sans emploi|retrait|[ée]tudiant|ch[ôo]mage|au foyer|rentier|renti[èe]re|revenus locatifs/i;
+/** Vit de revenus locatifs ou d'une rente (Marcela, 28.10.2026) : un justificatif de ces revenus est demandé à la place du salaire. */
+const RENTIER = /rentier|renti[èe]re|revenus locatifs/i;
+const JUSTIF_REVENUS: RequiredItem = { label: 'Justificatif des revenus (baux et loyers encaissés, attestation de rente ou dernière taxation)', types: ['justificatif_revenus', 'declaration_fiscale', 'decision_taxation'], min: 1 };
 const SALAIRE_TYPES = ['contrat_travail', 'fiche_salaire', 'fiche_salaire_1', 'attestation_employeur', 'certificat_salaire'];
 
 function docStatusLabel(statut?: string | null): string {
@@ -147,7 +150,8 @@ export async function documentsStatus(db: Db, dossier: Dossier) {
     // dans le dossier, ex. « Manal ne travaille pas », Phoebe licenciée). Indépendant : pas de contrat de travail.
     const sansSalaire = SANS_SALAIRE.test(String(person.typeContrat ?? ''));
     const independant = /ind[ée]pendant/i.test(String(person.typeContrat ?? ''));
-    const items = required
+    const rentier = RENTIER.test(String(person.typeContrat ?? ''));
+    const items = [...required, ...(rentier && dossier.journey !== 'achat' ? [JUSTIF_REVENUS] : [])]
       // Pièces facultatives : listées pour le client principal seulement.
       .filter((it) => person.id === null || !it.optional)
       .map((it) => {
@@ -161,7 +165,8 @@ export async function documentsStatus(db: Db, dossier: Dossier) {
         };
       });
     return { personne: person.label, situation: person.typeContrat ?? null, pieces: items,
-      ...(sansSalaire ? { note: 'Sans revenu salarié : la régie peut demander un justificatif de revenus (chômage, rente, bourse, aide) ou un garant.' } : {}) };
+      ...(rentier ? { note: 'Vit de revenus locatifs ou d’une rente : pas de fiches de salaire ni de contrat ; un justificatif de ces revenus et, souvent, un garant rassurent la régie.' }
+        : sansSalaire ? { note: 'Sans revenu salarié : la régie peut demander un justificatif de revenus (chômage, rente, bourse, aide) ou un garant.' } : {}) };
   });
 
   let poursuites: string | null = null;
