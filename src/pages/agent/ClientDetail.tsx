@@ -48,6 +48,7 @@ import { PurchaseCreateButton } from '@/components/admin/purchase/PurchaseCreate
 import { isPurchaseBuyer } from '@/lib/journey';
 import { EditClientProfileDialog } from '@/components/EditClientProfileDialog';
 import { CandidatGarantCard } from '@/components/candidat/CandidatGarantCard';
+import { InfosPostulationCard } from '@/components/infos-postulation/InfosPostulationCard';
 import { AdminCreditsCard } from '@/components/credits/AdminCreditsCard';
 import { fetchCandidatCriteresMap, mergeCandidatCriteres } from '@/lib/candidatCriteresMerge';
 import {
@@ -1773,6 +1774,10 @@ export default function ClientDetail() {
               </Card>
             </div>
           )}
+
+          <div className="col-span-full">
+            <InfosPostulationCard clientId={client.id} />
+          </div>
 
           {/* Candidats supplémentaires */}
           <div className="col-span-full">
