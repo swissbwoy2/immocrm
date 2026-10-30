@@ -143,6 +143,11 @@ export interface CandidatData {
   troisieme_pilier?: number;
   lien_avec_client: string;
   remarques?: string;
+  // Infos de postulation (recopiées dans client_candidates par le déclencheur client_candidates_depuis_demande)
+  rc_menage?: '' | 'oui' | 'non';
+  rc_compagnie?: string;
+  statut_logement_actuel?: string;
+  mobile_suivi_autorise?: '' | 'oui' | 'non';
 }
 
 export interface DocumentData {

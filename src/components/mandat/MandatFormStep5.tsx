@@ -5,6 +5,8 @@ import { MandatFormData, CandidatData, NATIONALITES, TYPES_PERMIS, LIENS_CANDIDA
 import { LandingInput } from '@/components/forms-premium/LandingInput';
 import { LandingSelect } from '@/components/forms-premium/LandingSelect';
 import { LandingTextarea } from '@/components/forms-premium/LandingTextarea';
+import { InfosCoCandidatFields } from '@/components/infos-postulation/InfosPostulationFields';
+import { coCandidatConcerne, coCandidatDepuisLigne, infosCoCandidatManquantes } from '@/lib/infosPostulation';
 
 interface Props {
   data: MandatFormData;
@@ -34,8 +36,12 @@ export default function MandatFormStep5({ data, onChange }: Props) {
   const [currentCandidat, setCurrentCandidat] = useState<Omit<CandidatData, 'id'>>(emptyCandidat);
   const isPurchase = data.journey === 'purchase';
 
+  // Location : pour une personne qui habitera le logement, RC / statut / mobile sont obligatoires.
+  const infosCoManquantes = !isPurchase && !!currentCandidat.lien_avec_client && coCandidatConcerne(currentCandidat.lien_avec_client)
+    && infosCoCandidatManquantes(coCandidatDepuisLigne(currentCandidat as unknown as Record<string, unknown>)).length > 0;
+
   const handleAddCandidat = () => {
-    if (!currentCandidat.prenom || !currentCandidat.nom || !currentCandidat.lien_avec_client) return;
+    if (!currentCandidat.prenom || !currentCandidat.nom || !currentCandidat.lien_avec_client || infosCoManquantes) return;
     const newCandidat: CandidatData = { ...currentCandidat, id: crypto.randomUUID() };
     onChange({ candidats: [...data.candidats, newCandidat] });
     setCurrentCandidat(emptyCandidat);
@@ -215,6 +221,18 @@ export default function MandatFormStep5({ data, onChange }: Props) {
                 </div>
               </div>
 
+              {/* Infos exigées par les gérances (personnes qui habiteront le logement) */}
+              {!isPurchase && coCandidatConcerne(currentCandidat.lien_avec_client) && (
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <p className="text-xs font-semibold text-primary uppercase tracking-wider">Pour les dossiers de candidature *</p>
+                  <InfosCoCandidatFields
+                    idPrefix="mandat-cc"
+                    value={coCandidatDepuisLigne(currentCandidat as unknown as Record<string, unknown>)}
+                    onChange={(patch) => setCurrentCandidat((prev) => ({ ...prev, ...patch }))}
+                  />
+                </div>
+              )}
+
               {/* Remarques */}
               <div className="pt-2 border-t border-border">
                 <LandingTextarea
@@ -229,7 +247,7 @@ export default function MandatFormStep5({ data, onChange }: Props) {
               <button
                 type="button"
                 onClick={handleAddCandidat}
-                disabled={!currentCandidat.prenom || !currentCandidat.nom || !currentCandidat.lien_avec_client}
+                disabled={!currentCandidat.prenom || !currentCandidat.nom || !currentCandidat.lien_avec_client || infosCoManquantes}
                 className="w-full flex items-center justify-center gap-2 px-5 py-3 rounded-full text-sm font-semibold bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
               >
                 <Plus size={16} /> Ajouter
