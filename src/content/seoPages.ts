@@ -47,7 +47,7 @@ export const ZONES: SeoZonePage[] = [
     slug: 'lausanne-ouest-lausannois',
     path: `${HUB_PATH}/lausanne-ouest-lausannois`,
     name: 'Lausanne et Ouest lausannois',
-    title: 'Recherche d’appartement à Lausanne et dans l’Ouest lausannois | Logisorama',
+    title: 'Appartement à Lausanne et Ouest lausannois | Logisorama',
     description:
       'Appartement à louer à Lausanne, Renens, Prilly, Crissier ou Ecublens : un agent dédié cible les biens, visite pour vous et suit votre dossier auprès des régies.',
     h1: 'Recherche d’appartement à Lausanne et dans l’Ouest lausannois',
@@ -102,7 +102,7 @@ export const ZONES: SeoZonePage[] = [
     name: 'Logement étudiant UNIL et EPFL',
     title: 'Logement étudiant près de l’UNIL et de l’EPFL | Logisorama',
     description:
-      'Studio, chambre ou colocation près de l’UNIL et de l’EPFL à Ecublens, Chavannes, Saint-Sulpice, Renens ou Lausanne : nous préparons votre dossier et cherchons avant la rentrée.',
+      'Studio, chambre ou colocation près de l’UNIL et de l’EPFL (Ecublens, Chavannes, Renens, Lausanne) : dossier prêt et recherche avant la rentrée.',
     h1: 'Logement étudiant près de l’UNIL et de l’EPFL',
     lede:
       'Le campus de Dorigny, qui accueille l’Université de Lausanne et l’EPFL, attire chaque année des milliers d’étudiants qui cherchent un logement au même moment. Bien s’y prendre, c’est commencer tôt et arriver avec un dossier solide.',
@@ -146,7 +146,7 @@ export const ZONES: SeoZonePage[] = [
     slug: 'lavaux-riviera',
     path: `${HUB_PATH}/lavaux-riviera`,
     name: 'Lavaux et Riviera',
-    title: 'Recherche d’appartement à Lavaux et sur la Riviera | Logisorama',
+    title: 'Appartement à Lavaux et sur la Riviera | Logisorama',
     description:
       'Appartement à louer à Pully, Lutry, Vevey, La Tour-de-Peilz ou Montreux : recherche ciblée, visites déléguées et suivi de votre candidature jusqu’au bail.',
     h1: 'Recherche d’appartement à Lavaux et sur la Riviera',
@@ -192,7 +192,7 @@ export const ZONES: SeoZonePage[] = [
     slug: 'la-cote-morges-nyon',
     path: `${HUB_PATH}/la-cote-morges-nyon`,
     name: 'La Côte, Morges et Nyon',
-    title: 'Recherche d’appartement à Morges, Nyon et sur La Côte | Logisorama',
+    title: 'Appartement à Morges, Nyon et sur La Côte | Logisorama',
     description:
       'Appartement ou maison à louer à Morges, Rolle, Gland, Nyon ou Coppet : un agent dédié pour cibler les biens entre Lausanne et Genève et suivre votre dossier.',
     h1: 'Recherche d’appartement à Morges, Nyon et sur La Côte',
@@ -238,7 +238,7 @@ export const ZONES: SeoZonePage[] = [
     slug: 'geneve',
     path: `${HUB_PATH}/geneve`,
     name: 'Genève',
-    title: 'Recherche d’appartement à Genève et dans le Grand Genève | Logisorama',
+    title: 'Appartement à Genève et dans le Grand Genève | Logisorama',
     description:
       'Appartement à louer à Genève, Carouge, Lancy, Meyrin, Vernier ou Versoix : dossier complet, recherche quotidienne et suivi auprès des régies genevoises.',
     h1: 'Recherche d’appartement à Genève',
@@ -285,7 +285,7 @@ export const ZONES: SeoZonePage[] = [
     slug: 'fribourg-neuchatel-valais-jura',
     path: `${HUB_PATH}/fribourg-neuchatel-valais-jura`,
     name: 'Fribourg, Neuchâtel, Valais et Jura',
-    title: 'Recherche d’appartement à Fribourg, Neuchâtel, en Valais et dans le Jura | Logisorama',
+    title: 'Appartement Fribourg, Neuchâtel, Valais, Jura | Logisorama',
     description:
       'Appartement à louer à Fribourg, Bulle, Neuchâtel, La Chaux-de-Fonds, Sion, Martigny, Monthey ou Delémont : un agent dédié pour toute la Suisse romande.',
     h1: 'Recherche d’appartement à Fribourg, Neuchâtel, en Valais et dans le Jura',
@@ -333,7 +333,7 @@ export const findZone = (slug?: string) => ZONES.find((z) => z.slug === slug) ??
 export const HUB = {
   path: HUB_PATH,
   name: 'Recherche d’appartement en Suisse romande',
-  title: 'Recherche d’appartement à Lausanne, Genève et en Suisse romande | Logisorama',
+  title: 'Recherche d’appartement en Suisse romande | Logisorama',
   description:
     'Un agent immobilier personnel cherche, visite et postule pour vous à Lausanne, Genève et dans toute la Suisse romande. Découvrez nos zones de recherche.',
   h1: 'Recherche d’appartement à Lausanne, Genève et en Suisse romande',
@@ -370,9 +370,9 @@ export const HUB = {
 export const AGENCE = {
   path: AGENCE_PATH,
   name: 'Agence immobilière à Crissier',
-  title: 'Agence immobilière à Crissier, près de Lausanne | Logisorama by Immo-rama.ch',
+  title: 'Agence immobilière à Crissier, près de Lausanne | Logisorama',
   description:
-    'Logisorama by Immo-rama.ch, Chemin de l’Esparcette 5, 1023 Crissier : recherche d’appartement, relocation et accompagnement à l’achat dans l’Ouest lausannois et en Suisse romande.',
+    'Logisorama by Immo-rama.ch, Chemin de l’Esparcette 5 à Crissier : recherche d’appartement, relocation et achat dans l’Ouest lausannois et en Suisse romande.',
   h1: 'Notre agence immobilière à Crissier',
   lede:
     'Notre bureau se trouve au Chemin de l’Esparcette 5, à 1023 Crissier, à quelques minutes du centre de Lausanne, de Renens, de Prilly et d’Ecublens. C’est d’ici que nos agents organisent les recherches, les visites et le suivi des dossiers.',
