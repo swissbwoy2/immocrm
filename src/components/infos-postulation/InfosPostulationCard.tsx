@@ -7,8 +7,9 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { InfosPostulationFields } from './InfosPostulationFields';
 import {
-  INFOS_POSTULATION_VIDES, infosDepuisClient, infosManquantes, infosVersColonnes, libelleParking, libelleStatutLogement,
-  type InfosPostulation,
+  INFOS_POSTULATION_VIDES, coCandidatConcerne, coCandidatDepuisLigne, infosCoCandidatManquantes, infosDepuisClient,
+  infosManquantes, infosVersColonnes, libelleParking, libelleStatutLogement,
+  type InfosCoCandidat, type InfosPostulation,
 } from '@/lib/infosPostulation';
 
 const COLONNES = 'rc_menage, rc_compagnie, parking_souhaite, nombre_enfants, enfants_ages, statut_logement_actuel, mobile_suivi_autorise, infos_postulation_completees_at';
@@ -23,6 +24,7 @@ export function InfosPostulationCard({ clientId }: { clientId: string }) {
   const [edition, setEdition] = useState(false);
   const [brouillon, setBrouillon] = useState<InfosPostulation>(INFOS_POSTULATION_VIDES);
   const [saving, setSaving] = useState(false);
+  const [cos, setCos] = useState<{ id: string; nom: string; infos: InfosCoCandidat }[]>([]);
 
   const charger = useCallback(async () => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- colonnes ajoutées par la migration 20261029150000
@@ -30,12 +32,21 @@ export function InfosPostulationCard({ clientId }: { clientId: string }) {
     if (error || !data) { setInfos(null); return; }
     setInfos(infosDepuisClient(data));
     setCompleteLe(data.infos_postulation_completees_at ?? null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- colonnes ajoutées par la migration du 30.10.2026
+    const { data: cc } = await (supabase.from('client_candidates') as any)
+      .select('id, prenom, nom, type, rc_menage, rc_compagnie, statut_logement_actuel, mobile_suivi_autorise').eq('client_id', clientId);
+    setCos(((cc ?? []) as Record<string, unknown>[])
+      .filter((k) => coCandidatConcerne(String(k.type ?? '')))
+      .map((k) => ({ id: String(k.id), nom: (String(k.prenom ?? '') + ' ' + String(k.nom ?? '')).trim(), infos: coCandidatDepuisLigne(k) })));
   }, [clientId]);
 
   useEffect(() => { void charger(); }, [charger]);
 
   if (!infos) return null;
-  const manquantes = infosManquantes(infos);
+  const manquantes = [
+    ...infosManquantes(infos),
+    ...cos.flatMap((k) => infosCoCandidatManquantes(k.infos).map((m) => k.nom + ' : ' + m)),
+  ];
 
   const enregistrer = async () => {
     setSaving(true);
@@ -88,6 +99,14 @@ export function InfosPostulationCard({ clientId }: { clientId: string }) {
           {ligne('Enfants', infos.nombre_enfants == null ? '—' : String(infos.nombre_enfants) + (infos.enfants_ages ? ' (' + infos.enfants_ages + ')' : ''))}
           {ligne('Statut du logement actuel', infos.statut_logement_actuel ? libelleStatutLogement(infos.statut_logement_actuel) : '—')}
           {ligne('Mobile de suivi autorisé', ouiNon(infos.mobile_suivi_autorise))}
+          {cos.map((k) => ligne(
+            'Co-candidat ' + k.nom,
+            infosCoCandidatManquantes(k.infos).length > 0 && !k.infos.rc_menage && !k.infos.statut_logement_actuel && !k.infos.mobile_suivi_autorise
+              ? '—'
+              : 'RC ' + ouiNon(k.infos.rc_menage) + (k.infos.rc_compagnie ? ' (' + k.infos.rc_compagnie + ')' : '')
+                + ' · ' + (k.infos.statut_logement_actuel ? libelleStatutLogement(k.infos.statut_logement_actuel) : 'statut ?')
+                + ' · mobile ' + ouiNon(k.infos.mobile_suivi_autorise),
+          ))}
           {manquantes.length > 0 && <p className="pt-2 text-xs text-destructive">Manquant : {manquantes.join(', ')}</p>}
           {completeLe && <p className="pt-2 text-xs text-muted-foreground">Complétées le {new Date(completeLe).toLocaleString('fr-CH', { timeZone: 'Europe/Zurich' })}</p>}
         </div>

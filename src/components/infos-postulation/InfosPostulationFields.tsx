@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
-import { PARKING_OPTIONS, STATUT_LOGEMENT_OPTIONS, type InfosPostulation } from '@/lib/infosPostulation';
+import { PARKING_OPTIONS, STATUT_LOGEMENT_OPTIONS, type InfosCoCandidat, type InfosPostulation } from '@/lib/infosPostulation';
 
 const CHAMP = 'w-full bg-muted/40 border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary transition-all duration-300';
 
@@ -124,6 +124,43 @@ export function InfosPostulationFields({
       <div className="space-y-1.5 md:col-span-2">
         <Libelle>La gérance peut-elle vous joindre directement sur votre mobile pour le suivi du dossier ?</Libelle>
         <OuiNon name="Mobile de suivi autorisé" value={value.mobile_suivi_autorise} onChange={(v) => onChange({ mobile_suivi_autorise: v })} />
+      </div>
+    </div>
+  );
+}
+
+/** Mêmes questions pour un co-candidat (colocataire, conjoint, co-débiteur, occupant). */
+export function InfosCoCandidatFields({
+  value,
+  onChange,
+  idPrefix = 'cc',
+}: {
+  value: InfosCoCandidat;
+  onChange: (patch: Partial<InfosCoCandidat>) => void;
+  idPrefix?: string;
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="space-y-1.5">
+        <Libelle>Assurance RC ménage ?</Libelle>
+        <OuiNon name="Assurance RC ménage du co-candidat" value={value.rc_menage} onChange={(v) => onChange({ rc_menage: v, ...(v === 'non' ? { rc_compagnie: '' } : {}) })} />
+      </div>
+      {value.rc_menage === 'oui' && (
+        <div className="space-y-1.5">
+          <Libelle htmlFor={idPrefix + '-rc'}>Compagnie d’assurance RC</Libelle>
+          <input id={idPrefix + '-rc'} className={CHAMP} value={value.rc_compagnie} onChange={(e) => onChange({ rc_compagnie: e.target.value })} placeholder="Ex : Mobilière, AXA, Allianz…" />
+        </div>
+      )}
+      <div className="space-y-1.5 md:col-span-2">
+        <Libelle htmlFor={idPrefix + '-statut'}>Statut dans son logement actuel</Libelle>
+        <select id={idPrefix + '-statut'} className={CHAMP} value={value.statut_logement_actuel} onChange={(e) => onChange({ statut_logement_actuel: e.target.value })}>
+          <option value="">Choisir…</option>
+          {STATUT_LOGEMENT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+      <div className="space-y-1.5 md:col-span-2">
+        <Libelle>La gérance peut-elle le/la joindre directement sur son mobile ?</Libelle>
+        <OuiNon name="Mobile de suivi du co-candidat" value={value.mobile_suivi_autorise} onChange={(v) => onChange({ mobile_suivi_autorise: v })} />
       </div>
     </div>
   );
