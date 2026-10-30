@@ -146,6 +146,7 @@ const AdminWhatsAppLogs = lazyWithRetry(() => import("./pages/admin/WhatsAppLogs
 const AgentWhatsAppInbox = lazyWithRetry(() => import("./pages/agent/WhatsAppInbox"));
 const AgentMessageTemplates = lazyWithRetry(() => import("./pages/agent/MessageTemplates"));
 const StaffMandatPrefill = lazyWithRetry(() => import("./pages/staff/MandatPrefill"));
+const FichePostulation = lazyWithRetry(() => import("./pages/staff/FichePostulation"));
 const MandatV3SignOnly = lazyWithRetry(() => import("./pages/mandat-v3/SignOnly"));
 
 // Agent pages
@@ -419,6 +420,7 @@ const App = () => (
               <Route path="/admin/inscriptions-echouees" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminInscriptionsEchouees /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/clients/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminClientDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/admin/clients/:id/mandat-prefill" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><StaffMandatPrefill /></AppLayout></ProtectedRoute>} />
+              <Route path="/admin/clients/:id/postulation" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><FichePostulation /></AppLayout></ProtectedRoute>} />
              {/* /admin/relouer redirige vers l'onglet Reloueurs de /admin/clients (registre CRM global) */}
              <Route path="/admin/relouer" element={<Navigate to="/admin/clients?tab=reloueurs" replace />} />
              <Route path="/admin/relouer/:id" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout><AdminRelouerDetail /></AppLayout></ProtectedRoute>} />
@@ -484,6 +486,7 @@ const App = () => (
               <Route path="/agent/suivi-extraits" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentSuiviExtraits /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/clients/:id" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentClientDetail /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/clients/:id/mandat-prefill" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><StaffMandatPrefill /></AppLayout></ProtectedRoute>} />
+              <Route path="/agent/clients/:id/postulation" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><FichePostulation /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/envoyer-offre" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentEnvoyerOffre /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/offres-envoyees" element={<ProtectedRoute allowedRoles={['agent']}><AppLayout><AgentOffresEnvoyees /></AppLayout></ProtectedRoute>} />
               <Route path="/agent/offres-auto" element={<ProtectedRoute allowedRoles={['agent','admin']}><AppLayout><AgentOffresAuto /></AppLayout></ProtectedRoute>} />
