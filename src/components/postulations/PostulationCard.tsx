@@ -215,6 +215,11 @@ export function PostulationCard({ r, scope, saving, deleting, busyDossier, onDep
               <Link to={lienOffre} className={cn('inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-foreground underline-offset-4 hover:underline sm:min-h-[28px]', FOCUS)}>
                 Fiche de l’offre
               </Link>
+              {r.client_id && (
+                <Link to={'/' + scope + '/clients/' + r.client_id + '/postulation?offre=' + r.id} className={cn('inline-flex min-h-[44px] items-center gap-1 text-xs font-medium text-primary underline-offset-4 hover:underline sm:min-h-[28px]', FOCUS)}>
+                  Fiche de postulation
+                </Link>
+              )}
             </div>
           </div>
         </div>
