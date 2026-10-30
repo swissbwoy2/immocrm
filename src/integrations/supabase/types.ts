@@ -4155,6 +4155,7 @@ export type Database = {
           id: string
           lien_avec_client: string | null
           loyer_actuel: number | null
+          mobile_suivi_autorise: boolean | null
           montant_charges_extra: number | null
           motif_changement: string | null
           nationalite: string | null
@@ -4163,10 +4164,13 @@ export type Database = {
           poursuites: boolean | null
           prenom: string
           profession: string | null
+          rc_compagnie: string | null
+          rc_menage: boolean | null
           revenus_mensuels: number | null
           secteur_activite: string | null
           situation_familiale: string | null
           source_revenus: string | null
+          statut_logement_actuel: string | null
           telephone: string | null
           type: string
           type_contrat: string | null
@@ -4193,6 +4197,7 @@ export type Database = {
           id?: string
           lien_avec_client?: string | null
           loyer_actuel?: number | null
+          mobile_suivi_autorise?: boolean | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
           nationalite?: string | null
@@ -4201,10 +4206,13 @@ export type Database = {
           poursuites?: boolean | null
           prenom: string
           profession?: string | null
+          rc_compagnie?: string | null
+          rc_menage?: boolean | null
           revenus_mensuels?: number | null
           secteur_activite?: string | null
           situation_familiale?: string | null
           source_revenus?: string | null
+          statut_logement_actuel?: string | null
           telephone?: string | null
           type: string
           type_contrat?: string | null
@@ -4231,6 +4239,7 @@ export type Database = {
           id?: string
           lien_avec_client?: string | null
           loyer_actuel?: number | null
+          mobile_suivi_autorise?: boolean | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
           nationalite?: string | null
@@ -4239,10 +4248,13 @@ export type Database = {
           poursuites?: boolean | null
           prenom?: string
           profession?: string | null
+          rc_compagnie?: string | null
+          rc_menage?: boolean | null
           revenus_mensuels?: number | null
           secteur_activite?: string | null
           situation_familiale?: string | null
           source_revenus?: string | null
+          statut_logement_actuel?: string | null
           telephone?: string | null
           type?: string
           type_contrat?: string | null
@@ -4417,6 +4429,7 @@ export type Database = {
           depuis_le: string | null
           derniere_relance_at: string | null
           employeur: string | null
+          enfants_ages: string | null
           etat_avancement: string | null
           etat_civil: string | null
           extrait_poursuites_ai_confidence: number | null
@@ -4427,6 +4440,7 @@ export type Database = {
           garanties: string | null
           gerance_actuelle: string | null
           id: string
+          infos_postulation_completees_at: string | null
           instrument_musique: boolean | null
           journey_type: string | null
           loyer_actuel: number | null
@@ -4437,18 +4451,23 @@ export type Database = {
           mandate_official_end_date: string | null
           mandate_pause_days: number
           mandate_paused_at: string | null
+          mobile_suivi_autorise: boolean | null
           montant_charges_extra: number | null
           motif_changement: string | null
           nationalite: string | null
+          nombre_enfants: number | null
           nombre_occupants: number | null
           note_agent: string | null
           numero_plaques: string | null
+          parking_souhaite: string | null
           payslip_last_reminder_at: string | null
           pieces: number | null
           pieces_actuel: number | null
           poursuites: boolean | null
           priorite: string | null
           profession: string | null
+          rc_compagnie: string | null
+          rc_menage: boolean | null
           refund_eligible: boolean
           refund_processed_at: string | null
           refund_requested_at: string | null
@@ -4463,6 +4482,7 @@ export type Database = {
           souhaits_particuliers: string | null
           source_revenus: string | null
           statut: string | null
+          statut_logement_actuel: string | null
           steeve_email_verifie: string | null
           steeve_email_verifie_le: string | null
           steeve_email_verifie_par: string | null
@@ -4505,6 +4525,7 @@ export type Database = {
           depuis_le?: string | null
           derniere_relance_at?: string | null
           employeur?: string | null
+          enfants_ages?: string | null
           etat_avancement?: string | null
           etat_civil?: string | null
           extrait_poursuites_ai_confidence?: number | null
@@ -4515,6 +4536,7 @@ export type Database = {
           garanties?: string | null
           gerance_actuelle?: string | null
           id?: string
+          infos_postulation_completees_at?: string | null
           instrument_musique?: boolean | null
           journey_type?: string | null
           loyer_actuel?: number | null
@@ -4525,18 +4547,23 @@ export type Database = {
           mandate_official_end_date?: string | null
           mandate_pause_days?: number
           mandate_paused_at?: string | null
+          mobile_suivi_autorise?: boolean | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
           nationalite?: string | null
+          nombre_enfants?: number | null
           nombre_occupants?: number | null
           note_agent?: string | null
           numero_plaques?: string | null
+          parking_souhaite?: string | null
           payslip_last_reminder_at?: string | null
           pieces?: number | null
           pieces_actuel?: number | null
           poursuites?: boolean | null
           priorite?: string | null
           profession?: string | null
+          rc_compagnie?: string | null
+          rc_menage?: boolean | null
           refund_eligible?: boolean
           refund_processed_at?: string | null
           refund_requested_at?: string | null
@@ -4551,6 +4578,7 @@ export type Database = {
           souhaits_particuliers?: string | null
           source_revenus?: string | null
           statut?: string | null
+          statut_logement_actuel?: string | null
           steeve_email_verifie?: string | null
           steeve_email_verifie_le?: string | null
           steeve_email_verifie_par?: string | null
@@ -4593,6 +4621,7 @@ export type Database = {
           depuis_le?: string | null
           derniere_relance_at?: string | null
           employeur?: string | null
+          enfants_ages?: string | null
           etat_avancement?: string | null
           etat_civil?: string | null
           extrait_poursuites_ai_confidence?: number | null
@@ -4603,6 +4632,7 @@ export type Database = {
           garanties?: string | null
           gerance_actuelle?: string | null
           id?: string
+          infos_postulation_completees_at?: string | null
           instrument_musique?: boolean | null
           journey_type?: string | null
           loyer_actuel?: number | null
@@ -4613,18 +4643,23 @@ export type Database = {
           mandate_official_end_date?: string | null
           mandate_pause_days?: number
           mandate_paused_at?: string | null
+          mobile_suivi_autorise?: boolean | null
           montant_charges_extra?: number | null
           motif_changement?: string | null
           nationalite?: string | null
+          nombre_enfants?: number | null
           nombre_occupants?: number | null
           note_agent?: string | null
           numero_plaques?: string | null
+          parking_souhaite?: string | null
           payslip_last_reminder_at?: string | null
           pieces?: number | null
           pieces_actuel?: number | null
           poursuites?: boolean | null
           priorite?: string | null
           profession?: string | null
+          rc_compagnie?: string | null
+          rc_menage?: boolean | null
           refund_eligible?: boolean
           refund_processed_at?: string | null
           refund_requested_at?: string | null
@@ -4639,6 +4674,7 @@ export type Database = {
           souhaits_particuliers?: string | null
           source_revenus?: string | null
           statut?: string | null
+          statut_logement_actuel?: string | null
           steeve_email_verifie?: string | null
           steeve_email_verifie_le?: string | null
           steeve_email_verifie_par?: string | null
@@ -5650,20 +5686,24 @@ export type Database = {
           documents_uploades: Json | null
           email: string
           employeur: string
+          enfants_ages: string | null
           etat_civil: string
           gerance_actuelle: string
           id: string
           instrument_musique: boolean | null
           legal_consents: Json
           loyer_actuel: number
+          mobile_suivi_autorise: boolean | null
           montant_acompte: number | null
           montant_charges_extra: number | null
           motif_changement: string
           nationalite: string
           nom: string
+          nombre_enfants: number | null
           nombre_occupants: number
           notes_admin: string | null
           numero_plaques: string | null
+          parking_souhaite: string | null
           payment_method: string
           pieces_actuel: number
           pieces_recherche: string
@@ -5672,11 +5712,14 @@ export type Database = {
           processed_at: string | null
           processed_by: string | null
           profession: string
+          rc_compagnie: string | null
+          rc_menage: boolean | null
           region_recherche: string
           revenus_mensuels: number
           signature_data: string | null
           souhaits_particuliers: string | null
           statut: string | null
+          statut_logement_actuel: string | null
           telephone: string
           type_bien: string
           type_permis: string
@@ -5715,20 +5758,24 @@ export type Database = {
           documents_uploades?: Json | null
           email: string
           employeur: string
+          enfants_ages?: string | null
           etat_civil: string
           gerance_actuelle: string
           id?: string
           instrument_musique?: boolean | null
           legal_consents?: Json
           loyer_actuel?: number
+          mobile_suivi_autorise?: boolean | null
           montant_acompte?: number | null
           montant_charges_extra?: number | null
           motif_changement: string
           nationalite: string
           nom: string
+          nombre_enfants?: number | null
           nombre_occupants?: number
           notes_admin?: string | null
           numero_plaques?: string | null
+          parking_souhaite?: string | null
           payment_method?: string
           pieces_actuel?: number
           pieces_recherche: string
@@ -5737,11 +5784,14 @@ export type Database = {
           processed_at?: string | null
           processed_by?: string | null
           profession: string
+          rc_compagnie?: string | null
+          rc_menage?: boolean | null
           region_recherche: string
           revenus_mensuels?: number
           signature_data?: string | null
           souhaits_particuliers?: string | null
           statut?: string | null
+          statut_logement_actuel?: string | null
           telephone: string
           type_bien: string
           type_permis: string
@@ -5780,20 +5830,24 @@ export type Database = {
           documents_uploades?: Json | null
           email?: string
           employeur?: string
+          enfants_ages?: string | null
           etat_civil?: string
           gerance_actuelle?: string
           id?: string
           instrument_musique?: boolean | null
           legal_consents?: Json
           loyer_actuel?: number
+          mobile_suivi_autorise?: boolean | null
           montant_acompte?: number | null
           montant_charges_extra?: number | null
           motif_changement?: string
           nationalite?: string
           nom?: string
+          nombre_enfants?: number | null
           nombre_occupants?: number
           notes_admin?: string | null
           numero_plaques?: string | null
+          parking_souhaite?: string | null
           payment_method?: string
           pieces_actuel?: number
           pieces_recherche?: string
@@ -5802,11 +5856,14 @@ export type Database = {
           processed_at?: string | null
           processed_by?: string | null
           profession?: string
+          rc_compagnie?: string | null
+          rc_menage?: boolean | null
           region_recherche?: string
           revenus_mensuels?: number
           signature_data?: string | null
           souhaits_particuliers?: string | null
           statut?: string | null
+          statut_logement_actuel?: string | null
           telephone?: string
           type_bien?: string
           type_permis?: string
@@ -17804,6 +17861,26 @@ export type Database = {
       admin_set_steeve_autonomie: { Args: { p_mode: string }; Returns: Json }
       admin_set_steeve_settings: { Args: { p_settings: Json }; Returns: Json }
       admin_steeve_a_appeler: { Args: { p_limite?: number }; Returns: Json }
+      admin_steeve_ajouter_personne: {
+        Args: {
+          p_client_id: string
+          p_date_naissance?: string
+          p_lien?: string
+          p_nom: string
+          p_prenom: string
+          p_type: string
+        }
+        Returns: Json
+      }
+      admin_steeve_candidature_deposee: {
+        Args: {
+          p_canal?: string
+          p_detail?: string
+          p_le?: string
+          p_offre_id: string
+        }
+        Returns: Json
+      }
       admin_steeve_classer_document: {
         Args: {
           p_candidate_id?: string
@@ -18297,6 +18374,17 @@ export type Database = {
         Args: { _annonce_id: string }
         Returns: undefined
       }
+      infos_postulation_manquantes: {
+        Args: {
+          p_enfants: number
+          p_mobile: boolean
+          p_parking: string
+          p_rc_compagnie: string
+          p_rc_menage: boolean
+          p_statut_logement: string
+        }
+        Returns: string[]
+      }
       ir_build_msg: {
         Args: {
           addr: string
@@ -18657,7 +18745,36 @@ export type Database = {
         Args: { p_adresse: string; p_lien: string }
         Returns: string
       }
+      offre_groupe_cle_bien: {
+        Args: {
+          p_adresse: string
+          p_lien: string
+          p_pieces: number
+          p_prix: number
+        }
+        Returns: string
+      }
+      offre_rue_normalisee: { Args: { p_adresse: string }; Returns: string }
       offres_auto_groupes: {
+        Args: {
+          p_client_ids?: string[]
+          p_date_from?: string
+          p_date_to?: string
+          p_limit?: number
+          p_manual?: boolean
+          p_offset?: number
+          p_statut?: string
+        }
+        Returns: {
+          besoin_action: boolean
+          derniere_creation: string
+          groupe_cle: string
+          nb_clients: number
+          offres: Json
+          total: number
+        }[]
+      }
+      offres_auto_groupes_v2: {
         Args: {
           p_client_ids?: string[]
           p_date_from?: string
@@ -19057,6 +19174,21 @@ export type Database = {
         Returns: Json
       }
       steeve_admin_personnes: { Args: { p_nom: string }; Returns: Json }
+      steeve_ajouter_personne: {
+        Args: {
+          p_adresse?: string
+          p_client_id: string
+          p_date_naissance?: string
+          p_employeur?: string
+          p_lien?: string
+          p_nationalite?: string
+          p_nom: string
+          p_prenom: string
+          p_source?: string
+          p_type: string
+        }
+        Returns: Json
+      }
       steeve_annonce_creneaux: { Args: { p_annonce_id: string }; Returns: Json }
       steeve_annonceur_apercu: { Args: never; Returns: Json }
       steeve_annonceur_cle: { Args: { p_lien: string }; Returns: string }
