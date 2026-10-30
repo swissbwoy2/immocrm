@@ -10,6 +10,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save, User, DollarSign, Briefcase, Home, Users, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { ClientCandidate, CandidateType, CANDIDATE_TYPE_LABELS } from '@/hooks/useClientCandidates';
 import { toast } from 'sonner';
+import { InfosCoCandidatFields } from '@/components/infos-postulation/InfosPostulationFields';
+import { INFOS_COCANDIDAT_VIDES, coCandidatConcerne, coCandidatDepuisLigne, coCandidatVersColonnes, type InfosCoCandidat } from '@/lib/infosPostulation';
 
 const TABS = ['type', 'personal', 'financial', 'professional', 'housing'] as const;
 type TabValue = typeof TABS[number];
@@ -67,6 +69,7 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
   const [formData, setFormData] = useState(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [activeTab, setActiveTab] = useState<TabValue>('type');
+  const [infosCo, setInfosCo] = useState<InfosCoCandidat>(INFOS_COCANDIDAT_VIDES);
 
   const currentTabIndex = TABS.indexOf(activeTab);
   const isFirstTab = currentTabIndex === 0;
@@ -122,8 +125,10 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
           curatelle: editCandidate.curatelle || false,
           lien_avec_client: editCandidate.lien_avec_client || '',
         });
+        setInfosCo(coCandidatDepuisLigne(editCandidate as unknown as Record<string, unknown>));
       } else {
         setFormData(initialFormData);
+        setInfosCo(INFOS_COCANDIDAT_VIDES);
       }
     }
   }, [open, editCandidate]);
@@ -184,6 +189,8 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
         date_naissance: formData.date_naissance || null,
         depuis_le: formData.depuis_le || null,
         date_engagement: formData.date_engagement || null,
+        // Infos de postulation (personnes qui habiteront le logement)
+        ...(coCandidatConcerne(formData.type) ? coCandidatVersColonnes(infosCo) : {}),
       };
       await onSave(dataToSave as any);
       onOpenChange(false);
@@ -593,6 +600,12 @@ export function AddCandidateDialog({ open, onOpenChange, onSave, editCandidate }
                   />
                 </div>
               </div>
+              {coCandidatConcerne(formData.type) && (
+                <div className="space-y-3 border-t pt-4">
+                  <p className="text-sm font-medium">Pour les dossiers de candidature</p>
+                  <InfosCoCandidatFields idPrefix="dlg-cc" value={infosCo} onChange={(p) => setInfosCo((prev) => ({ ...prev, ...p }))} />
+                </div>
+              )}
             </TabsContent>
           </ScrollArea>
         </Tabs>
