@@ -68,8 +68,8 @@ export function PublicSiteHeader() {
                   size="sm"
                   className="min-w-9"
                 >
-                  <Link to="/login">
-                    <LogIn className="h-4 w-4 sm:mr-2" />
+                  <Link to="/login" aria-label="Mon espace client">
+                    <LogIn className="h-4 w-4 sm:mr-2" aria-hidden="true" />
                     <span className="hidden sm:inline">Mon espace client</span>
                   </Link>
                 </Button>
