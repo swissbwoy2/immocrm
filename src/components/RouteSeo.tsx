@@ -81,7 +81,7 @@ const seoByPath: Record<string, SeoConfig> = {
     ],
   },
   '/chasseur-appartement': {
-    title: "Chasseur d'appartement Lausanne & Suisse romande | Logisorama",
+    title: "Chasseur d'appartement Lausanne, Suisse romande | Logisorama",
     description:
       "Votre chasseur d'appartement à Lausanne et en Suisse romande : veille quotidienne, biens ciblés, visites, dossier de location et suivi auprès des régies.",
     canonical: '/chasseur-appartement',
