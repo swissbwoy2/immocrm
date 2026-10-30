@@ -1333,6 +1333,12 @@ export default function ClientDetail() {
           <ClientSummaryTiles tiles={tiles} onOpen={(t) => openTab(t, true)} />
           <ClientTodoList items={todos} />
 
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" className="rounded-full" onClick={() => navigate('/admin/clients/' + client.id + '/postulation')}>
+              <FileText className="mr-1.5 h-4 w-4" /> Fiche de postulation
+            </Button>
+          </div>
+
           <div ref={tabsRef} className="scroll-mt-44">
             <ClientTabsRail tabs={tabs} value={activeTab} onChange={(t) => openTab(t)} />
           </div>
