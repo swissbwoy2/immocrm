@@ -104,6 +104,53 @@ export function echeancePour(creeLe: string | null | undefined): Date {
   return parInscription > ECHEANCE_INFOS_POSTULATION ? parInscription : ECHEANCE_INFOS_POSTULATION;
 }
 
+/* ---------- Co-candidats (colocataire, conjoint, co-débiteur, occupant) ---------- */
+
+export type InfosCoCandidat = {
+  rc_menage: '' | 'oui' | 'non';
+  rc_compagnie: string;
+  statut_logement_actuel: string;
+  mobile_suivi_autorise: '' | 'oui' | 'non';
+};
+
+export const INFOS_COCANDIDAT_VIDES: InfosCoCandidat = {
+  rc_menage: '', rc_compagnie: '', statut_logement_actuel: '', mobile_suivi_autorise: '',
+};
+
+/** Les garants et signataires solidaires n'habitent pas le logement : pas concernés. */
+export function coCandidatConcerne(typeOuLien: string | null | undefined): boolean {
+  const t = String(typeOuLien ?? '').toLowerCase();
+  return !t.startsWith('garant') && t !== 'signataire_solidaire';
+}
+
+export function infosCoCandidatManquantes(i: InfosCoCandidat): string[] {
+  const m: string[] = [];
+  if (!i.rc_menage) m.push('assurance RC ménage');
+  if (i.rc_menage === 'oui' && !i.rc_compagnie.trim()) m.push('compagnie d’assurance RC');
+  if (!i.statut_logement_actuel) m.push('statut du logement actuel');
+  if (!i.mobile_suivi_autorise) m.push('autorisation du mobile de suivi');
+  return m;
+}
+
+export function coCandidatDepuisLigne(c: Record<string, unknown> | null | undefined): InfosCoCandidat {
+  const b = (v: unknown): '' | 'oui' | 'non' => (v === true || v === 'oui' ? 'oui' : v === false || v === 'non' ? 'non' : '');
+  return {
+    rc_menage: b(c?.rc_menage),
+    rc_compagnie: String(c?.rc_compagnie ?? ''),
+    statut_logement_actuel: String(c?.statut_logement_actuel ?? ''),
+    mobile_suivi_autorise: b(c?.mobile_suivi_autorise),
+  };
+}
+
+export function coCandidatVersColonnes(i: InfosCoCandidat) {
+  return {
+    rc_menage: i.rc_menage === '' ? null : i.rc_menage === 'oui',
+    rc_compagnie: i.rc_menage === 'oui' ? i.rc_compagnie.trim() || null : null,
+    statut_logement_actuel: i.statut_logement_actuel || null,
+    mobile_suivi_autorise: i.mobile_suivi_autorise === '' ? null : i.mobile_suivi_autorise === 'oui',
+  };
+}
+
 export function libelleParking(v: string | null | undefined): string {
   return PARKING_OPTIONS.find((o) => o.value === v)?.label ?? '—';
 }
