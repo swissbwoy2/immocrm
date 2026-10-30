@@ -1133,8 +1133,7 @@ export function aucuneOffreMessage(r: { lues: number; ecartees: { raison: string
   const cherche = [c.pieces ? `${String(c.pieces).replace('.', ',')} pièces ou plus` : null, c.budget ? `jusqu'à ${c.budget} CHF` : null, c.communes ? `${c.communes} commune${c.communes > 1 ? 's' : ''}` : null].filter(Boolean).join(', ');
   const recent = c.changeIlYaMin !== null && c.changeIlYaMin <= 24 * 60;
   const tete = recent ? `J'ai relancé la recherche avec tes nouveaux critères${cherche ? ` (${cherche})` : ''}` : `J'ai refait la recherche${cherche ? ` (${cherche})` : ''}`;
-  return `${tete} : j'ai lu ${r.lues} annonce${r.lues > 1 ? 's' : ''} sur Flatfox, immobilier.ch, Homegate et dans nos offres en cours, et aucune nouvelle ne correspond pour l'instant${raisons(r.ecartees)}. Je continue de chercher plusieurs fois par jour et je t'envoie chaque nouvelle annonce dès qu'elle sort.` +
-    (recent ? '' : ` Si tu veux plus de choix, dis-moi ce que tu peux assouplir (zone, budget ou nombre de pièces).`);
+  return `${tete} : j'ai lu ${r.lues} annonce${r.lues > 1 ? 's' : ''} sur Flatfox, immobilier.ch, Homegate et dans nos offres en cours, et aucune nouvelle ne correspond pour l'instant${raisons(r.ecartees)}. Je continue de chercher plusieurs fois par jour et je t'envoie chaque nouvelle annonce dès qu'elle sort.`;
 }
 
 function raisons(e: { raison: string; n: number }[]): string {
