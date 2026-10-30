@@ -933,6 +933,15 @@ export default function ClientDetail() {
               <span className="hidden sm:inline">Pré-remplir le mandat</span>
               <span className="sm:hidden">Mandat</span>
             </Button>
+            <Button
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => navigate('/agent/clients/' + client.id + '/postulation')}
+            >
+              <FileCheck className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">Fiche de postulation</span>
+              <span className="sm:hidden">Postulation</span>
+            </Button>
             {client.statut === 'actif' && client.mandat_date_signature && (
               <>
                 <Button
