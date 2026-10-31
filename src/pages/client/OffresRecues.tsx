@@ -496,6 +496,7 @@ const OffresRecues = () => {
           )
         `)
         .eq('client_id', clientData.id)
+        .neq('statut', 'retiree') // offres retirées par l'admin (ex. hors budget) : invisibles pour le client
         .order('date_envoi', { ascending: false })
         .limit(15000);
 

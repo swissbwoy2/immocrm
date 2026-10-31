@@ -222,6 +222,7 @@ function ClientDashboardLocation() {
           .from('offres')
           .select('id, adresse, prix, pieces, surface, etage, date_envoi, created_at, lien_annonce, medias_galerie, statut, client_id, titre, type_bien')
           .eq('client_id', clientData.id)
+          .neq('statut', 'retiree') // offres retirées par l'admin (ex. hors budget) : invisibles pour le client
           .limit(15000),
         supabase
           .from('visites')
