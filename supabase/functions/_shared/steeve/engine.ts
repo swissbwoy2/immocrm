@@ -23,6 +23,45 @@ export function sensitiveNote(text: string): string {
     : '';
 }
 
+/**
+ * Accusés de réception simples (« merci », « ok », « bien reçu », « bonne journée », emoji seul) : Steeve répond avec
+ * le modèle léger (règle de l'admin du 02.11.2026). Tout le reste garde le modèle habituel : question, chiffre, date,
+ * pièce jointe, sujet sensible, ou réponse à une question de Steeve (un « oui » ou un « ok » peut alors déclencher une action).
+ * Désactivable avec app_config steeve_simple_model = 'off'.
+ */
+export const SIMPLE_MODEL = 'claude-haiku-5-5';
+const SIMPLE_WORDS = new Set([
+  'merci', 'mercii', 'merciii', 'beaucoup', 'bcp', 'infiniment', 'mille', 'fois', 'encore',
+  'ok', 'okay', 'oki', 'okok', 'okk', 'dac', "d'accord", 'daccord', 'accord', 'oui', 'yes', 'ouais',
+  'parfait', 'super', 'top', 'genial', 'nickel', 'cool', 'excellent', 'impeccable', 'tres', 'bien', 'bon',
+  'recu', 'note', "c'est", 'cest', 'ca', 'marche', 'entendu', 'compris', 'vu', 'je', "j'ai", 'ai', 'tout',
+  'bonne', 'journee', 'soiree', 'nuit', 'fin', 'semaine', 'a', 'demain', 'bientot', 'plus', 'tard',
+  'salut', 'bonjour', 'bonsoir', 'et', 'vous', 'toi', 'aussi', 'de', 'rien', 'steeve', 'pour', 'votre', 'ton', 'aide',
+  'thanks', 'thank', 'you', 'ah', 'voila',
+]);
+
+export function isSimpleAck(text: unknown): boolean {
+  const raw = String(text ?? '').replace(/’/g, "'").trim();
+  if (!raw || raw.length > 60) return false;
+  if (/[?0-9@:/]/.test(raw) || SENSITIVE_TOPIC.test(raw)) return false;
+  const norm = raw.toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
+    .replace(/[^a-z' ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!norm) return /\p{Extended_Pictographic}/u.test(raw);
+  const words = norm.split(' ');
+  return words.length <= 8 && words.every((w) => SIMPLE_WORDS.has(w));
+}
+
+/** Tous les messages du client depuis la dernière intervention sont des accusés simples, sans question de Steeve juste avant. */
+export function isSimpleTurn(transcript: any[], last: any): boolean {
+  let i = transcript.findIndex((m: any) => m.id === last?.id);
+  if (i < 0) return false;
+  const pending: any[] = [];
+  while (i >= 0 && transcript[i].sender_type === 'client') { pending.push(transcript[i]); i--; }
+  if (!pending.length || pending.some((m: any) => m.attachment_url || !isSimpleAck(m.content))) return false;
+  const prev = i >= 0 ? transcript[i] : null;
+  return !(prev && String(prev.content ?? '').includes('?'));
+}
+
 export const CAPPED_MESSAGE =
   "Je ne peux pas te répondre en détail pour le moment. J'ai transmis ton message à ton agent, qui te répondra ici.";
 export const TECHNICAL_MESSAGE =
@@ -345,6 +384,7 @@ export async function runTurn(opts: {
   // Plafonds de dépense (réglables dans app_config).
   const cfg = await readConfig(db);
   model = cfg.steeve_model || model;
+  const baseModel = model;
   const { data: spend } = await db.rpc('steeve_spend', { p_client_id: conv.client_id });
   const s = spend || {};
   const monthCap = num(cfg.steeve_budget_month_usd, 30);
@@ -399,6 +439,10 @@ export async function runTurn(opts: {
       }
       // Quelqu'un a déjà répondu au client (agent ou passage précédent) : rien à ajouter.
       if (!last || last.sender_type !== 'client') return finish({ status: 'skipped', reason: 'deja_repondu' });
+      // Accusé de réception simple (merci, ok, bien reçu…) : modèle léger ; sinon le modèle habituel (règle du 02.11.2026).
+      model = !isRelance && !isControle && cfg.steeve_simple_model !== 'off' && isSimpleTurn(transcript, last)
+        ? (cfg.steeve_simple_model || SIMPLE_MODEL)
+        : baseModel;
 
       const facts = await overview(db, dossier, now());
       // Langue d'écriture notée pour ce client (outil noter_langue, ou l'équipe) : toutes les réponses dans cette langue.
