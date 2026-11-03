@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { emailInvoice, extractCreatedInvoice } from "../_shared/abaninja-invoice.ts";
 import { requireAuth } from "../_shared/require-admin.ts";
 
 const corsHeaders = {
@@ -198,73 +199,25 @@ serve(async (req) => {
 
     const data = JSON.parse(responseText);
 
-    // v2 API returns documents in data array
-    const invoice = data.data?.[0] || data.documents?.[0] || data;
-
-    // Send invoice by email automatically
-    let emailSent = false;
+    // Réponse v2 : { data: { documents: [ … ] } }
+    const invoice = extractCreatedInvoice(data);
     console.log('Invoice UUID:', invoice.uuid);
-    
-    try {
-      const sendResponse = await fetch(
-        `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices/${invoice.uuid}/send`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify({
-            channel: 'email',
-            recipient: {
-              email: email
-            }
-          })
-        }
-      );
 
-      const sendResponseText = await sendResponse.text();
-      console.log('Send invoice response status:', sendResponse.status);
-
-      if (sendResponse.ok) {
-        console.log('Final invoice sent successfully');
-        emailSent = true;
-      } else {
-        console.warn('Failed to send invoice by email:', sendResponse.status, sendResponseText);
-        
-        // Fallback: Try alternative endpoint format
-        console.log('Trying alternative send endpoint...');
-        const altSendResponse = await fetch(
-          `https://api.abaninja.ch/accounts/${accountUuid}/documents/v2/invoices/${invoice.uuid}/actions/send`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-              channel: 'email',
-              recipientEmail: email
-            })
-          }
-        );
-        
-        if (altSendResponse.ok) {
-          console.log('Invoice sent via alternative endpoint');
-          emailSent = true;
-        }
-      }
-    } catch (sendErr) {
-      console.warn('Error sending invoice by email:', sendErr);
+    // Envoi par e-mail (PATCH …/actions/email). Sans UUID, la facture reste en brouillon : on le signale.
+    let emailSent = false;
+    if (invoice.uuid) {
+      const sent = await emailInvoice(accountUuid, apiKey, invoice.uuid);
+      emailSent = sent.ok;
+      console.log('AbaNinja email action status:', sent.status);
+    } else {
+      console.error('AbaNinja: facture créée mais UUID introuvable dans la réponse');
     }
 
     return new Response(
       JSON.stringify({
         success: true,
         invoice_id: invoice.uuid,
-        invoice_ref: invoice.number || invoice.reference,
+        invoice_ref: invoice.number,
         montant: montant_final,
         email_sent: emailSent,
         data: invoice

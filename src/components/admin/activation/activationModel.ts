@@ -45,6 +45,7 @@ export const STATUT_LABEL: Record<string, { label: string; tone: Ton }> = {
   facture_envoyee: { label: 'Facture envoyée', tone: 'neutral' },
   paye: { label: 'Payé - À activer', tone: 'success' },
   active: { label: 'Activé', tone: 'muted' },
+  doublon: { label: 'Doublon', tone: 'muted' },
 };
 
 /** Seuils d'attente : une demande à traiter est en retard après 48 h, une facture impayée après 7 jours. */
@@ -143,4 +144,28 @@ export function nbDocuments(d: DemandeMandat): number {
 
 export function texteRecherche(d: DemandeMandat): string {
   return `${d.prenom ?? ''} ${d.nom ?? ''} ${d.email ?? ''} ${d.telephone ?? ''} ${d.region_recherche ?? ''} ${d.abaninja_invoice_ref ?? ''}`.toLowerCase();
+}
+
+/** Statuts d'une demande « en cours » (un même e-mail ne devrait en avoir qu'une). */
+export const STATUTS_EN_COURS = ['en_attente', 'facture_envoyee', 'paye', 'active'];
+
+/**
+ * Pour chaque demande en cours, l'id de l'autre demande en cours du même e-mail (la plus ancienne),
+ * afin de signaler les doublons sur la carte. Les demandes sans doublon ne figurent pas dans la table.
+ */
+export function doublonsParEmail(demandes: DemandeMandat[]): Map<string, DemandeMandat> {
+  const parEmail = new Map<string, DemandeMandat[]>();
+  for (const d of demandes) {
+    if (!STATUTS_EN_COURS.includes(d.statut)) continue;
+    const k = (d.email ?? '').trim().toLowerCase();
+    if (!k) continue;
+    parEmail.set(k, [...(parEmail.get(k) ?? []), d]);
+  }
+  const out = new Map<string, DemandeMandat>();
+  for (const liste of parEmail.values()) {
+    if (liste.length < 2) continue;
+    const triee = [...liste].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    for (const d of triee) out.set(d.id, triee.find((x) => x.id !== d.id)!);
+  }
+  return out;
 }

@@ -23,7 +23,7 @@ import { DemandeActivationCard, CompteInactifCard } from '@/components/admin/act
 import { DemandeDetailsDialogBody } from '@/components/admin/activation/DemandeDetailsDialogBody';
 import { DETAIL_DIALOG } from '@/components/details/DetailPrimitives';
 import {
-  attente, attenteProfil, etapeDemande, nomComplet, rangUrgence, texteRecherche,
+  attente, attenteProfil, doublonsParEmail, etapeDemande, nomComplet, rangUrgence, texteRecherche,
   type DemandeMandat, type Etape, type Profile,
 } from '@/components/admin/activation/activationModel';
 
@@ -98,6 +98,24 @@ export default function DemandesActivation() {
     try {
       setCreatingInvoice(demande.id);
 
+      // Facture déjà créée à l'inscription (/nouveau-mandat) : on la renvoie au lieu d'en créer une
+      // seconde (et un second contact AbaNinja).
+      if (demande.abaninja_invoice_id) {
+        const { data: resent, error: resendError } = await supabase.functions.invoke('resend-abaninja-invoice', {
+          body: { invoice_uuid: demande.abaninja_invoice_id, email: demande.email },
+        });
+        if (resendError) throw resendError;
+        if (!resent?.success) throw new Error(resent?.error || 'Envoi de la facture impossible');
+        const { error: majError } = await supabase
+          .from('demandes_mandat')
+          .update({ statut: 'facture_envoyee' })
+          .eq('id', demande.id);
+        if (majError) throw majError;
+        toast.success('Facture existante envoyée par e-mail (aucune nouvelle facture créée).');
+        await loadData();
+        return;
+      }
+
       // Step 1: Create client in AbaNinja
       console.log('Creating AbaNinja client...');
       const { data: clientResult, error: clientError } = await supabase.functions.invoke('create-abaninja-client', {
@@ -146,7 +164,9 @@ export default function DemandesActivation() {
 
       if (updateError) throw updateError;
 
-      toast.success('Client et facture créés dans AbaNinja ! Facture envoyée par email.');
+      toast.success(invoiceResult.email_sent
+        ? 'Client et facture créés dans AbaNinja, facture envoyée par e-mail.'
+        : 'Facture créée dans AbaNinja mais pas envoyée : ouvrez-la dans AbaNinja et envoyez-la à la main.');
       await loadData();
     } catch (error: any) {
       console.error('Error creating AbaNinja invoice:', error);
@@ -377,6 +397,8 @@ export default function DemandesActivation() {
     profile.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const doublons = useMemo(() => doublonsParEmail(demandes), [demandes]);
+
   const parEtape = useMemo(() => {
     const m: Record<Etape, DemandeMandat[]> = { a_traiter: [], paiement: [], comptes: [], activees: [], autres: [] };
     for (const d of demandesVisibles) m[etapeDemande(d)].push(d);
@@ -540,6 +562,7 @@ export default function DemandesActivation() {
             <DemandeActivationCard
               key={demande.id}
               d={demande}
+              doublonDe={doublons.get(demande.id) ?? null}
               creatingInvoice={creatingInvoice === demande.id}
               resendingInvoice={resendingInvoice === demande.id}
               activating={activating === demande.id}
