@@ -991,14 +991,27 @@ serve(async (req) => {
             throw new Error(invoiceJson.error || `create-abaninja-invoice failed (${invoiceRes.status})`);
           }
 
-          // Enregistrer un acompte 300 CHF lié au client (statut 'paye' = en attente règlement)
-          await supabaseAdmin.from('acomptes').insert({
+          // Acompte 300 CHF « en attente » : il passe en « payé » tout seul quand la facture
+          // est réglée dans AbaNinja (fonction abaninja-sync, toutes les heures).
+          const noteFacture = `Facture AbaNinja ${invoiceJson.invoice_number || invoiceJson.invoice_id || ''} (invitation légère locative) - en attente paiement client`;
+          const { error: acompteError } = await supabaseAdmin.from('acomptes').insert({
             client_id: clientRecordId,
             agent_id: agentId || null,
             montant: 300,
-            statut: 'paye',
-            notes: `Facture AbaNinja ${invoiceJson.invoice_number || invoiceJson.invoice_id || ''} (invitation légère locative) - en attente paiement client`,
+            statut: 'en_attente',
+            date_paiement: null,
+            abaninja_invoice_id: invoiceJson.invoice_id || null,
+            abaninja_invoice_number: invoiceJson.invoice_number || null,
+            notes: noteFacture,
           });
+          if (acompteError) {
+            // Base pas encore migrée : on n'enregistre surtout pas un faux « payé ».
+            console.error('Acompte en attente non enregistré:', acompteError.message);
+          }
+          await supabaseAdmin.from('clients').update({
+            abaninja_invoice_id: invoiceJson.invoice_id || null,
+            abaninja_invoice_ref: invoiceJson.invoice_number || null,
+          }).eq('id', clientRecordId);
 
           invoiceCreated = true;
           console.log('AbaNinja invoice created for light invitation:', invoiceJson.invoice_id);

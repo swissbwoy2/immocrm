@@ -33,6 +33,7 @@ import {
   etapeFacture, prochaineActionFacture, RETARD_FACTURE_JOURS, type EtapeFacture, type PeriodeKey,
 } from '@/components/admin/finances/financeModel';
 import { cn } from '@/lib/utils';
+import { SyncAbaNinjaButton } from '@/components/admin/finances/SyncAbaNinjaButton';
 import { nombreSuisse } from '@/lib/montantSuisse';
 
 type VueFactures = EtapeFacture | 'toutes' | 'stats';
@@ -390,10 +391,13 @@ export default function FacturesAbaNinja() {
           </>
         }
         action={
-          <Button onClick={loadData} variant="outline" size="sm" className="h-10 rounded-full" aria-label="Actualiser">
-            <RefreshCw className="h-4 w-4" />
-            <span className="ml-2 hidden sm:inline">Actualiser</span>
-          </Button>
+          <div className="flex gap-2">
+            <SyncAbaNinjaButton onDone={loadData} />
+            <Button onClick={loadData} variant="outline" size="sm" className="h-10 rounded-full" aria-label="Actualiser">
+              <RefreshCw className="h-4 w-4" />
+              <span className="ml-2 hidden sm:inline">Actualiser</span>
+            </Button>
+          </div>
         }
       />
 
