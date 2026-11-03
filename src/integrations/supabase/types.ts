@@ -14,6 +14,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      abaninja_invoices: {
+        Row: {
+          aba_updated_at: string | null
+          acompte_id: string | null
+          demande_mandat_id: string | null
+          document_total: number | null
+          due_date: string | null
+          est_payee: boolean
+          invoice_date: string | null
+          invoice_number: string | null
+          is_cancelled: boolean
+          open_amount: number | null
+          payee_detectee_le: string | null
+          raw: Json | null
+          receiver_email: string | null
+          receiver_name: string | null
+          reference: string | null
+          sent_status: string | null
+          status: string | null
+          synced_at: string
+          title: string | null
+          uuid: string
+        }
+        Insert: {
+          aba_updated_at?: string | null
+          acompte_id?: string | null
+          demande_mandat_id?: string | null
+          document_total?: number | null
+          due_date?: string | null
+          est_payee?: boolean
+          invoice_date?: string | null
+          invoice_number?: string | null
+          is_cancelled?: boolean
+          open_amount?: number | null
+          payee_detectee_le?: string | null
+          raw?: Json | null
+          receiver_email?: string | null
+          receiver_name?: string | null
+          reference?: string | null
+          sent_status?: string | null
+          status?: string | null
+          synced_at?: string
+          title?: string | null
+          uuid: string
+        }
+        Update: {
+          aba_updated_at?: string | null
+          acompte_id?: string | null
+          demande_mandat_id?: string | null
+          document_total?: number | null
+          due_date?: string | null
+          est_payee?: boolean
+          invoice_date?: string | null
+          invoice_number?: string | null
+          is_cancelled?: boolean
+          open_amount?: number | null
+          payee_detectee_le?: string | null
+          raw?: Json | null
+          receiver_email?: string | null
+          receiver_name?: string | null
+          reference?: string | null
+          sent_status?: string | null
+          status?: string | null
+          synced_at?: string
+          title?: string | null
+          uuid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "abaninja_invoices_acompte_id_fkey"
+            columns: ["acompte_id"]
+            isOneToOne: false
+            referencedRelation: "acomptes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "abaninja_invoices_demande_mandat_id_fkey"
+            columns: ["demande_mandat_id"]
+            isOneToOne: false
+            referencedRelation: "demandes_mandat"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       abaninja_settings: {
         Row: {
           created_at: string | null
@@ -38,8 +122,46 @@ export type Database = {
         }
         Relationships: []
       }
+      abaninja_sync_runs: {
+        Row: {
+          corrections: Json
+          ecarts: Json
+          erreur: string | null
+          factures_lues: number | null
+          finished_at: string | null
+          id: string
+          ok: boolean | null
+          source: string
+          started_at: string
+        }
+        Insert: {
+          corrections?: Json
+          ecarts?: Json
+          erreur?: string | null
+          factures_lues?: number | null
+          finished_at?: string | null
+          id?: string
+          ok?: boolean | null
+          source?: string
+          started_at?: string
+        }
+        Update: {
+          corrections?: Json
+          ecarts?: Json
+          erreur?: string | null
+          factures_lues?: number | null
+          finished_at?: string | null
+          id?: string
+          ok?: boolean | null
+          source?: string
+          started_at?: string
+        }
+        Relationships: []
+      }
       acomptes: {
         Row: {
+          abaninja_invoice_id: string | null
+          abaninja_invoice_number: string | null
           agent_id: string | null
           client_id: string | null
           created_at: string
@@ -53,6 +175,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_number?: string | null
           agent_id?: string | null
           client_id?: string | null
           created_at?: string
@@ -66,6 +190,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          abaninja_invoice_id?: string | null
+          abaninja_invoice_number?: string | null
           agent_id?: string | null
           client_id?: string | null
           created_at?: string
@@ -18214,6 +18340,7 @@ export type Database = {
         Returns: undefined
       }
       decrement_mandat_coins_daily: { Args: never; Returns: number }
+      demande_mandat_existante: { Args: { p_email: string }; Returns: boolean }
       document_changer_personne: {
         Args: { p_candidate_id: string; p_document_id: string }
         Returns: Json
