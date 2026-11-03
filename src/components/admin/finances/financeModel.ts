@@ -118,9 +118,10 @@ export function prochaineActionTransaction(t: any): ProchaineAction {
   }
 }
 
-export type EtapeAcompte = 'a_decider' | 'acquis' | 'ristournes';
+export type EtapeAcompte = 'en_attente' | 'a_decider' | 'acquis' | 'ristournes';
 
 export function etapeAcompte(a: any): EtapeAcompte {
+  if (a.statut === 'en_attente') return 'en_attente';
   if (a.statut === 'acquis') return 'acquis';
   if (a.statut === 'ristourne') return 'ristournes';
   return 'a_decider';
@@ -128,6 +129,7 @@ export function etapeAcompte(a: any): EtapeAcompte {
 
 export function prochaineActionAcompte(a: any): ProchaineAction {
   switch (etapeAcompte(a)) {
+    case 'en_attente': return { texte: 'Facture envoyée : passe en payé dès le règlement dans AbaNinja', tone: 'muted' };
     case 'acquis': return { texte: 'Acompte acquis (revenu de l’agence)', tone: 'success' };
     case 'ristournes': return { texte: `Ristourné le ${dateCH(a.date_ristourne)}`, tone: 'muted' };
     default: return { texte: 'À décider : acquis si la recherche est arrêtée, sinon ristourner', tone: 'primary' };

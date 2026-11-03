@@ -40,6 +40,7 @@ import {
   type EtapeTransaction, type EtapeAcompte, type PeriodeKey,
 } from "@/components/admin/finances/financeModel";
 import { cn } from "@/lib/utils";
+import { SyncAbaNinjaButton } from "@/components/admin/finances/SyncAbaNinjaButton";
 
 type VueTransactions = 'en_retard' | 'a_encaisser' | 'en_cours' | 'payees' | 'toutes' | 'acomptes';
 type VueAcomptes = EtapeAcompte | 'tous';
@@ -53,6 +54,7 @@ const STATUT_TRANSACTION: Record<string, { label: string; tone: 'primary' | 'neu
 };
 
 const STATUT_ACOMPTE: Record<string, { label: string; tone: 'neutral' | 'success' | 'danger' }> = {
+  en_attente: { label: 'Facture envoyée', tone: 'neutral' },
   paye: { label: 'Payé', tone: 'neutral' },
   acquis: { label: 'Acquis', tone: 'success' },
   ristourne: { label: 'Ristourné', tone: 'danger' },
@@ -378,7 +380,9 @@ const Transactions = () => {
   const acomptesPayes = acomptes.filter(a => a.statut === 'paye');
   const acomptesAcquis = acomptes.filter(a => a.statut === 'acquis');
   const acomptesRistournes = acomptes.filter(a => a.statut === 'ristourne');
-  const totalAcomptesEncaisses = acomptes.reduce((sum, a) => sum + (a.montant || 0), 0);
+  // « en_attente » = facture envoyée, pas encore réglée : jamais compté comme encaissé.
+  const acomptesEncaisses = acomptes.filter(a => a.statut !== 'en_attente');
+  const totalAcomptesEncaisses = acomptesEncaisses.reduce((sum, a) => sum + (Number(a.montant) || 0), 0);
   const totalAcomptesAcquis = acomptesAcquis.reduce((sum, a) => sum + (a.montant || 0), 0);
   const totalRistournes = acomptesRistournes.reduce((sum, a) => sum + (a.montant || 0), 0);
 
@@ -439,7 +443,7 @@ const Transactions = () => {
   }), [transactions, profiles, qn, periode]);
 
   const acomptesVisibles = useMemo(() => acomptes.filter((a) => {
-    if (!dansPeriode(a.date_paiement, periode)) return false;
+    if (!dansPeriode(a.date_paiement || a.created_at, periode)) return false;
     if (!qn) return true;
     return `${a.client_name ?? ''} ${a.agent_name ?? ''}`.toLowerCase().includes(qn);
   }), [acomptes, qn, periode]);
@@ -451,7 +455,7 @@ const Transactions = () => {
   }, [transactionsVisibles]);
 
   const acomptesParEtape = useMemo(() => {
-    const m: Record<EtapeAcompte, any[]> = { a_decider: [], acquis: [], ristournes: [] };
+    const m: Record<EtapeAcompte, any[]> = { en_attente: [], a_decider: [], acquis: [], ristournes: [] };
     for (const a of acomptesVisibles) m[etapeAcompte(a)].push(a);
     return m;
   }, [acomptesVisibles]);
@@ -570,10 +574,13 @@ const Transactions = () => {
           </>
         }
         action={
-          <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={refresh} disabled={refreshing} aria-label="Actualiser">
-            {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            <span className="ml-2 hidden sm:inline">Actualiser</span>
-          </Button>
+          <div className="flex gap-2">
+            <SyncAbaNinjaButton onDone={refresh} />
+            <Button variant="outline" size="sm" className="h-10 rounded-full" onClick={refresh} disabled={refreshing} aria-label="Actualiser">
+              {refreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+              <span className="ml-2 hidden sm:inline">Actualiser</span>
+            </Button>
+          </div>
         }
       />
 
@@ -721,13 +728,14 @@ const Transactions = () => {
         <div className="space-y-4">
           {/* Synthèse acomptes */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <FinanceStat icon={Wallet} tone="primary" label="Acomptes encaissés" value={chf(totalAcomptesEncaisses)} hint={pluriel(acomptes.length, 'acompte')} onClick={() => setVueAcomptes('tous')} active={vueAcomptes === 'tous'} />
+            <FinanceStat icon={Wallet} tone="primary" label="Acomptes encaissés" value={chf(totalAcomptesEncaisses)} hint={pluriel(acomptesEncaisses.length, 'acompte')} onClick={() => setVueAcomptes('tous')} active={vueAcomptes === 'tous'} />
             <FinanceStat icon={CheckCircle2} tone="success" label="Acomptes acquis" value={chf(totalAcomptesAcquis)} hint={`${acomptesAcquis.length} acquis`} onClick={() => setVueAcomptes('acquis')} active={vueAcomptes === 'acquis'} />
             <FinanceStat icon={ArrowDownLeft} tone="warning" label="Ristournes" value={chf(totalRistournes)} hint={`${acomptesRistournes.length} ristourné${acomptesRistournes.length > 1 ? 's' : ''}`} onClick={() => setVueAcomptes('ristournes')} active={vueAcomptes === 'ristournes'} />
           </div>
 
           <div className="flex flex-wrap gap-2" role="tablist" aria-label="Étapes des acomptes">
             {([
+              { key: 'en_attente', label: 'Facture envoyée', count: acomptesParEtape.en_attente.length },
               { key: 'a_decider', label: 'À décider', count: acomptesParEtape.a_decider.length },
               { key: 'acquis', label: 'Acquis', count: acomptesParEtape.acquis.length },
               { key: 'ristournes', label: 'Ristournés', count: acomptesParEtape.ristournes.length },
@@ -769,7 +777,7 @@ const Transactions = () => {
                       <DashBadge tone={s.tone}>{s.label}</DashBadge>
                     </div>
                     <div className="flex items-end justify-between gap-2">
-                      <p className="text-xl font-semibold tabular-nums text-foreground">{chf(acompte.montant || 300)}</p>
+                      <p className="text-xl font-semibold tabular-nums text-foreground">{chf(Number(acompte.montant ?? 0))}</p>
                       <div className="text-right text-xs text-muted-foreground">
                         {acompte.date_paiement && (
                           <p className="inline-flex items-center gap-1"><CalendarIcon className="h-3.5 w-3.5" /> Payé le {dateCH(acompte.date_paiement)}</p>

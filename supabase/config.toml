@@ -19,6 +19,8 @@ project_id = "ydljsdscdnqrqnjvqela"
     verify_jwt = false
   [functions.auto-offers-daily-digest]
     verify_jwt = false
+  [functions.abaninja-sync]
+    verify_jwt = false
   [functions.abaninja-webhook]
     verify_jwt = false
   [functions.ai-matching]
