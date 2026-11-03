@@ -66,6 +66,8 @@ function Frise({ statut }: { statut: string }) {
 
 interface CardProps {
   d: DemandeMandat;
+  /** Autre demande en cours pour le même e-mail (doublon probable). */
+  doublonDe?: DemandeMandat | null;
   creatingInvoice: boolean;
   resendingInvoice: boolean;
   activating: boolean;
@@ -82,7 +84,7 @@ interface CardProps {
  * Grand écran : trois colonnes (client | avancement et prochaine action | actions).
  */
 export function DemandeActivationCard({
-  d, creatingInvoice, resendingInvoice, activating,
+  d, doublonDe, creatingInvoice, resendingInvoice, activating,
   onVoir, onFacturer, onRenvoyer, onPayer, onActiver, onSupprimer,
 }: CardProps) {
   const [ouvert, setOuvert] = useState(false);
@@ -150,6 +152,11 @@ export function DemandeActivationCard({
               </button>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <DashBadge tone={statut.tone}>{statut.label}</DashBadge>
+                {doublonDe && (
+                  <span title={`Même e-mail qu'une autre demande du ${new Date(doublonDe.created_at).toLocaleString('fr-CH', { dateStyle: 'short', timeStyle: 'short' })} (${STATUT_LABEL[doublonDe.statut]?.label ?? doublonDe.statut}). Garder une seule demande.`}>
+                    <DashBadge tone="warning">Doublon</DashBadge>
+                  </span>
+                )}
                 <DashBadge tone={achat ? 'primary' : 'muted'}>
                   {achat ? <Building2 className="mr-1 h-3 w-3" /> : <Home className="mr-1 h-3 w-3" />}
                   {achat ? 'Achat' : 'Location'}

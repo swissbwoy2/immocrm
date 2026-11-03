@@ -205,15 +205,21 @@ export default function NouveauMandat() {
     setSubmitting(true);
 
     try {
-      // Vérifier si l'email existe déjà
-      const { data: existing } = await supabase
-        .from('demandes_mandat')
-        .select('id')
-        .eq('email', formData.email)
-        .single();
-
-      if (existing) {
-        toast.error('Une demande existe déjà avec cet email');
+      // Anti-doublon : une demande en cours (en attente, facturée, payée ou active) existe-t-elle déjà
+      // pour cet e-mail ? Le visiteur anonyme ne peut pas lire demandes_mandat (RLS) : on passe par la
+      // fonction demande_mandat_existante, qui répond seulement oui/non. Vérifié AVANT AbaNinja pour ne
+      // créer ni second contact ni seconde facture. Si la fonction est indisponible, on ne bloque pas.
+      const { data: dejaDemande, error: doublonError } = await supabase.rpc(
+        'demande_mandat_existante' as any,
+        { p_email: formData.email.trim() } as any,
+      );
+      if (doublonError) {
+        console.warn('Vérification anti-doublon indisponible :', doublonError.message);
+      } else if (dejaDemande === true) {
+        toast.error(
+          'Une demande de mandat existe déjà pour cette adresse e-mail. Inutile de la refaire : connectez-vous à votre espace ou contactez-nous au 021 634 28 39.',
+          { duration: 10000 },
+        );
         setSubmitting(false);
         return;
       }

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { verifyInternalCaller } from "../_shared/internal-auth.ts";
+import { emailInvoice } from "../_shared/abaninja-invoice.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -44,34 +45,11 @@ serve(async (req) => {
 
     console.log('Resending AbaNinja invoice:', { invoice_uuid, email });
 
-    // Send invoice via AbaNinja API
-    const sendPayload = {
-      send_type: "email",
-      recipient_email: email,
-      message: "Veuillez trouver ci-joint votre facture Immo-Rama. Merci de procéder au paiement dans les meilleurs délais."
-    };
-
-    console.log('AbaNinja send payload:', JSON.stringify(sendPayload));
-
-    const response = await fetch(
-      `https://api.abaninja.ch/accounts/${accountUuid}/invoices/v2/invoices/${invoice_uuid}/send`,
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(sendPayload)
-      }
-    );
-
-    const responseText = await response.text();
-    console.log('AbaNinja send response status:', response.status);
-    console.log('AbaNinja send response:', responseText);
-
-    if (!response.ok) {
-      throw new Error(`AbaNinja API error: ${response.status} - ${responseText}`);
+    // Envoi par e-mail : PATCH …/actions/email (vers l'e-mail du contact AbaNinja).
+    const sent = await emailInvoice(accountUuid, apiKey, invoice_uuid);
+    console.log('AbaNinja email action status:', sent.status);
+    if (!sent.ok) {
+      throw new Error(`AbaNinja API error: ${sent.status} - ${sent.detail}`);
     }
 
     return new Response(
