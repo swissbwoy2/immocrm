@@ -204,6 +204,11 @@ serve(async (req) => {
       .from("demandes_mandat")
       .select("id, prenom, nom, email, statut, date_paiement, created_at, montant_acompte, abaninja_invoice_id, abaninja_invoice_ref");
     const notifs: string[] = [];
+    // E-mails qui ont déjà une demande payée/active : une 2e demande du même client est un doublon,
+    // elle ne doit jamais être passée en « payé » (sinon le paiement est compté deux fois).
+    const emailsDejaPayes = new Set(
+      (demandes ?? []).filter((x: any) => DEMANDES_PAYEES.includes(x.statut) && x.email).map((x: any) => norm(x.email)),
+    );
 
     for (const d of demandes ?? []) {
       if (d.statut === "doublon") continue;
@@ -229,6 +234,11 @@ serve(async (req) => {
       if (!d.abaninja_invoice_id) lien.abaninja_invoice_id = f.uuid;
       if (!d.abaninja_invoice_ref && f.numero) lien.abaninja_invoice_ref = f.numero;
 
+      if (f.payee && DEMANDES_A_REGLER.includes(d.statut) && lienParEmail && emailsDejaPayes.has(norm(d.email))) {
+        factureUtilisee.delete(f.uuid);
+        ecarts.push({ type: "demande_doublon_client_deja_paye", demande_id: d.id, client: nom, facture: f.numero });
+        continue;
+      }
       if (f.payee && DEMANDES_A_REGLER.includes(d.statut)) {
         const { error } = await admin.from("demandes_mandat")
           .update({ ...lien, statut: "paye", date_paiement: datePaiement(f) })
