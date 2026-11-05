@@ -25,6 +25,7 @@ import { PremiumCandidatureDetails } from '@/components/premium/PremiumCandidatu
 import { cn } from '@/lib/utils';
 
 const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+  'demande_postulation': { label: 'Demande de postulation', color: 'outline', icon: <FileCheck className="h-4 w-4" /> },
   'candidature_deposee': { label: 'Candidature reçue', color: 'outline', icon: <FileCheck className="h-4 w-4" /> },
   'en_attente': { label: 'Dossier envoyé', color: 'secondary', icon: <Clock className="h-4 w-4" /> },
   'acceptee': { label: '🎉 Acceptée', color: 'default', icon: <CheckCircle className="h-4 w-4" /> },
@@ -430,7 +431,7 @@ export default function Candidatures() {
   const stats = {
     total: candidatures.length,
     candidature_deposee: candidatures.filter(c => c.statut === 'candidature_deposee').length,
-    en_attente: candidatures.filter(c => c.statut === 'en_attente').length,
+    en_attente: candidatures.filter(c => c.statut === 'en_attente' || c.statut === 'demande_postulation').length,
     acceptee: candidatures.filter(c => ['acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe'].includes(c.statut)).length,
     cles_remises: candidatures.filter(c => c.statut === 'cles_remises').length,
     refusee: candidatures.filter(c => c.statut === 'refusee').length,
