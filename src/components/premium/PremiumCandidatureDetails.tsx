@@ -315,7 +315,7 @@ export function PremiumCandidatureDetails({
 
         <div className="space-y-4">
           {/* Status-specific actions */}
-          {candidature.statut === 'candidature_deposee' && (
+          {(candidature.statut === 'candidature_deposee' || candidature.statut === 'demande_postulation') && (
             <>
               <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
                 <FileCheck className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
@@ -326,6 +326,15 @@ export function PremiumCandidatureDetails({
               <div className="flex flex-wrap gap-3">
                 <Button onClick={onSendDossier} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
                   <Send className="h-4 w-4 mr-2" />Envoyer le dossier
+                </Button>
+                <Button variant="outline" onClick={() => onStatutChange(candidature.id, 'en_attente', { date_depot: new Date().toISOString() })}>
+                  <FileCheck className="h-4 w-4 mr-2" />Marquer dossier déposé
+                </Button>
+                <Button
+                  onClick={() => onStatutChange(candidature.id, 'acceptee', { date_depot: (candidature as any).date_depot || new Date().toISOString() })}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />Accepter directement
                 </Button>
                 <Button variant="destructive" onClick={() => onStatutChange(candidature.id, 'refusee')}>
                   <XCircle className="h-4 w-4 mr-2" />Refuser

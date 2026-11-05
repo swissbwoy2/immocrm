@@ -22,7 +22,8 @@ import { CandidatureWorkflowTimeline } from '@/components/CandidatureWorkflowTim
 import { DashPage, DashPageHeader, DASH_CARD, DashBadge, DashEmptyState } from '@/components/client/dashboard/DashPrimitives';
 
 const WORKFLOW_STATUTS: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-  'en_attente': { label: 'En attente', color: 'secondary', icon: <Clock className="h-4 w-4" /> },
+  'demande_postulation': { label: 'Demande de postulation', color: 'outline', icon: <FileCheck className="h-4 w-4" /> },
+  'en_attente': { label: 'Dossier déposé', color: 'secondary', icon: <Clock className="h-4 w-4" /> },
   'acceptee': { label: '🎉 Acceptée', color: 'default', icon: <CheckCircle className="h-4 w-4" /> },
   'refusee': { label: 'Refusée', color: 'destructive', icon: <XCircle className="h-4 w-4" /> },
   'bail_conclu': { label: 'Client accepte bail', color: 'default', icon: <FileSignature className="h-4 w-4" /> },
@@ -402,7 +403,7 @@ export default function AdminCandidatures() {
 
   const stats = {
     total: candidatures.length,
-    en_attente: candidatures.filter(c => c.statut === 'en_attente').length,
+    en_attente: candidatures.filter(c => c.statut === 'en_attente' || c.statut === 'demande_postulation').length,
     en_cours: candidatures.filter(c => ['acceptee', 'bail_conclu', 'attente_bail', 'bail_recu', 'signature_planifiee', 'signature_effectuee', 'etat_lieux_fixe'].includes(c.statut)).length,
     cles_remises: candidatures.filter(c => c.statut === 'cles_remises').length,
     refusee: candidatures.filter(c => c.statut === 'refusee').length,
@@ -465,6 +466,20 @@ export default function AdminCandidatures() {
           </h4>
           
           <div className="flex flex-wrap gap-2">
+            {candidature.statut === 'demande_postulation' && (
+              <>
+                <Button size="sm" className="rounded-full" onClick={() => handleStatutChange(candidature.id, 'en_attente', { date_depot: new Date().toISOString() })}>
+                  <FileCheck className="h-4 w-4 mr-1" />Marquer dossier déposé
+                </Button>
+                <Button size="sm" className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => handleStatutChange(candidature.id, 'acceptee', { date_depot: candidature.date_depot || new Date().toISOString() })}>
+                  <CheckCircle className="h-4 w-4 mr-1" />Accepter directement
+                </Button>
+                <Button size="sm" variant="destructive" className="rounded-full" onClick={() => handleStatutChange(candidature.id, 'refusee')}>
+                  <XCircle className="h-4 w-4 mr-1" />Refuser
+                </Button>
+              </>
+            )}
+
             {candidature.statut === 'en_attente' && (
               <>
                 <Button size="sm" className="rounded-full bg-emerald-600 text-white hover:bg-emerald-700" onClick={() => handleStatutChange(candidature.id, 'acceptee')}>
