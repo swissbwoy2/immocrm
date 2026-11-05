@@ -408,9 +408,9 @@ export default function AnnonceDetail() {
           </div>
         </header>
 
-        {/* Photos + calculateur (desktop : calculateur à droite des photos) */}
+        {/* Photos (pleine largeur) */}
         <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-          <div className="relative lg:col-span-2">
+          <div className="relative lg:col-span-3">
             {useMosaic ? (
               <>
                 {/* Mosaïque (tablette / desktop) */}
@@ -530,19 +530,6 @@ export default function AnnonceDetail() {
             </div>
           </div>
 
-          {/* Calculateur de budget (desktop) — colonne de droite, à côté des photos */}
-          <div className="hidden lg:block lg:col-span-1">
-            <div>
-              <SearchTypeProvider>
-                <BudgetCalcSection
-                  compact
-                  forceType={annonce.type_transaction === 'location' ? 'location' : 'achat'}
-                  ctaHref="/nouveau-mandat"
-                  ctaLabel="Faites-vous accompagner dans votre recherche"
-                />
-              </SearchTypeProvider>
-            </div>
-          </div>
         </section>
 
         {/* Contenu + carte de réservation */}
@@ -795,11 +782,11 @@ export default function AnnonceDetail() {
                   )}
                   <div className="flex items-center justify-between gap-4 py-3">
                     <dt className="text-base text-muted-foreground">Animaux</dt>
-                    <dd className="text-base font-medium text-foreground text-right">{annonce.animaux_autorises ? '✓ Autorisés' : '✗ Non autorisés'}</dd>
+                    <dd className="text-base font-medium text-foreground text-right">{annonce.animaux_autorises == null ? 'Non précisé' : annonce.animaux_autorises ? '✓ Autorisés' : '✗ Non autorisés'}</dd>
                   </div>
                   <div className="flex items-center justify-between gap-4 py-3">
                     <dt className="text-base text-muted-foreground">Fumeurs</dt>
-                    <dd className="text-base font-medium text-foreground text-right">{annonce.fumeurs_acceptes ? '✓ Acceptés' : '✗ Non acceptés'}</dd>
+                    <dd className="text-base font-medium text-foreground text-right">{annonce.fumeurs_acceptes == null ? 'Non précisé' : annonce.fumeurs_acceptes ? '✓ Acceptés' : '✗ Non acceptés'}</dd>
                   </div>
                 </dl>
               </div>
@@ -833,6 +820,17 @@ export default function AnnonceDetail() {
 
           {/* Carte de réservation (collante) */}
           <aside className="lg:col-span-1 pt-8">
+            {/* Calculateur de budget (desktop) — colonne de droite, au-dessus de la carte de réservation */}
+            <div className="hidden lg:block mb-6">
+              <SearchTypeProvider>
+                <BudgetCalcSection
+                  compact
+                  forceType={annonce.type_transaction === 'location' ? 'location' : 'achat'}
+                  ctaHref="/nouveau-mandat"
+                  ctaLabel="Faites-vous accompagner dans votre recherche"
+                />
+              </SearchTypeProvider>
+            </div>
             <div className="lg:sticky lg:top-24 space-y-4">
               <div className={`rounded-[14px] border border-border bg-background p-6 ${SHADOW}`}>
                 <div className="flex items-baseline flex-wrap gap-x-2">
