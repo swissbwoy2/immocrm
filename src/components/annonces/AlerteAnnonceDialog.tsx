@@ -1,25 +1,9 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { toast } from 'sonner';
-import { BellPlus, Loader2 } from 'lucide-react';
+import { BellPlus } from 'lucide-react';
+import { Choice, Field, PrimaryButton, SecondaryButton, SheetDialog } from '@/components/funnel-ui/FunnelKit';
 
 export interface AlerteCriteres {
   type_transaction?: string | null;
@@ -76,61 +60,34 @@ export function AlerteAnnonceDialog({ open, onOpenChange, criteres, defaultNom }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[460px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BellPlus className="h-5 w-5 text-primary" />
-            Créer une alerte e-mail
-          </DialogTitle>
-          <DialogDescription>
-            Recevez un e-mail dès qu'une nouvelle annonce correspond à votre recherche.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 mt-2">
-          <div className="space-y-2">
-            <Label htmlFor="alerte-nom">Nom de l'alerte</Label>
-            <Input id="alerte-nom" value={nom} onChange={(e) => setNom(e.target.value)} />
-          </div>
-
-          {!user && (
-            <div className="space-y-2">
-              <Label htmlFor="alerte-email">Votre e-mail *</Label>
-              <Input
-                id="alerte-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="votre@email.com"
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label>Fréquence</Label>
-            <Select value={frequence} onValueChange={(v) => setFrequence(v as typeof frequence)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="instantane">Dès la publication</SelectItem>
-                <SelectItem value="quotidien">Résumé quotidien</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <p className="text-xs text-muted-foreground">
-            Vous pourrez vous désinscrire à tout moment via le lien présent dans chaque e-mail.
-          </p>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <BellPlus className="h-4 w-4 mr-2" />}
-              Créer l'alerte
-            </Button>
-          </div>
+    <SheetDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      icon={<BellPlus className="h-5 w-5" strokeWidth={1.8} />}
+      title="Créer une alerte e-mail"
+      description="Recevez un e-mail dès qu'une nouvelle annonce correspond à votre recherche."
+      footer={
+        <>
+          <SecondaryButton onClick={() => onOpenChange(false)}>Annuler</SecondaryButton>
+          <PrimaryButton onClick={handleSave} loading={saving}>Créer l'alerte</PrimaryButton>
+        </>
+      }
+    >
+      <form className="grid gap-3" noValidate onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+        <Field id="alerte-nom" label="Nom de l'alerte" value={nom} onChange={setNom} />
+        {!user && (
+          <Field id="alerte-email" label="Votre e-mail" type="email" inputMode="email" autoComplete="email" value={email} onChange={setEmail} placeholder="votre@email.com" />
+        )}
+        <p className="mt-2 text-[14px] font-semibold text-[#222222]">Fréquence</p>
+        <div className="grid gap-3">
+          <Choice selected={frequence === 'instantane'} onClick={() => setFrequence('instantane')} label="Dès la publication" />
+          <Choice index={1} selected={frequence === 'quotidien'} onClick={() => setFrequence('quotidien')} label="Résumé quotidien" />
         </div>
-      </DialogContent>
-    </Dialog>
+        <p className="mt-1 text-[13px] leading-[1.4] text-[#6a6a6a]">
+          Vous pourrez vous désinscrire à tout moment via le lien présent dans chaque e-mail.
+        </p>
+        <button type="submit" className="sr-only">Créer</button>
+      </form>
+    </SheetDialog>
   );
 }

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { AnimatePresence, MotionConfig, motion, useReducedMotion } from 'framer-motion';
 import { Check, ChevronLeft, Loader2, ShieldCheck, type LucideIcon } from 'lucide-react';
 import logo from '@/assets/logisorama-logo.png';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 
 /*
  * Kit commun des formulaires publics Logisorama (référence : tunnel /courtier).
@@ -180,7 +181,7 @@ export function Tile({ selected, onClick, children, disabled = false, strike = f
 type FieldProps = {
   id: string; label: string; value: string; onChange: (v: string) => void; type?: string; autoComplete?: string;
   inputMode?: React.HTMLAttributes<HTMLInputElement>['inputMode']; error?: string | null; autoFocus?: boolean;
-  min?: string; max?: string; suffix?: string; placeholder?: string;
+  min?: string; max?: string; suffix?: string; placeholder?: string; maxLength?: number;
 };
 
 const fieldFrame = (error?: string | null) => [
@@ -188,7 +189,7 @@ const fieldFrame = (error?: string | null) => [
   error ? 'border-[#c13515] shadow-[inset_0_0_0_1px_#c13515]' : 'border-[#b0b0b0] focus-within:border-[#222222] focus-within:shadow-[inset_0_0_0_1px_#222222]', // taste-skill-ignore : champ de saisie
 ].join(' ');
 
-export function Field({ id, label, value, onChange, type = 'text', autoComplete, inputMode, error, autoFocus, min, max, suffix, placeholder }: FieldProps) {
+export function Field({ id, label, value, onChange, type = 'text', autoComplete, inputMode, error, autoFocus, min, max, suffix, placeholder, maxLength }: FieldProps) {
   return (
     <div>
       <div className={fieldFrame(error)}>
@@ -203,6 +204,7 @@ export function Field({ id, label, value, onChange, type = 'text', autoComplete,
           min={min}
           max={max}
           placeholder={placeholder}
+          maxLength={maxLength}
           onChange={(e) => onChange(e.target.value)}
           aria-invalid={!!error}
           className={`h-14 w-full rounded-lg bg-transparent px-3 pb-2 pt-6 text-[16px] text-[#222222] outline-none placeholder:text-[#b0b0b0] [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${suffix ? 'pr-16' : ''}`}
@@ -378,6 +380,57 @@ export function DoneScreen({ title, children, cta }: { title: string; children: 
           {cta && <div className="mt-8">{cta}</div>}
         </motion.div>
       </main>
+    </FunnelPage>
+  );
+}
+
+/* ---------- Bouton secondaire (lien souligné) ---------- */
+export function SecondaryButton({ onClick, children, type = 'button', disabled = false }: {
+  onClick?: () => void; children: React.ReactNode; type?: 'button' | 'submit'; disabled?: boolean;
+}) {
+  return (
+    <button type={type} onClick={onClick} disabled={disabled}
+      className="inline-flex h-12 cursor-pointer items-center justify-center gap-1 rounded-lg px-3 text-[16px] font-semibold text-[#222222] underline underline-offset-4 transition-colors duration-200 hover:bg-[#f7f7f7] disabled:cursor-not-allowed disabled:opacity-50">
+      {children}
+    </button>
+  );
+}
+
+/* ---------- Fenêtre (feuille du bas sur mobile, fenêtre centrée sur ordinateur) ---------- */
+export function SheetDialog({ open, onOpenChange, title, description, icon, children, footer, wide = false }: {
+  open: boolean; onOpenChange: (o: boolean) => void; title: React.ReactNode; description?: React.ReactNode;
+  icon?: React.ReactNode; children?: React.ReactNode; footer?: React.ReactNode; wide?: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={`funnel-skin max-h-[90vh] gap-0 max-sm:pt-3 overflow-y-auto border-0 bg-white p-0 text-[#222222] ${wide ? 'sm:max-w-[560px]' : 'sm:max-w-[480px]'} sm:rounded-[14px]`}
+        style={{ fontFamily: FUNNEL_FONT }}
+      >
+        <div className="px-6 pb-2 pt-6">
+          {icon && <span className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-[#f7f7f7] text-[#222222]">{icon}</span>}
+          <DialogTitle className="pr-8 text-[22px] font-semibold leading-tight tracking-[-0.2px] text-[#222222]">{title}</DialogTitle>
+          {description
+            ? <DialogDescription className="mt-1.5 text-[15px] leading-snug text-[#3f3f3f]">{description}</DialogDescription>
+            : <DialogDescription className="sr-only">{typeof title === 'string' ? title : ''}</DialogDescription>}
+        </div>
+        {children ? <div className="px-6 py-4">{children}</div> : <div className="h-2" />}
+        {footer && (
+          <div className="sticky bottom-0 flex flex-col-reverse gap-2 bg-white px-6 pb-[max(env(safe-area-inset-bottom),20px)] pt-3 sm:flex-row sm:items-center sm:justify-between">
+            {footer}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------- Page simple centrée (liens reçus par e-mail, erreurs) ---------- */
+export function FunnelCardPage({ children }: { children: React.ReactNode }) {
+  return (
+    <FunnelPage>
+      <FunnelHeader label="" />
+      <main className="mx-auto max-w-md px-4 pb-16 pt-8">{children}</main>
     </FunnelPage>
   );
 }

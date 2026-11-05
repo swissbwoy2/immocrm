@@ -113,7 +113,7 @@ export default function MandatAchatStepProject({ data, onChange }: Props) {
 
       <div className="text-xs text-muted-foreground bg-primary/5 border border-primary/20 rounded-md p-3 flex items-start gap-2">
         <Calendar className="h-4 w-4 text-primary mt-0.5" />
-        <span>Acompte d'activation du parcours : <strong>CHF 2&apos;499.–</strong>. Aucune progression ne démarre tant que l'admin n'a pas activé votre dossier.</span>
+        <span>Acompte d'activation du parcours : <strong>CHF 2&apos;500.–</strong>. Aucune progression ne démarre tant que l'admin n'a pas activé votre dossier.</span>
       </div>
     </div>
   );

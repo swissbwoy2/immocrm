@@ -363,14 +363,6 @@ export default function FormulaireRelouer() {
             <p className="mt-2 text-[16px] leading-relaxed text-[#3f3f3f]">
               Décrivez votre logement : notre équipe trouve rapidement un repreneur solvable et vous évite une double charge de loyer.
             </p>
-            <div className="mt-5 rounded-[14px] bg-[#f7f7f7] p-5">
-              <p className="text-[14px] font-semibold text-[#6a6a6a]">Forfait locataire sortant</p>
-              <p className="mt-1 text-[22px] font-semibold tracking-[-0.2px] text-[#222222]">399.– CHF par appartement</p>
-              <p className="mt-2 text-[15px] leading-relaxed text-[#3f3f3f]">
-                Facturé à l’activation de la recherche de locataire. Paiement par facture QR ou Twint via{' '}
-                <a href="tel:+41764839199" className="cursor-pointer font-medium text-[#222222] underline">076 483 91 99</a>.
-              </p>
-            </div>
           </section>
         )}
 
